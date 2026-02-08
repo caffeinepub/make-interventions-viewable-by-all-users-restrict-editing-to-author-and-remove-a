@@ -1,0 +1,61 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-08T23:39:23.019Z",
+  "summary": "Frontend blacklist UI appears updated to be usable without an admin unlock prompt and uses English strings; intervention dialogs/hooks were updated and include author-only error handling. However, due to truncation of backend/main.mo around the relevant functions, the backend authorization changes for blacklist operations and intervention update/delete enforcement cannot be confirmed from the provided diff summary. Additionally, admin-unlock-related frontend code still exists, which conflicts with the request to remove that flow.",
+  "missing_requirements": [
+    {
+      "id": "REQ-1",
+      "requirement": "Backend authorization: any authenticated user can mark/unmark a client as blacklisted (no admin restriction); unauthenticated callers rejected as Unauthorized.",
+      "reason": "The diff for backend/main.mo is truncated before showing markAsBlacklisted/unmarkAsBlacklisted implementations or their permission checks, so removal of admin-only restriction and the exact auth behavior cannot be verified from the provided evidence.",
+      "evidence": [
+        "backend/main.mo (truncated; markAsBlacklisted/unmarkAsBlacklisted not shown)"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "requirement": "Remove administrator unlock flow from the frontend for blacklist management; sessionStorage admin unlock state no longer required for blacklist actions.",
+      "reason": "Admin unlock artifacts are still present/modified (AdminUnlockDialog component and useAdminUnlock hook). While BlacklistPanel no longer shows an unlock prompt in the snippet, the requirement explicitly says to remove the admin unlock flow and not rely on sessionStorage for blacklist actions, which is not demonstrated as removed.",
+      "evidence": [
+        "frontend/src/components/admin/AdminUnlockDialog.tsx",
+        "frontend/src/hooks/useAdminUnlock.ts",
+        "frontend/src/components/blacklist/BlacklistPanel.tsx (shows direct blacklist actions, but does not evidence removal of admin unlock flow globally)"
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "requirement": "Backend must enforce that only the intervention author (employee) can update/delete; interventions remain viewable to all authenticated users; frontend UI hides edit/delete for non-authors.",
+      "reason": "Frontend-side author-only handling is suggested (hook error message and file summary referencing InterventionList), but backend/main.mo is truncated and does not show updateIntervention/deleteIntervention permission checks or getClientInterventions access checks. Therefore backend enforcement and viewability to all authenticated users cannot be confirmed from the provided diff summary.",
+      "evidence": [
+        "backend/main.mo (truncated; updateIntervention/deleteIntervention/getClientInterventions not shown)",
+        "frontend/src/hooks/useInterventions.ts (truncated; shows author-only error handling but not backend enforcement)",
+        "frontend-file-summaries.txt (mentions InterventionList author-only controls, but code not shown)"
+      ]
+    }
+  ],
+  "hallucinated_features": [
+    {
+      "description": "Added a backend migration module (no-op).",
+      "reason": "BuildRequest did not request adding a migration module/file; backend was constrained to remain a single Motoko actor in backend/main.mo, and the new file is not described as required for access control changes.",
+      "evidence": [
+        "backend/migration.mo"
+      ]
+    }
+  ],
+  "confidence": 0.55,
+  "changed_files": [
+    "backend/main.mo",
+    "backend/migration.mo",
+    "frontend-file-summaries.txt",
+    "frontend/src/components/admin/AdminUnlockDialog.tsx",
+    "frontend/src/components/blacklist/BlacklistPanel.tsx",
+    "frontend/src/components/interventions/AddInterventionDialog.tsx",
+    "frontend/src/components/interventions/EditInterventionDialog.tsx",
+    "frontend/src/hooks/useAdminUnlock.ts",
+    "frontend/src/hooks/useBlacklist.ts",
+    "frontend/src/hooks/useInterventions.ts",
+    "frontend/src/pages/ClientDossierPage.tsx",
+    "frontend/src/pages/ClientsPage.tsx",
+    "project_state.json"
+  ]
+}

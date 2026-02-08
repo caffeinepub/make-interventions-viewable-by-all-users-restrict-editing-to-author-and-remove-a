@@ -1,0 +1,84 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Blacklist available to all authenticated users; intervention edit/delete restricted in UI to author; remove admin unlock wording",
+  "requirements": [
+    {
+      "id": "REQ-2",
+      "summary": "Remove the admin unlock flow from blacklist management so any authenticated user can use the blacklist panel directly.",
+      "acceptanceCriteria": [
+        "The blacklist UI no longer prompts for an admin code to add/update/remove blacklist status.",
+        "Admin unlock state stored in sessionStorage is no longer required for blacklist actions.",
+        "Blacklist actions (add/update/remove) are available to authenticated users and call the existing blacklist mutations."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/blacklist/BlacklistPanel.tsx",
+          "operation": "modify",
+          "description": "Remove useAdminUnlock/AdminUnlockDialog gating and any admin-only checks so mark/unmark actions are always available to authenticated users; ensure the panel calls the existing useMarkAsBlacklisted/useUnmarkAsBlacklisted mutations directly. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/hooks/useAdminUnlock.ts",
+          "operation": "delete",
+          "description": "Delete the admin unlock sessionStorage-based state hook so blacklist management no longer depends on any stored admin token."
+        },
+        {
+          "path": "frontend/src/components/admin/AdminUnlockDialog.tsx",
+          "operation": "delete",
+          "description": "Remove the admin code dialog component since blacklist management must not require an unlock flow."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Update blacklist/admin-related user-facing strings to English and remove admin-specific wording.",
+      "acceptanceCriteria": [
+        "BlacklistPanel strings are in English and do not mention admin access.",
+        "Blacklist-related toast/error messages are in English and do not mention an admin code."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/blacklist/BlacklistPanel.tsx",
+          "operation": "modify",
+          "description": "Replace blacklist panel labels, headings, placeholders, and button text with English equivalents and remove any mention of admin access/unlock/admin codes. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/hooks/useBlacklist.ts",
+          "operation": "modify",
+          "description": "Update blacklist-related success/error toast messages to English; remove any messaging that references an admin code (keep Unauthorized handling but describe it without admin wording). Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/pages/ClientDossierPage.tsx",
+          "operation": "modify",
+          "description": "Update blacklist-related UI text shown on the dossier (e.g., blacklist banner/title/tab labels as applicable) to English and remove admin-specific wording. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/pages/ClientsPage.tsx",
+          "operation": "modify",
+          "description": "Update any blacklist-related labels/badges in the client list (e.g., blacklist badge text) to English. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Keep interventions viewable to all authenticated users while restricting edit/delete UI controls to the intervention author.",
+      "acceptanceCriteria": [
+        "Any authenticated user can load and view a client’s interventions list.",
+        "Backend updateIntervention and deleteIntervention reject attempts when caller is not the intervention.employee.",
+        "Frontend only shows edit/delete controls for interventions authored by the current user; non-authors cannot trigger edit/delete actions from the UI."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/interventions/InterventionList.tsx",
+          "operation": "modify",
+          "description": "Ensure author-only enforcement for edit/delete UI is robust by basing visibility solely on current identity principal vs intervention.employee, and confirm non-authors have no UI path to trigger edit/delete. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/hooks/useInterventions.ts",
+          "operation": "modify",
+          "description": "Adjust intervention update/delete error handling messaging (if needed) to align with the author-only rule and provide a clear unauthorized message when the backend rejects a non-author action. Verify the component's usage instructions before implementing."
+        }
+      ]
+    }
+  ]
+}

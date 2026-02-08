@@ -1,0 +1,76 @@
+import type { Principal } from "@icp-sdk/core/principal";
+export interface Some<T> {
+    __kind__: "Some";
+    value: T;
+}
+export interface None {
+    __kind__: "None";
+}
+export type Option<T> = Some<T> | None;
+export class ExternalBlob {
+    getBytes(): Promise<Uint8Array<ArrayBuffer>>;
+    getDirectURL(): string;
+    static fromURL(url: string): ExternalBlob;
+    static fromBytes(blob: Uint8Array<ArrayBuffer>): ExternalBlob;
+    withUploadProgress(onProgress: (percentage: number) => void): ExternalBlob;
+}
+export interface Address {
+    zip: string;
+    street: string;
+    city: string;
+    state: string;
+}
+export type Time = bigint;
+export interface Client {
+    blacklistMedia: Array<ExternalBlob>;
+    blacklistComments: string;
+    info: ContactInfo;
+    updatedAt: Time;
+    isBlacklisted: boolean;
+}
+export interface ContactInfo {
+    name: string;
+    email: string;
+    address: Address;
+    phone: string;
+}
+export interface UserProfile {
+    name: string;
+}
+export interface Intervention {
+    id: string;
+    media: Array<ExternalBlob>;
+    clientId: string;
+    date: {
+        day: bigint;
+        month: bigint;
+        year: bigint;
+    };
+    updatedAt: Time;
+    employee: Principal;
+    comments: string;
+    interventionTimestamp: Time;
+}
+export enum UserRole {
+    admin = "admin",
+    user = "user",
+    guest = "guest"
+}
+export interface backendInterface {
+    addIntervention(clientId: string, comments: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint): Promise<void>;
+    assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createOrUpdateClient(id: string, name: string, address: Address, phone: string, email: string): Promise<void>;
+    deleteIntervention(interventionId: string, clientId: string): Promise<void>;
+    getCallerUserProfile(): Promise<UserProfile | null>;
+    getCallerUserRole(): Promise<UserRole>;
+    getClient(clientId: string): Promise<Client>;
+    getClientInterventions(clientId: string): Promise<Array<Intervention>>;
+    getClients(): Promise<Array<Client>>;
+    getUserProfile(user: Principal): Promise<UserProfile | null>;
+    isCallerAdmin(): Promise<boolean>;
+    markAsBlacklisted(clientId: string, comments: string, media: Array<ExternalBlob>): Promise<void>;
+    saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    searchClients(searchString: string): Promise<Array<Client>>;
+    unmarkAsBlacklisted(clientId: string): Promise<void>;
+    updateIntervention(interventionId: string, clientId: string, comments: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint): Promise<void>;
+}

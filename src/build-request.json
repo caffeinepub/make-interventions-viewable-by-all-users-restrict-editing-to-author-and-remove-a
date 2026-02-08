@@ -1,0 +1,101 @@
+{
+  "kind": "build_request",
+  "title": "Make interventions viewable by all users, restrict editing to author, and remove admin-only blacklist access",
+  "priority": "normal",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "text": "Update backend authorization so that any authenticated user can add/remove a client from the shared blacklist (markAsBlacklisted / unmarkAsBlacklisted), and remove any admin-only restriction for these actions.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "...pouvoir ajouter ou retirer de la liste noir les clients accessibke à tous les utilisateur supprime acces administrateur ."
+        ]
+      },
+      "acceptanceCriteria": [
+        "Calling markAsBlacklisted succeeds for any authenticated user (no admin permission required).",
+        "Calling unmarkAsBlacklisted succeeds for any authenticated user (no admin permission required).",
+        "Unauthenticated callers are still rejected with an Unauthorized error for blacklist operations."
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Remove the administrator unlock flow from the frontend for blacklist management, and make the blacklist panel fully usable by any authenticated user without entering an admin code.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "...supprime acces administrateur ."
+        ]
+      },
+      "acceptanceCriteria": [
+        "The blacklist UI no longer prompts for an admin code to add/update/remove blacklist status.",
+        "Admin unlock state stored in sessionStorage is no longer required for blacklist actions.",
+        "Blacklist actions (add/update/remove) are available to authenticated users and call the existing blacklist mutations."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Update frontend user-facing text related to blacklist/admin access to English and remove admin-specific wording (e.g., \"Admin access required\", \"Unlock\", \"admin code required\").",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "Use English for any user-facing text in the build request."
+        ]
+      },
+      "acceptanceCriteria": [
+        "BlacklistPanel strings are in English and do not mention admin access.",
+        "Blacklist-related toast/error messages are in English and do not mention an admin code."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Ensure interventions remain viewable to all authenticated users, but only the user who created an intervention can edit or delete it; keep both backend enforcement and frontend UI affordances aligned with this rule.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "...acces au intervention par tous les utilisateur mais seul lutilisateur qui a ajouter lintervention p la modifier."
+        ]
+      },
+      "acceptanceCriteria": [
+        "Any authenticated user can load and view a client’s interventions list.",
+        "Backend updateIntervention and deleteIntervention reject attempts when caller is not the intervention.employee.",
+        "Frontend only shows edit/delete controls for interventions authored by the current user; non-authors cannot trigger edit/delete actions from the UI."
+      ]
+    }
+  ],
+  "constraints": [
+    "Backend must remain a single Motoko actor in backend/main.mo (no additional backend services).",
+    "Do not modify files under frontend/src/components/ui or any paths listed as immutable in SYSTEM_CONTEXT."
+  ],
+  "nonGoals": [
+    "Changing the data model for clients or interventions beyond what is required for access control.",
+    "Adding new authentication providers (Internet Identity remains the only auth method).",
+    "Adding real-time collaboration or WebSocket-based updates."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
+  }
+}
