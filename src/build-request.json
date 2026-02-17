@@ -1,88 +1,114 @@
 {
   "kind": "build_request",
-  "title": "Make interventions viewable by all users, restrict editing to author, and remove admin-only blacklist access",
+  "title": "Add a global Technical Folder for PDFs, photos, and videos (independent from client dossiers)",
+  "projectName": "Technical Folder",
   "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Update backend authorization so that any authenticated user can add/remove a client from the shared blacklist (markAsBlacklisted / unmarkAsBlacklisted), and remove any admin-only restriction for these actions.",
+      "text": "Add backend support for a global (non-client-specific) “Technical Folder” that stores uploaded files (PDF, image, and video) and allows authenticated users to list, upload, and delete files.",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-user-1"
         ],
         "quotes": [
-          "...pouvoir ajouter ou retirer de la liste noir les clients accessibke à tous les utilisateur supprime acces administrateur ."
+          "Je voudrais que tu rajoute dans le tableaux de bord un dossier technique pour pouvoir stocker des fichiers pdf et photo et video in dependament des dossiers clients"
         ]
       },
       "acceptanceCriteria": [
-        "Calling markAsBlacklisted succeeds for any authenticated user (no admin permission required).",
-        "Calling unmarkAsBlacklisted succeeds for any authenticated user (no admin permission required).",
-        "Unauthenticated callers are still rejected with an Unauthorized error for blacklist operations."
+        "A new backend data model exists for technical-folder items, including at least: unique id, filename, mimeType, uploadedAt timestamp, uploader Principal, and a stored blob reference (Storage.ExternalBlob).",
+        "Authenticated users (#user permission) can call a query method to list all technical-folder items (metadata + ExternalBlob reference).",
+        "Authenticated users can upload a new technical-folder item (PDF/image/video) via a shared method.",
+        "Delete is supported via a shared method, and is authorized such that the uploader can delete their own items and admins can delete any item.",
+        "Backend methods trap with an Unauthorized error when called by non-authorized principals (consistent with existing patterns in backend/main.mo).",
+        "If adding new stable state requires a migration per the project’s conditional migration policy, include a backend/migration.mo update that preserves existing data."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Remove the administrator unlock flow from the frontend for blacklist management, and make the blacklist panel fully usable by any authenticated user without entering an admin code.",
+      "text": "Add a new authenticated route and page for the Technical Folder in the dashboard area, and provide a clear navigation entry point from the main dashboard (clients list).",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-user-1"
         ],
         "quotes": [
-          "...supprime acces administrateur ."
+          "Je voudrais que tu rajoute dans le tableaux de bord un dossier technique ..."
         ]
       },
       "acceptanceCriteria": [
-        "The blacklist UI no longer prompts for an admin code to add/update/remove blacklist status.",
-        "Admin unlock state stored in sessionStorage is no longer required for blacklist actions.",
-        "Blacklist actions (add/update/remove) are available to authenticated users and call the existing blacklist mutations."
+        "A new route is registered in frontend/src/App.tsx for the Technical Folder page (e.g., /technical-folder).",
+        "The Technical Folder page is guarded by the existing AuthenticatedOnly component.",
+        "The main dashboard page (frontend/src/pages/ClientsPage.tsx) includes a visible, user-friendly control (button/card) that navigates to the Technical Folder page.",
+        "All user-facing text introduced for this feature is in English."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Update frontend user-facing text related to blacklist/admin access to English and remove admin-specific wording (e.g., \"Admin access required\", \"Unlock\", \"admin code required\").",
+      "text": "Implement the Technical Folder UI to upload and display files (PDF, images, videos) independently of client dossiers.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-user-1"
         ],
         "quotes": [
-          "Use English for any user-facing text in the build request."
+          "... stocker des fichiers pdf et photo et video ..."
         ]
       },
       "acceptanceCriteria": [
-        "BlacklistPanel strings are in English and do not mention admin access.",
-        "Blacklist-related toast/error messages are in English and do not mention an admin code."
+        "The Technical Folder page provides an upload flow that accepts PDF, image, and video files.",
+        "After upload, newly added items appear in the list without a full page refresh (React Query cache invalidation/refetch).",
+        "The list renders each item with filename and uploaded date/time; images render as thumbnails, videos render with a playable preview, and PDFs render as a downloadable/openable link using the blob direct URL.",
+        "Users can delete items they are allowed to delete, and the UI updates accordingly after deletion.",
+        "Empty state and loading state are implemented (consistent with the existing Cards/Skeleton usage)."
       ]
     },
     {
       "id": "REQ-4",
-      "text": "Ensure interventions remain viewable to all authenticated users, but only the user who created an intervention can edit or delete it; keep both backend enforcement and frontend UI affordances aligned with this rule.",
-      "target": "both",
+      "text": "Extend the existing media/file picking components (or add a new file picker component) so the app can select PDFs in addition to the current image/video support, without breaking existing intervention/blacklist media flows.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-user-1"
         ],
         "quotes": [
-          "...acces au intervention par tous les utilisateur mais seul lutilisateur qui a ajouter lintervention p la modifier."
+          "... fichiers pdf ..."
         ]
       },
       "acceptanceCriteria": [
-        "Any authenticated user can load and view a client’s interventions list.",
-        "Backend updateIntervention and deleteIntervention reject attempts when caller is not the intervention.employee.",
-        "Frontend only shows edit/delete controls for interventions authored by the current user; non-authors cannot trigger edit/delete actions from the UI."
+        "The Technical Folder upload flow can select PDFs via the browser file picker (accept includes application/pdf).",
+        "Existing intervention and blacklist media selection continues to work as before (image/video selection is unchanged).",
+        "Any new/updated UI labels in the picker components are in English (do not introduce new French labels)."
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "text": "Add React Query hooks for Technical Folder operations (list, upload, delete) that call the new backend methods and provide basic error handling consistent with existing hooks.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-user-1"
+        ]
+      },
+      "acceptanceCriteria": [
+        "A dedicated hook module exists (e.g., useTechnicalFolder*) that exposes at least: useGetTechnicalFiles, useAddTechnicalFile, useDeleteTechnicalFile.",
+        "Hooks use the existing actor access pattern (useActor) and invalidate relevant queries on success.",
+        "Errors such as Unauthorized are surfaced via existing toast patterns (sonner) with clear English messaging."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor in backend/main.mo (no additional backend services).",
-    "Do not modify files under frontend/src/components/ui or any paths listed as immutable in SYSTEM_CONTEXT."
+    "Backend must remain a single Motoko actor in backend/main.mo; do not introduce additional backend services/canisters.",
+    "Only Internet Identity is used for authentication; do not add third-party auth providers.",
+    "Do not edit files under frontend/src/components/ui or any frontend immutablePaths listed in SYSTEM_CONTEXT; compose existing UI components instead.",
+    "Do not introduce external databases or third-party storage; use the existing blob-storage mixin and Storage.ExternalBlob pattern already used for intervention/blacklist media."
   ],
   "nonGoals": [
-    "Changing the data model for clients or interventions beyond what is required for access control.",
-    "Adding new authentication providers (Internet Identity remains the only auth method).",
-    "Adding real-time collaboration or WebSocket-based updates."
+    "Do not associate Technical Folder files with client dossiers; this feature is explicitly global/independent.",
+    "No sharing/permission management UI beyond the existing authenticated/admin model (no per-user folders or granular ACL UI).",
+    "No real-time collaboration or live updates (no websockets).",
+    "No automatic file classification, tagging, OCR, or search unless explicitly requested later."
   ],
   "imageRequirements": {
     "required": [],

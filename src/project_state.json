@@ -1,36 +1,40 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Define role/access rules: interventions are visible to all users but only editable by their creator; manage a shared client blacklist; remove administrator access.",
-  "architectural_notes": [
-    "Access control rule: intervention records are readable by all users, but update/delete is restricted to the record creator (owner-based permissions).",
-    "Blacklist is a shared/global list editable by all users (no admin-only control).",
-    "Remove/disable administrator role and any admin-only permission checks."
-  ],
+  "summary": "Ajouter au tableau de bord un dossier technique permettant de stocker des fichiers (PDF, photos, vidéos) indépendamment des dossiers clients.",
+  "architectural_notes": [],
   "known_issues": [],
   "isFixRequest": false,
   "existing_features": [
     {
-      "id": "feature-remove-the-administrator-unlock-flow-from-the-frontend-for-blacklist-management-and-make-the-blacklist-panel-fully-usable-by-any-authenticated-user-without-entering-an-admin-code",
-      "title": "Remove the administrator unlock flow from the frontend for blacklist management, and make the blacklist panel fully usable by any authenticated user without entering an admin code.",
+      "id": "feature-add-a-new-authenticated-route-and-page-for-the-technical-folder-in-the-dashboard-area-and-provide-a-clear-navigation-entry-point-from-the-main-dashboard-clients-list",
+      "title": "Add a new authenticated route and page for the Technical Folder in the dashboard area, and provide a clear navigation entry point from the main dashboard (clients list).",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-update-frontend-user-facing-text-related-to-blacklist-admin-access-to-english-and-remove-admin-specific-wording-e-g-admin-access-required-unlock-admin-code-required",
-      "title": "Update frontend user-facing text related to blacklist/admin access to English and remove admin-specific wording (e.g., \"Admin access required\", \"Unlock\", \"admin code required\").",
+      "id": "feature-implement-the-technical-folder-ui-to-upload-and-display-files-pdf-images-videos-independently-of-client-dossiers",
+      "title": "Implement the Technical Folder UI to upload and display files (PDF, images, videos) independently of client dossiers.",
       "reqIds": [
         "REQ-3"
       ],
       "version": 1
     },
     {
-      "id": "feature-ensure-interventions-remain-viewable-to-all-authenticated-users-but-only-the-user-who-created-an-intervention-can-edit-or-delete-it-keep-both-backend-enforcement-and-frontend-ui-affordances-aligned-with-this-rule",
-      "title": "Ensure interventions remain viewable to all authenticated users, but only the user who created an intervention can edit or delete it; keep both backend enforcement and frontend UI affordances aligned with this rule.",
+      "id": "feature-extend-the-existing-media-file-picking-components-or-add-a-new-file-picker-component-so-the-app-can-select-pdfs-in-addition-to-the-current-image-video-support-without-breaking-existing-intervention-blacklist-media-flows",
+      "title": "Extend the existing media/file picking components (or add a new file picker component) so the app can select PDFs in addition to the current image/video support, without breaking existing intervention/blacklist media flows.",
       "reqIds": [
         "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-react-query-hooks-for-technical-folder-operations-list-upload-delete-that-call-the-new-backend-methods-and-provide-basic-error-handling-consistent-with-existing-hooks",
+      "title": "Add React Query hooks for Technical Folder operations (list, upload, delete) that call the new backend methods and provide basic error handling consistent with existing hooks.",
+      "reqIds": [
+        "REQ-5"
       ],
       "version": 1
     }
@@ -38,32 +42,21 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Interventions: accessible/visible to all users, but only the user who created an intervention can modify it",
+      "summary": "Ajouter au tableau de bord un « dossier technique » pour stocker des fichiers (PDF, photos, vidéos) indépendamment des dossiers clients",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-2",
-      "summary": "Client blacklist: allow all users to add/remove clients from a shared blacklist",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-3",
-      "summary": "Remove administrator access/role (no admin-only privileges)",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-4",
-      "summary": "Update backend authorization so that any authenticated user can add/remove a client from the shared blacklist (markAsBlacklisted / unmarkAsBlacklisted), and remove any admin-only restriction for these actions.",
+      "summary": "Add backend support for a global (non-client-specific) “Technical Folder” that stores uploaded files (PDF, image, and video) and allows authenticated users to list, upload, and delete files.",
       "reqIds": [
         "REQ-1"
       ],
       "status": "pending"
     }
   ],
-  "projectName": "Make interventions viewable by all users, restrict editing to author, and remove admin-only blacklist access",
+  "gameProjectType": "none",
+  "projectName": "Technical Folder",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

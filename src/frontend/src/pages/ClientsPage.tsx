@@ -4,7 +4,7 @@ import { useGetClients, useSearchClients } from '../hooks/useClients';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Plus, AlertCircle } from 'lucide-react';
+import { Search, Plus, AlertCircle, FolderOpen } from 'lucide-react';
 import AppBadge from '../components/common/AppBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import CreateClientDialog from '../components/clients/CreateClientDialog';
@@ -32,7 +32,27 @@ function ClientsPageContent() {
   return (
     <div className="flex flex-col gap-4 pb-20">
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4">
-        <div className="flex items-center gap-2 mb-4">
+        <Card className="mb-4 bg-primary/5 border-primary/20">
+          <CardHeader className="py-3 px-4">
+            <Button
+              variant="ghost"
+              className="w-full justify-start h-auto p-0 hover:bg-transparent"
+              onClick={() => navigate({ to: '/technical-folder' })}
+            >
+              <div className="flex items-center gap-3 w-full">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <FolderOpen className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 text-left">
+                  <CardTitle className="text-sm font-semibold">Technical Folder</CardTitle>
+                  <p className="text-xs text-muted-foreground">Store PDFs, photos, and videos</p>
+                </div>
+              </div>
+            </Button>
+          </CardHeader>
+        </Card>
+
+        <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -49,18 +69,18 @@ function ClientsPageContent() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">
+        <div className="space-y-1">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
+              <CardHeader className="py-1.5 px-3">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
               </CardHeader>
             </Card>
           ))}
         </div>
       ) : clients && clients.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-1">
           {clients.map((client) => {
             const clientId = client.info.name.toLowerCase().replace(/\s+/g, '-');
             return (
@@ -69,15 +89,15 @@ function ClientsPageContent() {
                 className="cursor-pointer transition-colors hover:bg-accent"
                 onClick={() => navigate({ to: '/clients/$clientId', params: { clientId } })}
               >
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2">
+                <CardHeader className="py-1.5 px-3">
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg truncate">{client.info.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground truncate">{client.info.address.city}</p>
+                      <CardTitle className="text-sm font-medium truncate">{client.info.name}</CardTitle>
+                      <p className="text-xs text-muted-foreground truncate mt-0">{client.info.address.city}</p>
                     </div>
                     {client.isBlacklisted && (
-                      <AppBadge variant="destructive">
-                        <AlertCircle className="h-3 w-3 mr-1" />
+                      <AppBadge variant="destructive" className="text-xs py-0 px-1.5 h-5 shrink-0">
+                        <AlertCircle className="h-2.5 w-2.5 mr-0.5" />
                         Blacklisted
                       </AppBadge>
                     )}

@@ -59,6 +59,7 @@ export default function EditInterventionDialog({
         month: monthNum,
         year: yearNum,
       },
+      canEdit: intervention.canEdit,
     });
 
     onOpenChange(false);

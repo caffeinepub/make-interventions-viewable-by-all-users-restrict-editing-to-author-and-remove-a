@@ -31,9 +31,9 @@ export async function syncAllOperations() {
             operation.data.clientId,
             operation.data.comments,
             operation.data.media,
-            BigInt(operation.data.day),
-            BigInt(operation.data.month),
-            BigInt(operation.data.year)
+            BigInt(operation.data.date.day),
+            BigInt(operation.data.date.month),
+            BigInt(operation.data.date.year)
           );
           break;
 
@@ -43,10 +43,14 @@ export async function syncAllOperations() {
             operation.data.clientId,
             operation.data.comments,
             operation.data.media,
-            BigInt(operation.data.day),
-            BigInt(operation.data.month),
-            BigInt(operation.data.year)
+            BigInt(operation.data.date.day),
+            BigInt(operation.data.date.month),
+            BigInt(operation.data.date.year)
           );
+          break;
+
+        case 'deleteIntervention':
+          await actor.deleteIntervention(operation.data.interventionId, operation.data.clientId);
           break;
 
         case 'markAsBlacklisted':
@@ -61,8 +65,19 @@ export async function syncAllOperations() {
       if (operation.id) {
         await removeFromOutbox(operation.id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sync error for operation:', operation, error);
+      
+      // If the error is an authorization error for intervention operations, remove from queue
+      if (
+        (operation.type === 'updateIntervention' || operation.type === 'deleteIntervention') &&
+        error.message?.includes('You can only')
+      ) {
+        console.warn('Removing unauthorized operation from queue:', operation.type);
+        if (operation.id) {
+          await removeFromOutbox(operation.id);
+        }
+      }
     }
   }
 }

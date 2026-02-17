@@ -46,8 +46,10 @@ export interface Intervention {
         month: bigint;
         year: bigint;
     };
+    canEdit: boolean;
     updatedAt: Time;
     employee: Principal;
+    canDelete: boolean;
     comments: string;
     interventionTimestamp: Time;
 }
@@ -61,6 +63,7 @@ export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createOrUpdateClient(id: string, name: string, address: Address, phone: string, email: string): Promise<void>;
     deleteIntervention(interventionId: string, clientId: string): Promise<void>;
+    deleteTechnicalFile(fileId: string): Promise<void>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getClient(clientId: string): Promise<Client>;
@@ -68,9 +71,11 @@ export interface backendInterface {
     getClients(): Promise<Array<Client>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    listTechnicalFiles(): Promise<Array<[string, ExternalBlob]>>;
     markAsBlacklisted(clientId: string, comments: string, media: Array<ExternalBlob>): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     searchClients(searchString: string): Promise<Array<Client>>;
     unmarkAsBlacklisted(clientId: string): Promise<void>;
     updateIntervention(interventionId: string, clientId: string, comments: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint): Promise<void>;
+    uploadTechnicalFile(fileId: string, blob: ExternalBlob): Promise<void>;
 }

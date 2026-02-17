@@ -35,8 +35,10 @@ export interface Intervention {
   'media' : Array<ExternalBlob>,
   'clientId' : string,
   'date' : { 'day' : bigint, 'month' : bigint, 'year' : bigint },
+  'canEdit' : boolean,
   'updatedAt' : Time,
   'employee' : Principal,
+  'canDelete' : boolean,
   'comments' : string,
   'interventionTimestamp' : Time,
 }
@@ -83,6 +85,7 @@ export interface _SERVICE {
     undefined
   >,
   'deleteIntervention' : ActorMethod<[string, string], undefined>,
+  'deleteTechnicalFile' : ActorMethod<[string], undefined>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getClient' : ActorMethod<[string], Client>,
@@ -90,6 +93,7 @@ export interface _SERVICE {
   'getClients' : ActorMethod<[], Array<Client>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'listTechnicalFiles' : ActorMethod<[], Array<[string, ExternalBlob]>>,
   'markAsBlacklisted' : ActorMethod<
     [string, string, Array<ExternalBlob>],
     undefined
@@ -101,6 +105,7 @@ export interface _SERVICE {
     [string, string, string, Array<ExternalBlob>, bigint, bigint, bigint],
     undefined
   >,
+  'uploadTechnicalFile' : ActorMethod<[string, ExternalBlob], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

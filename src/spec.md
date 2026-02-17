@@ -1,12 +1,13 @@
 # Specification
 
 ## Summary
-**Goal:** Allow all authenticated users to manage the shared blacklist without any admin unlock, while keeping interventions visible to all authenticated users but editable/deletable only by their author.
+**Goal:** Add a global, non-client-specific Technical Folder in the dashboard where authenticated users can upload, view, and manage PDF, image, and video files.
 
 **Planned changes:**
-- Update backend authorization so any authenticated user can mark/unmark clients as blacklisted; keep unauthenticated users blocked.
-- Remove the frontend “admin unlock/admin code” flow for blacklist management and make the blacklist panel usable by any authenticated user.
-- Update blacklist-related user-facing text to English and remove admin-specific wording.
-- Enforce intervention edit/delete permissions so only the intervention creator can edit/delete, while all authenticated users can view interventions; align frontend UI controls with backend rules.
+- Add a backend Technical Folder data model and methods for authenticated users to list and upload files, and to delete files with uploader/admin authorization.
+- Persist Technical Folder items using the existing Storage.ExternalBlob pattern and add stable-state migration if required.
+- Add a new authenticated dashboard route/page for the Technical Folder and a clear navigation entry point from the main dashboard (clients list).
+- Build the Technical Folder UI: upload flow, list rendering (thumbnails/previews/links), and delete actions with loading/empty states and React Query refresh.
+- Extend or add a file picker to support selecting PDFs (application/pdf) without breaking existing image/video flows, and add React Query hooks for list/upload/delete with basic error handling (English UI text).
 
-**User-visible outcome:** Logged-in users can add or remove clients from the shared blacklist without entering an admin code, and can view all interventions while only being able to edit/delete interventions they created.
+**User-visible outcome:** Authenticated users can open a “Technical Folder” from the dashboard to upload PDFs/photos/videos, see them listed with previews/links and timestamps, and delete allowed items; the list updates without a full page refresh.

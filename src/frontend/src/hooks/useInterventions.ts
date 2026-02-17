@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
+import { useInternetIdentity } from './useInternetIdentity';
 import type { Intervention } from '../backend';
 import { ExternalBlob } from '../backend';
 import { toast } from 'sonner';
@@ -72,6 +73,7 @@ export function useAddIntervention() {
 
 export function useUpdateIntervention() {
   const { actor } = useActor();
+  const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
   const { isOnline } = useOnlineStatus();
 
@@ -82,13 +84,20 @@ export function useUpdateIntervention() {
       comments,
       media,
       date,
+      canEdit,
     }: {
       interventionId: string;
       clientId: string;
       comments: string;
       media: ExternalBlob[];
       date: { day: number; month: number; year: number };
+      canEdit?: boolean;
     }) => {
+      // Frontend guard: prevent unauthorized updates
+      if (canEdit === false) {
+        throw new Error('You can only update your own interventions');
+      }
+
       if (!isOnline) {
         await enqueueOfflineOperation({
           type: 'updateIntervention',
@@ -127,11 +136,25 @@ export function useUpdateIntervention() {
 
 export function useDeleteIntervention() {
   const { actor } = useActor();
+  const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
   const { isOnline } = useOnlineStatus();
 
   return useMutation({
-    mutationFn: async ({ interventionId, clientId }: { interventionId: string; clientId: string }) => {
+    mutationFn: async ({
+      interventionId,
+      clientId,
+      canDelete,
+    }: {
+      interventionId: string;
+      clientId: string;
+      canDelete?: boolean;
+    }) => {
+      // Frontend guard: prevent unauthorized deletes
+      if (canDelete === false) {
+        throw new Error('You can only delete your own interventions');
+      }
+
       if (!isOnline) {
         await enqueueOfflineOperation({
           type: 'deleteIntervention',

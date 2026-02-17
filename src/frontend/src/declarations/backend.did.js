@@ -51,8 +51,10 @@ export const Intervention = IDL.Record({
   'media' : IDL.Vec(ExternalBlob),
   'clientId' : IDL.Text,
   'date' : IDL.Record({ 'day' : IDL.Nat, 'month' : IDL.Nat, 'year' : IDL.Nat }),
+  'canEdit' : IDL.Bool,
   'updatedAt' : Time,
   'employee' : IDL.Principal,
+  'canDelete' : IDL.Bool,
   'comments' : IDL.Text,
   'interventionTimestamp' : Time,
 });
@@ -97,6 +99,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'deleteIntervention' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'deleteTechnicalFile' : IDL.Func([IDL.Text], [], []),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getClient' : IDL.Func([IDL.Text], [Client], ['query']),
@@ -112,6 +115,11 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'listTechnicalFiles' : IDL.Func(
+      [],
+      [IDL.Vec(IDL.Tuple(IDL.Text, ExternalBlob))],
+      ['query'],
+    ),
   'markAsBlacklisted' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Vec(ExternalBlob)],
       [],
@@ -133,6 +141,7 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'uploadTechnicalFile' : IDL.Func([IDL.Text, ExternalBlob], [], []),
 });
 
 export const idlInitArgs = [];
@@ -185,8 +194,10 @@ export const idlFactory = ({ IDL }) => {
       'month' : IDL.Nat,
       'year' : IDL.Nat,
     }),
+    'canEdit' : IDL.Bool,
     'updatedAt' : Time,
     'employee' : IDL.Principal,
+    'canDelete' : IDL.Bool,
     'comments' : IDL.Text,
     'interventionTimestamp' : Time,
   });
@@ -231,6 +242,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'deleteIntervention' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'deleteTechnicalFile' : IDL.Func([IDL.Text], [], []),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getClient' : IDL.Func([IDL.Text], [Client], ['query']),
@@ -246,6 +258,11 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'listTechnicalFiles' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Tuple(IDL.Text, ExternalBlob))],
+        ['query'],
+      ),
     'markAsBlacklisted' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Vec(ExternalBlob)],
         [],
@@ -267,6 +284,7 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'uploadTechnicalFile' : IDL.Func([IDL.Text, ExternalBlob], [], []),
   });
 };
 

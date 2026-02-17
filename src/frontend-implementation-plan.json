@@ -1,82 +1,102 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Blacklist available to all authenticated users; intervention edit/delete restricted in UI to author; remove admin unlock wording",
+  "title": "Technical Folder (global file storage) — frontend dashboard UI",
   "requirements": [
     {
       "id": "REQ-2",
-      "summary": "Remove the admin unlock flow from blacklist management so any authenticated user can use the blacklist panel directly.",
+      "summary": "Add an authenticated dashboard route and navigation entry for the Technical Folder page.",
       "acceptanceCriteria": [
-        "The blacklist UI no longer prompts for an admin code to add/update/remove blacklist status.",
-        "Admin unlock state stored in sessionStorage is no longer required for blacklist actions.",
-        "Blacklist actions (add/update/remove) are available to authenticated users and call the existing blacklist mutations."
+        "A new route is registered in frontend/src/App.tsx for the Technical Folder page (e.g., /technical-folder).",
+        "The Technical Folder page is guarded by the existing AuthenticatedOnly component.",
+        "The main dashboard page (frontend/src/pages/ClientsPage.tsx) includes a visible, user-friendly control (button/card) that navigates to the Technical Folder page.",
+        "All user-facing text introduced for this feature is in English."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/blacklist/BlacklistPanel.tsx",
+          "path": "frontend/src/pages/TechnicalFolderPage.tsx",
+          "operation": "create",
+          "description": "Create the Technical Folder dashboard page component (route target) and wrap its content with AuthenticatedOnly to ensure only authenticated users can access it. Ensure all new UI text is English."
+        },
+        {
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Remove useAdminUnlock/AdminUnlockDialog gating and any admin-only checks so mark/unmark actions are always available to authenticated users; ensure the panel calls the existing useMarkAsBlacklisted/useUnmarkAsBlacklisted mutations directly. Verify the component's usage instructions before implementing."
+          "description": "Register the new /technical-folder route in the TanStack Router tree and wire it to TechnicalFolderPage so it is navigable."
         },
         {
-          "path": "frontend/src/hooks/useAdminUnlock.ts",
-          "operation": "delete",
-          "description": "Delete the admin unlock sessionStorage-based state hook so blacklist management no longer depends on any stored admin token."
-        },
-        {
-          "path": "frontend/src/components/admin/AdminUnlockDialog.tsx",
-          "operation": "delete",
-          "description": "Remove the admin code dialog component since blacklist management must not require an unlock flow."
+          "path": "frontend/src/pages/ClientsPage.tsx",
+          "operation": "modify",
+          "description": "Add a prominent navigation control (e.g., card/button near the top) labeled in English (e.g., \"Technical Folder\") that routes users to /technical-folder."
         }
       ]
     },
     {
       "id": "REQ-3",
-      "summary": "Update blacklist/admin-related user-facing strings to English and remove admin-specific wording.",
+      "summary": "Implement Technical Folder UI to upload, preview, list, and delete PDF/image/video files with proper loading/empty states.",
       "acceptanceCriteria": [
-        "BlacklistPanel strings are in English and do not mention admin access.",
-        "Blacklist-related toast/error messages are in English and do not mention an admin code."
+        "The Technical Folder page provides an upload flow that accepts PDF, image, and video files.",
+        "After upload, newly added items appear in the list without a full page refresh (React Query cache invalidation/refetch).",
+        "The list renders each item with filename and uploaded date/time; images render as thumbnails, videos render with a playable preview, and PDFs render as a downloadable/openable link using the blob direct URL.",
+        "Users can delete items they are allowed to delete, and the UI updates accordingly after deletion.",
+        "Empty state and loading state are implemented (consistent with the existing Cards/Skeleton usage)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/blacklist/BlacklistPanel.tsx",
+          "path": "frontend/src/pages/TechnicalFolderPage.tsx",
           "operation": "modify",
-          "description": "Replace blacklist panel labels, headings, placeholders, and button text with English equivalents and remove any mention of admin access/unlock/admin codes. Verify the component's usage instructions before implementing."
+          "description": "Implement the Technical Folder page UI: upload control (PDF/image/video), list rendering with previews (image thumbnail, video player preview, PDF open/download link via ExternalBlob direct URL), delete action per item, and loading/empty states using existing Card/Skeleton components. Use React Query invalidation/refetch so the list updates after upload/delete without a full refresh. Use the blob-storage ExternalBlob direct URL capability for previews and links. Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/hooks/useBlacklist.ts",
-          "operation": "modify",
-          "description": "Update blacklist-related success/error toast messages to English; remove any messaging that references an admin code (keep Unauthorized handling but describe it without admin wording). Verify the component's usage instructions before implementing."
+          "path": "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+          "operation": "create",
+          "description": "Create a presentational row/card component to render a single technical-folder item (filename, uploaded date/time, preview based on mimeType, and delete action). Use blob-storage ExternalBlob.getDirectURL() for preview/link rendering. Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/pages/ClientDossierPage.tsx",
-          "operation": "modify",
-          "description": "Update blacklist-related UI text shown on the dossier (e.g., blacklist banner/title/tab labels as applicable) to English and remove admin-specific wording. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/pages/ClientsPage.tsx",
-          "operation": "modify",
-          "description": "Update any blacklist-related labels/badges in the client list (e.g., blacklist badge text) to English. Verify the component's usage instructions before implementing."
+          "path": "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
+          "operation": "create",
+          "description": "Create an upload card component used by TechnicalFolderPage to select a file (PDF/image/video), show basic upload progress/state, and trigger the upload mutation; keep all labels in English."
         }
       ]
     },
     {
       "id": "REQ-4",
-      "summary": "Keep interventions viewable to all authenticated users while restricting edit/delete UI controls to the intervention author.",
+      "summary": "Add a reusable file picker that supports PDFs in addition to image/video without impacting existing media flows.",
       "acceptanceCriteria": [
-        "Any authenticated user can load and view a client’s interventions list.",
-        "Backend updateIntervention and deleteIntervention reject attempts when caller is not the intervention.employee.",
-        "Frontend only shows edit/delete controls for interventions authored by the current user; non-authors cannot trigger edit/delete actions from the UI."
+        "The Technical Folder upload flow can select PDFs via the browser file picker (accept includes application/pdf).",
+        "Existing intervention and blacklist media selection continues to work as before (image/video selection is unchanged).",
+        "Any new/updated UI labels in the picker components are in English (do not introduce new French labels)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/interventions/InterventionList.tsx",
-          "operation": "modify",
-          "description": "Ensure author-only enforcement for edit/delete UI is robust by basing visibility solely on current identity principal vs intervention.employee, and confirm non-authors have no UI path to trigger edit/delete. Verify the component's usage instructions before implementing."
+          "path": "frontend/src/components/media/FilePicker.tsx",
+          "operation": "create",
+          "description": "Add a new file picker component dedicated for selecting files (configurable accept + single/multiple) that supports PDFs (application/pdf) in addition to image/video. Keep all labels English. Use this new component for the Technical Folder so existing MediaPicker-based intervention/blacklist flows remain unchanged."
         },
         {
-          "path": "frontend/src/hooks/useInterventions.ts",
+          "path": "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
           "operation": "modify",
-          "description": "Adjust intervention update/delete error handling messaging (if needed) to align with the author-only rule and provide a clear unauthorized message when the backend rejects a non-author action. Verify the component's usage instructions before implementing."
+          "description": "Wire the new FilePicker component into the Technical Folder upload UI with accept set to include application/pdf alongside image/* and video/*."
+        }
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "summary": "Add React Query hooks for Technical Folder list/upload/delete using the existing actor pattern and consistent toast error handling.",
+      "acceptanceCriteria": [
+        "A dedicated hook module exists (e.g., useTechnicalFolder*) that exposes at least: useGetTechnicalFiles, useAddTechnicalFile, useDeleteTechnicalFile.",
+        "Hooks use the existing actor access pattern (useActor) and invalidate relevant queries on success.",
+        "Errors such as Unauthorized are surfaced via existing toast patterns (sonner) with clear English messaging."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useTechnicalFolder.ts",
+          "operation": "create",
+          "description": "Create React Query hooks: useGetTechnicalFiles, useAddTechnicalFile, useDeleteTechnicalFile. Use the existing useActor access pattern and invalidate the Technical Folder query key on successful upload/delete so UI refreshes automatically. Use sonner to surface Unauthorized and generic errors with clear English messages. Use the blob-storage ExternalBlob class when constructing uploads and when rendering using direct URLs. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/pages/TechnicalFolderPage.tsx",
+          "operation": "modify",
+          "description": "Use the new useTechnicalFolder hooks to fetch, upload, and delete technical files; ensure mutations trigger query invalidation/refetch and errors are shown via toast."
         }
       ]
     }

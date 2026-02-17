@@ -9,6 +9,7 @@ import ConnectivityStatusBar from './components/sync/ConnectivityStatusBar';
 import MobileLayout from './components/layout/MobileLayout';
 import ClientsPage from './pages/ClientsPage';
 import ClientDossierPage from './pages/ClientDossierPage';
+import TechnicalFolderPage from './pages/TechnicalFolderPage';
 import LoginPage from './pages/LoginPage';
 import { registerServiceWorker } from './pwa/registerServiceWorker';
 
@@ -52,7 +53,13 @@ const clientDossierRoute = createRoute({
   component: ClientDossierPage,
 });
 
-const routeTree = rootRoute.addChildren([loginRoute, clientsRoute, clientDossierRoute]);
+const technicalFolderRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/technical-folder',
+  component: TechnicalFolderPage,
+});
+
+const routeTree = rootRoute.addChildren([loginRoute, clientsRoute, clientDossierRoute, technicalFolderRoute]);
 
 const router = createRouter({ routeTree });
 

@@ -1,61 +1,65 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-08T23:39:23.019Z",
-  "summary": "Frontend blacklist UI appears updated to be usable without an admin unlock prompt and uses English strings; intervention dialogs/hooks were updated and include author-only error handling. However, due to truncation of backend/main.mo around the relevant functions, the backend authorization changes for blacklist operations and intervention update/delete enforcement cannot be confirmed from the provided diff summary. Additionally, admin-unlock-related frontend code still exists, which conflicts with the request to remove that flow.",
+  "generatedAt": "2026-02-17T23:24:32.429Z",
+  "summary": "Technical Folder frontend route/page, navigation entry, React Query hooks, and basic UI for uploading/listing/deleting blobs were added. Backend state/migration for a new technicalFolder map was introduced, but the backend data model and authorization semantics required by REQ-1 are not evidenced in the diff, and the frontend currently treats file metadata as encoded in fileId rather than coming from a proper backend model.",
   "missing_requirements": [
     {
       "id": "REQ-1",
-      "requirement": "Backend authorization: any authenticated user can mark/unmark a client as blacklisted (no admin restriction); unauthenticated callers rejected as Unauthorized.",
-      "reason": "The diff for backend/main.mo is truncated before showing markAsBlacklisted/unmarkAsBlacklisted implementations or their permission checks, so removal of admin-only restriction and the exact auth behavior cannot be verified from the provided evidence.",
+      "requirement": "Backend data model for technical-folder items must include at least: unique id, filename, mimeType, uploadedAt timestamp, uploader Principal, and a stored blob reference (Storage.ExternalBlob).",
+      "reason": "The diff shows backend state as `technicalFolder : Map.Map<Text, Storage.ExternalBlob>` (blob only) and migration also stores only `ExternalBlob`, with no separate metadata fields (filename, mimeType, uploadedAt, uploader) evidenced.",
       "evidence": [
-        "backend/main.mo (truncated; markAsBlacklisted/unmarkAsBlacklisted not shown)"
+        "backend/main.mo",
+        "backend/migration.mo"
       ]
     },
     {
-      "id": "REQ-2",
-      "requirement": "Remove administrator unlock flow from the frontend for blacklist management; sessionStorage admin unlock state no longer required for blacklist actions.",
-      "reason": "Admin unlock artifacts are still present/modified (AdminUnlockDialog component and useAdminUnlock hook). While BlacklistPanel no longer shows an unlock prompt in the snippet, the requirement explicitly says to remove the admin unlock flow and not rely on sessionStorage for blacklist actions, which is not demonstrated as removed.",
+      "id": "REQ-1",
+      "requirement": "Backend list/upload/delete methods for technical-folder items with authorization: authenticated users can list/upload; delete allowed for uploader or admins; traps with Unauthorized for non-authorized principals.",
+      "reason": "Frontend hooks call `actor.listTechnicalFiles()`, `actor.uploadTechnicalFile(...)`, and `actor.deleteTechnicalFile(...)`, but the diff snippet of backend/main.mo does not show these methods or any authorization logic for them, so implementation cannot be verified from the provided diff summary.",
       "evidence": [
-        "frontend/src/components/admin/AdminUnlockDialog.tsx",
-        "frontend/src/hooks/useAdminUnlock.ts",
-        "frontend/src/components/blacklist/BlacklistPanel.tsx (shows direct blacklist actions, but does not evidence removal of admin unlock flow globally)"
+        "frontend/src/hooks/useTechnicalFolder.ts",
+        "backend/main.mo"
       ]
     },
     {
-      "id": "REQ-4",
-      "requirement": "Backend must enforce that only the intervention author (employee) can update/delete; interventions remain viewable to all authenticated users; frontend UI hides edit/delete for non-authors.",
-      "reason": "Frontend-side author-only handling is suggested (hook error message and file summary referencing InterventionList), but backend/main.mo is truncated and does not show updateIntervention/deleteIntervention permission checks or getClientInterventions access checks. Therefore backend enforcement and viewability to all authenticated users cannot be confirmed from the provided diff summary.",
+      "id": "REQ-3",
+      "requirement": "Users can delete items they are allowed to delete (permission-aware UI).",
+      "reason": "The TechnicalFileRow always renders a delete button without any conditional check for whether the current user is allowed to delete a given item; no per-item permission metadata is shown/used.",
       "evidence": [
-        "backend/main.mo (truncated; updateIntervention/deleteIntervention/getClientInterventions not shown)",
-        "frontend/src/hooks/useInterventions.ts (truncated; shows author-only error handling but not backend enforcement)",
-        "frontend-file-summaries.txt (mentions InterventionList author-only controls, but code not shown)"
+        "frontend/src/components/technical-folder/TechnicalFileRow.tsx"
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "requirement": "Hook module exposes at least: useGetTechnicalFiles, useAddTechnicalFile, useDeleteTechnicalFile.",
+      "reason": "The module exports `useGetTechnicalFiles`, `useUploadTechnicalFile`, and `useDeleteTechnicalFile`; there is no `useAddTechnicalFile` export as stated in the acceptance criteria.",
+      "evidence": [
+        "frontend/src/hooks/useTechnicalFolder.ts"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Added a backend migration module (no-op).",
-      "reason": "BuildRequest did not request adding a migration module/file; backend was constrained to remain a single Motoko actor in backend/main.mo, and the new file is not described as required for access control changes.",
+      "description": "Upload dialog includes editable \"File Name\" input and an upload progress UI (progress bar + percentage).",
+      "reason": "BuildRequest/AC did not request custom renaming UI or upload progress indicators; only an upload flow was required.",
       "evidence": [
-        "backend/migration.mo"
+        "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx"
       ]
     }
   ],
-  "confidence": 0.55,
+  "confidence": 0.72,
   "changed_files": [
     "backend/main.mo",
     "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/admin/AdminUnlockDialog.tsx",
-    "frontend/src/components/blacklist/BlacklistPanel.tsx",
-    "frontend/src/components/interventions/AddInterventionDialog.tsx",
-    "frontend/src/components/interventions/EditInterventionDialog.tsx",
-    "frontend/src/hooks/useAdminUnlock.ts",
-    "frontend/src/hooks/useBlacklist.ts",
-    "frontend/src/hooks/useInterventions.ts",
-    "frontend/src/pages/ClientDossierPage.tsx",
+    "frontend/src/App.tsx",
+    "frontend/src/components/media/FilePicker.tsx",
+    "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+    "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
+    "frontend/src/hooks/useTechnicalFolder.ts",
     "frontend/src/pages/ClientsPage.tsx",
+    "frontend/src/pages/TechnicalFolderPage.tsx",
     "project_state.json"
   ]
 }

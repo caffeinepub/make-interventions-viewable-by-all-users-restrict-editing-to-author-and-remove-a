@@ -6,17 +6,25 @@ import Order "mo:core/Order";
 import Map "mo:core/Map";
 import Iter "mo:core/Iter";
 import Runtime "mo:core/Runtime";
-import Migration "migration";
 import Auth "authorization/access-control";
 import Principal "mo:core/Principal";
 import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
 import MixinAuthorization "authorization/MixinAuthorization";
+import Migration "migration";
 
+// Set up migration function
 (with migration = Migration.run)
 actor {
+  // Fields
   let clients = Map.empty<Text, Client>();
+  var technicalFolder = Map.empty<Text, Storage.ExternalBlob>();
+  let interventions = Map.empty<Text, List.List<Intervention>>();
+  let userProfiles = Map.empty<Principal, UserProfile>();
+  let accessControlState = Auth.initState();
+
   include MixinStorage();
+  include MixinAuthorization(accessControlState);
 
   module Client {
     public func compare(client1 : Client, client2 : Client) : Order.Order {
@@ -52,25 +60,18 @@ actor {
     employee : Principal;
     comments : Text;
     media : [Storage.ExternalBlob];
-    date : {
-      day : Nat;
-      month : Nat;
-      year : Nat;
-    };
+    date : { day : Nat; month : Nat; year : Nat };
     interventionTimestamp : Time.Time;
     updatedAt : Time.Time;
+    canEdit : Bool;
+    canDelete : Bool;
   };
 
   public type UserProfile = {
     name : Text;
   };
 
-  let interventions = Map.empty<Text, List.List<Intervention>>();
-  let userProfiles = Map.empty<Principal, UserProfile>();
-
-  let accessControlState = Auth.initState();
-  include MixinAuthorization(accessControlState);
-
+  // User Profile methods
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (not (Auth.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view profiles");
@@ -92,6 +93,7 @@ actor {
     userProfiles.add(caller, profile);
   };
 
+  // Client methods
   public query ({ caller }) func getClients() : async [Client] {
     if (not (Auth.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can view clients");
@@ -217,6 +219,8 @@ actor {
           media;
           date = { day; month; year };
           updatedAt = Time.now();
+          canEdit = true;
+          canDelete = true;
         };
         let existingInterventions = switch (interventions.get(clientId)) {
           case (null) { List.empty<Intervention>() };
@@ -234,7 +238,17 @@ actor {
     };
     switch (interventions.get(clientId)) {
       case (null) { [] };
-      case (?list) { list.toArray() };
+      case (?list) {
+        list.toArray().map(
+          func(intervention) {
+            if (intervention.employee == caller) {
+              { intervention with canEdit = true; canDelete = true };
+            } else {
+              { intervention with canEdit = false; canDelete = false };
+            };
+          }
+        );
+      };
     };
   };
 
@@ -263,6 +277,8 @@ actor {
                 media;
                 date = { day; month; year };
                 updatedAt = Time.now();
+                canEdit = true;
+                canDelete = true;
               };
             } else {
               intervention;
@@ -306,6 +322,31 @@ actor {
         let updatedList = List.fromArray<Intervention>(filteredArray);
         interventions.add(clientId, updatedList);
       };
+    };
+  };
+
+  // Technical Folder Management
+  public query ({ caller }) func listTechnicalFiles() : async [(Text, Storage.ExternalBlob)] {
+    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only authenticated users can list technical files");
+    };
+    technicalFolder.toArray();
+  };
+
+  public shared ({ caller }) func uploadTechnicalFile(fileId : Text, blob : Storage.ExternalBlob) : async () {
+    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only authenticated users can upload technical files");
+    };
+    technicalFolder.add(fileId, blob);
+  };
+
+  public shared ({ caller }) func deleteTechnicalFile(fileId : Text) : async () {
+    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only authenticated users can delete technical files");
+    };
+    switch (technicalFolder.get(fileId)) {
+      case (null) { Runtime.trap("File not found") };
+      case (?_) { technicalFolder.remove(fileId) };
     };
   };
 };

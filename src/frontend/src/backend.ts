@@ -132,8 +132,10 @@ export interface Intervention {
         month: bigint;
         year: bigint;
     };
+    canEdit: boolean;
     updatedAt: Time;
     employee: Principal;
+    canDelete: boolean;
     comments: string;
     interventionTimestamp: Time;
 }
@@ -154,6 +156,7 @@ export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createOrUpdateClient(id: string, name: string, address: Address, phone: string, email: string): Promise<void>;
     deleteIntervention(interventionId: string, clientId: string): Promise<void>;
+    deleteTechnicalFile(fileId: string): Promise<void>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getClient(clientId: string): Promise<Client>;
@@ -161,11 +164,13 @@ export interface backendInterface {
     getClients(): Promise<Array<Client>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    listTechnicalFiles(): Promise<Array<[string, ExternalBlob]>>;
     markAsBlacklisted(clientId: string, comments: string, media: Array<ExternalBlob>): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     searchClients(searchString: string): Promise<Array<Client>>;
     unmarkAsBlacklisted(clientId: string): Promise<void>;
     updateIntervention(interventionId: string, clientId: string, comments: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint): Promise<void>;
+    uploadTechnicalFile(fileId: string, blob: ExternalBlob): Promise<void>;
 }
 import type { Client as _Client, ContactInfo as _ContactInfo, ExternalBlob as _ExternalBlob, Intervention as _Intervention, Time as _Time, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -324,6 +329,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async deleteTechnicalFile(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteTechnicalFile(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteTechnicalFile(arg0);
+            return result;
+        }
+    }
     async getCallerUserProfile(): Promise<UserProfile | null> {
         if (this.processError) {
             try {
@@ -422,6 +441,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async listTechnicalFiles(): Promise<Array<[string, ExternalBlob]>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.listTechnicalFiles();
+                return from_candid_vec_n23(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.listTechnicalFiles();
+            return from_candid_vec_n23(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async markAsBlacklisted(arg0: string, arg1: string, arg2: Array<ExternalBlob>): Promise<void> {
         if (this.processError) {
             try {
@@ -492,6 +525,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async uploadTechnicalFile(arg0: string, arg1: ExternalBlob): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.uploadTechnicalFile(arg0, await to_candid_ExternalBlob_n9(this._uploadFile, this._downloadFile, arg1));
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.uploadTechnicalFile(arg0, await to_candid_ExternalBlob_n9(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
 }
 async function from_candid_Client_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Client): Promise<Client> {
     return await from_candid_record_n16(_uploadFile, _downloadFile, value);
@@ -547,8 +594,10 @@ async function from_candid_record_n21(_uploadFile: (file: ExternalBlob) => Promi
         month: bigint;
         year: bigint;
     };
+    canEdit: boolean;
     updatedAt: _Time;
     employee: Principal;
+    canDelete: boolean;
     comments: string;
     interventionTimestamp: _Time;
 }): Promise<{
@@ -560,8 +609,10 @@ async function from_candid_record_n21(_uploadFile: (file: ExternalBlob) => Promi
         month: bigint;
         year: bigint;
     };
+    canEdit: boolean;
     updatedAt: Time;
     employee: Principal;
+    canDelete: boolean;
     comments: string;
     interventionTimestamp: Time;
 }> {
@@ -570,8 +621,10 @@ async function from_candid_record_n21(_uploadFile: (file: ExternalBlob) => Promi
         media: await from_candid_vec_n17(_uploadFile, _downloadFile, value.media),
         clientId: value.clientId,
         date: value.date,
+        canEdit: value.canEdit,
         updatedAt: value.updatedAt,
         employee: value.employee,
+        canDelete: value.canDelete,
         comments: value.comments,
         interventionTimestamp: value.interventionTimestamp
     };
@@ -587,6 +640,12 @@ function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint
         success: record_opt_to_undefined(from_candid_opt_n6(_uploadFile, _downloadFile, value.success)),
         topped_up_amount: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.topped_up_amount))
     };
+}
+async function from_candid_tuple_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [string, _ExternalBlob]): Promise<[string, ExternalBlob]> {
+    return [
+        value[0],
+        await from_candid_ExternalBlob_n18(_uploadFile, _downloadFile, value[1])
+    ];
 }
 function from_candid_variant_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     admin: null;
@@ -605,6 +664,9 @@ async function from_candid_vec_n19(_uploadFile: (file: ExternalBlob) => Promise<
 }
 async function from_candid_vec_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Client>): Promise<Array<Client>> {
     return await Promise.all(value.map(async (x)=>await from_candid_Client_n15(_uploadFile, _downloadFile, x)));
+}
+async function from_candid_vec_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<[string, _ExternalBlob]>): Promise<Array<[string, ExternalBlob]>> {
+    return await Promise.all(value.map(async (x)=>await from_candid_tuple_n24(_uploadFile, _downloadFile, x)));
 }
 async function to_candid_ExternalBlob_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExternalBlob): Promise<_ExternalBlob> {
     return await _uploadFile(value);

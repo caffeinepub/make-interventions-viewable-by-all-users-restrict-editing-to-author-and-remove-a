@@ -2,12 +2,12 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-remove-the-administrator-unlock-flow-from-the-frontend-for-blacklist-management-and-make-the-blacklist-panel-fully-usable-by-any-authenticated-user-without-entering-an-admin-code",
-      "featureTitle": "Remove the administrator unlock flow from the frontend for blacklist management, and make the blacklist panel fully usable by any authenticated user without entering an admin code.",
+      "featureId": "feature-add-a-new-authenticated-route-and-page-for-the-technical-folder-in-the-dashboard-area-and-provide-a-clear-navigation-entry-point-from-the-main-dashboard-clients-list",
+      "featureTitle": "Add a new authenticated route and page for the Technical Folder in the dashboard area, and provide a clear navigation entry point from the main dashboard (clients list).",
       "files": [
-        "frontend/src/components/admin/AdminUnlockDialog.tsx",
-        "frontend/src/components/blacklist/BlacklistPanel.tsx",
-        "frontend/src/hooks/useAdminUnlock.ts"
+        "frontend/src/App.tsx",
+        "frontend/src/pages/ClientsPage.tsx",
+        "frontend/src/pages/TechnicalFolderPage.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -25,13 +25,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-update-frontend-user-facing-text-related-to-blacklist-admin-access-to-english-and-remove-admin-specific-wording-e-g-admin-access-required-unlock-admin-code-required",
-      "featureTitle": "Update frontend user-facing text related to blacklist/admin access to English and remove admin-specific wording (e.g., \"Admin access required\", \"Unlock\", \"admin code required\").",
+      "featureId": "feature-implement-the-technical-folder-ui-to-upload-and-display-files-pdf-images-videos-independently-of-client-dossiers",
+      "featureTitle": "Implement the Technical Folder UI to upload and display files (PDF, images, videos) independently of client dossiers.",
       "files": [
-        "frontend/src/components/blacklist/BlacklistPanel.tsx",
-        "frontend/src/hooks/useBlacklist.ts",
-        "frontend/src/pages/ClientDossierPage.tsx",
-        "frontend/src/pages/ClientsPage.tsx"
+        "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+        "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
+        "frontend/src/pages/TechnicalFolderPage.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -49,10 +48,11 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-ensure-interventions-remain-viewable-to-all-authenticated-users-but-only-the-user-who-created-an-intervention-can-edit-or-delete-it-keep-both-backend-enforcement-and-frontend-ui-affordances-aligned-with-this-rule",
-      "featureTitle": "Ensure interventions remain viewable to all authenticated users, but only the user who created an intervention can edit or delete it; keep both backend enforcement and frontend UI affordances aligned with this rule.",
+      "featureId": "feature-extend-the-existing-media-file-picking-components-or-add-a-new-file-picker-component-so-the-app-can-select-pdfs-in-addition-to-the-current-image-video-support-without-breaking-existing-intervention-blacklist-media-flows",
+      "featureTitle": "Extend the existing media/file picking components (or add a new file picker component) so the app can select PDFs in addition to the current image/video support, without breaking existing intervention/blacklist media flows.",
       "files": [
-        "frontend/src/hooks/useInterventions.ts"
+        "frontend/src/components/media/FilePicker.tsx",
+        "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -66,6 +66,28 @@
       ],
       "testIds": [
         "REQ-4"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-react-query-hooks-for-technical-folder-operations-list-upload-delete-that-call-the-new-backend-methods-and-provide-basic-error-handling-consistent-with-existing-hooks",
+      "featureTitle": "Add React Query hooks for Technical Folder operations (list, upload, delete) that call the new backend methods and provide basic error handling consistent with existing hooks.",
+      "files": [
+        "frontend/src/hooks/useTechnicalFolder.ts",
+        "frontend/src/pages/TechnicalFolderPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "camera@1.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-5"
       ],
       "confidence": "high"
     }
