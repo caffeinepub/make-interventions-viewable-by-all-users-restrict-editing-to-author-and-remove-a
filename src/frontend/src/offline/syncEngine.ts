@@ -1,81 +1,81 @@
-import { getAllFromOutbox, removeFromOutbox } from './db';
-import { createActorWithConfig } from '../config';
-import { ExternalBlob } from '../backend';
+import { getOfflineOperations, removeOfflineOperation } from './outbox';
+import type { backendInterface } from '../backend';
 
-export async function getPendingOperationsCount(): Promise<number> {
-  const operations = await getAllFromOutbox();
-  return operations.length;
-}
+export async function syncOfflineOperations(actor: backendInterface): Promise<void> {
+  const operations = await getOfflineOperations();
 
-export async function syncAllOperations() {
-  const operations = await getAllFromOutbox();
-  if (operations.length === 0) return;
-
-  const actor = await createActorWithConfig();
-
-  for (const operation of operations) {
+  for (const op of operations) {
     try {
-      switch (operation.type) {
+      switch (op.type) {
         case 'createOrUpdateClient':
           await actor.createOrUpdateClient(
-            operation.data.id,
-            operation.data.name,
-            operation.data.address,
-            operation.data.phone,
-            operation.data.email
+            op.data.id,
+            op.data.name,
+            op.data.address,
+            op.data.phone,
+            op.data.email
           );
           break;
 
         case 'addIntervention':
           await actor.addIntervention(
-            operation.data.clientId,
-            operation.data.comments,
-            operation.data.media,
-            BigInt(operation.data.date.day),
-            BigInt(operation.data.date.month),
-            BigInt(operation.data.date.year)
+            op.data.clientId,
+            op.data.comments,
+            op.data.media,
+            op.data.day,
+            op.data.month,
+            op.data.year
           );
           break;
 
         case 'updateIntervention':
           await actor.updateIntervention(
-            operation.data.interventionId,
-            operation.data.clientId,
-            operation.data.comments,
-            operation.data.media,
-            BigInt(operation.data.date.day),
-            BigInt(operation.data.date.month),
-            BigInt(operation.data.date.year)
+            op.data.interventionId,
+            op.data.clientId,
+            op.data.comments,
+            op.data.media,
+            op.data.day,
+            op.data.month,
+            op.data.year
           );
           break;
 
         case 'deleteIntervention':
-          await actor.deleteIntervention(operation.data.interventionId, operation.data.clientId);
+          await actor.deleteIntervention(
+            op.data.interventionId,
+            op.data.clientId
+          );
           break;
 
         case 'markAsBlacklisted':
-          await actor.markAsBlacklisted(operation.data.clientId, operation.data.comments, operation.data.media);
+          await actor.markAsBlacklisted(
+            op.data.clientId,
+            op.data.comments,
+            op.data.media
+          );
           break;
 
         case 'unmarkAsBlacklisted':
-          await actor.unmarkAsBlacklisted(operation.data.clientId);
+          await actor.unmarkAsBlacklisted(op.data.clientId);
           break;
+
+        default:
+          console.warn('Type d\'opération inconnu:', op.type);
       }
 
-      if (operation.id) {
-        await removeFromOutbox(operation.id);
+      if (op.id !== undefined) {
+        await removeOfflineOperation(op.id);
       }
     } catch (error: any) {
-      console.error('Sync error for operation:', operation, error);
-      
-      // If the error is an authorization error for intervention operations, remove from queue
+      console.error('Échec de la synchronisation de l\'opération:', error);
+
       if (
-        (operation.type === 'updateIntervention' || operation.type === 'deleteIntervention') &&
-        error.message?.includes('You can only')
+        error.message?.includes('Non autorisé') &&
+        (op.type === 'updateIntervention' || op.type === 'deleteIntervention')
       ) {
-        console.warn('Removing unauthorized operation from queue:', operation.type);
-        if (operation.id) {
-          await removeFromOutbox(operation.id);
+        console.log('Suppression de l\'opération non autorisée de la file d\'attente');
+        if (op.id !== undefined) {
+          await removeOfflineOperation(op.id);
         }
       }
     }

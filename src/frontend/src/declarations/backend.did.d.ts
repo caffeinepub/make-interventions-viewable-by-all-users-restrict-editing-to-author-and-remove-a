@@ -85,12 +85,17 @@ export interface _SERVICE {
     undefined
   >,
   'deleteIntervention' : ActorMethod<[string, string], undefined>,
-  'deleteTechnicalFile' : ActorMethod<[string], undefined>,
+  'deleteTechnicalFileWithPath' : ActorMethod<[string], undefined>,
+  'downloadTechnicalFileWithPath' : ActorMethod<[string], [] | [ExternalBlob]>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getClient' : ActorMethod<[string], Client>,
   'getClientInterventions' : ActorMethod<[string], Array<Intervention>>,
   'getClients' : ActorMethod<[], Array<Client>>,
+  'getInterventionsByDate' : ActorMethod<
+    [bigint, bigint, bigint],
+    Array<Intervention>
+  >,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'listTechnicalFiles' : ActorMethod<[], Array<[string, ExternalBlob]>>,
@@ -98,6 +103,7 @@ export interface _SERVICE {
     [string, string, Array<ExternalBlob>],
     undefined
   >,
+  'moveTechnicalFile' : ActorMethod<[string, string], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'searchClients' : ActorMethod<[string], Array<Client>>,
   'unmarkAsBlacklisted' : ActorMethod<[string], undefined>,
@@ -105,7 +111,10 @@ export interface _SERVICE {
     [string, string, string, Array<ExternalBlob>, bigint, bigint, bigint],
     undefined
   >,
-  'uploadTechnicalFile' : ActorMethod<[string, ExternalBlob], undefined>,
+  'uploadTechnicalFileWithFolderPath' : ActorMethod<
+    [string, ExternalBlob],
+    undefined
+  >,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

@@ -1,137 +1,109 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useGetClients, useSearchClients } from '../hooks/useClients';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useGetClients } from '../hooks/useClients';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Plus, AlertCircle, FolderOpen } from 'lucide-react';
-import AppBadge from '../components/common/AppBadge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Plus, Search, FolderOpen } from 'lucide-react';
 import CreateClientDialog from '../components/clients/CreateClientDialog';
-import AuthenticatedOnly from '../components/guards/AuthenticatedOnly';
+import MobileLayout from '../components/layout/MobileLayout';
+import AppBadge from '../components/common/AppBadge';
 
-function ClientsPageContent() {
-  const navigate = useNavigate();
+export default function ClientsPage() {
+  const { data: clients = [], isLoading } = useGetClients();
   const [searchQuery, setSearchQuery] = useState('');
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const { data: allClients, isLoading: loadingAll } = useGetClients();
-  const { data: searchResults, isLoading: loadingSearch } = useSearchClients(debouncedSearch);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  const clients = debouncedSearch ? searchResults : allClients;
-  const isLoading = debouncedSearch ? loadingSearch : loadingAll;
+  const filteredClients = clients.filter((client) =>
+    client.info.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="flex flex-col gap-4 pb-20">
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4">
-        <Card className="mb-4 bg-primary/5 border-primary/20">
-          <CardHeader className="py-3 px-4">
-            <Button
-              variant="ghost"
-              className="w-full justify-start h-auto p-0 hover:bg-transparent"
-              onClick={() => navigate({ to: '/technical-folder' })}
-            >
-              <div className="flex items-center gap-3 w-full">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <FolderOpen className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 text-left">
-                  <CardTitle className="text-sm font-semibold">Technical Folder</CardTitle>
-                  <p className="text-xs text-muted-foreground">Store PDFs, photos, and videos</p>
-                </div>
+    <MobileLayout>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Clients</h1>
+          <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Ajouter
+          </Button>
+        </div>
+
+        <Card
+          className="cursor-pointer hover:bg-accent/50 transition-colors"
+          onClick={() => navigate({ to: '/technical-folder' })}
+        >
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <FolderOpen className="h-5 w-5 text-primary" />
               </div>
-            </Button>
+              <CardTitle className="text-lg">Dossier Technique</CardTitle>
+            </div>
           </CardHeader>
         </Card>
 
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search for a client..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Button onClick={() => setShowCreateDialog(true)} size="icon">
-            <Plus className="h-4 w-4" />
-          </Button>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher un client..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
-      </div>
 
-      {isLoading ? (
-        <div className="space-y-1">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i}>
-              <CardHeader className="py-1.5 px-3">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      ) : clients && clients.length > 0 ? (
-        <div className="space-y-1">
-          {clients.map((client) => {
-            const clientId = client.info.name.toLowerCase().replace(/\s+/g, '-');
-            return (
+        {isLoading ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Chargement...
+          </div>
+        ) : filteredClients.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            {searchQuery ? 'Aucun client trouvé' : 'Aucun client'}
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {filteredClients.map((client) => (
               <Card
-                key={clientId}
-                className="cursor-pointer transition-colors hover:bg-accent"
-                onClick={() => navigate({ to: '/clients/$clientId', params: { clientId } })}
+                key={client.info.name}
+                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() =>
+                  navigate({
+                    to: '/clients/$clientId',
+                    params: { clientId: client.info.name },
+                  })
+                }
               >
-                <CardHeader className="py-1.5 px-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-sm font-medium truncate">{client.info.name}</CardTitle>
-                      <p className="text-xs text-muted-foreground truncate mt-0">{client.info.address.city}</p>
-                    </div>
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-base leading-tight">
+                      {client.info.name}
+                    </CardTitle>
                     {client.isBlacklisted && (
-                      <AppBadge variant="destructive" className="text-xs py-0 px-1.5 h-5 shrink-0">
-                        <AlertCircle className="h-2.5 w-2.5 mr-0.5" />
-                        Blacklisted
+                      <AppBadge variant="destructive" className="shrink-0 text-xs">
+                        Liste noire
                       </AppBadge>
                     )}
                   </div>
                 </CardHeader>
+                <CardContent className="text-xs text-muted-foreground space-y-0.5">
+                  <p className="truncate">{client.info.address.street}</p>
+                  <p className="truncate">
+                    {client.info.address.city}, {client.info.address.state}{' '}
+                    {client.info.address.zip}
+                  </p>
+                </CardContent>
               </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-muted-foreground">
-              {debouncedSearch ? 'No clients found' : 'No clients registered'}
-            </p>
-            {!debouncedSearch && (
-              <Button onClick={() => setShowCreateDialog(true)} className="mt-4">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Client
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
 
-      <CreateClientDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} />
-    </div>
-  );
-}
-
-export default function ClientsPage() {
-  return (
-    <AuthenticatedOnly>
-      <ClientsPageContent />
-    </AuthenticatedOnly>
+      <CreateClientDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+      />
+    </MobileLayout>
   );
 }

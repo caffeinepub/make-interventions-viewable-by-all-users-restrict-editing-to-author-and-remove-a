@@ -1,23 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
-import { useInternetIdentity } from './useInternetIdentity';
 import type { Intervention } from '../backend';
-import { ExternalBlob } from '../backend';
 import { toast } from 'sonner';
 import { enqueueOfflineOperation } from '../offline/outbox';
 import { useOnlineStatus } from './useOnlineStatus';
+import type { ExternalBlob } from '../backend';
 
 export function useGetClientInterventions(clientId: string) {
-  const { actor, isFetching: actorFetching } = useActor();
+  const { actor, isFetching } = useActor();
 
   return useQuery<Intervention[]>({
     queryKey: ['interventions', clientId],
     queryFn: async () => {
       if (!actor) return [];
-      const interventions = await actor.getClientInterventions(clientId);
-      return interventions.sort((a, b) => Number(b.interventionTimestamp - a.interventionTimestamp));
+      return actor.getClientInterventions(clientId);
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !isFetching && !!clientId,
   });
 }
 
@@ -27,158 +25,138 @@ export function useAddIntervention() {
   const { isOnline } = useOnlineStatus();
 
   return useMutation({
-    mutationFn: async ({
-      clientId,
-      comments,
-      media,
-      date,
-    }: {
+    mutationFn: async (params: {
       clientId: string;
       comments: string;
       media: ExternalBlob[];
-      date: { day: number; month: number; year: number };
+      date: { day: bigint; month: bigint; year: bigint };
     }) => {
       if (!isOnline) {
         await enqueueOfflineOperation({
           type: 'addIntervention',
-          data: { clientId, comments, media, date },
+          data: {
+            clientId: params.clientId,
+            comments: params.comments,
+            media: params.media,
+            day: params.date.day,
+            month: params.date.month,
+            year: params.date.year,
+          },
           timestamp: Date.now(),
         });
         return;
       }
 
-      if (!actor) throw new Error('Actor not available');
+      if (!actor) throw new Error('Acteur non disponible');
       await actor.addIntervention(
-        clientId,
-        comments,
-        media,
-        BigInt(date.day),
-        BigInt(date.month),
-        BigInt(date.year)
+        params.clientId,
+        params.comments,
+        params.media,
+        params.date.day,
+        params.date.month,
+        params.date.year
       );
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['interventions', variables.clientId] });
-      toast.success('Intervention added successfully');
+      toast.success('Intervention ajoutée avec succès');
     },
     onError: (error: any) => {
-      if (error.message?.includes('Unauthorized')) {
-        toast.error('Access denied: You must be logged in');
-      } else {
-        toast.error(error.message || 'Error adding intervention');
-      }
+      toast.error(`Erreur: ${error.message || 'Échec de l\'ajout de l\'intervention'}`);
     },
   });
 }
 
 export function useUpdateIntervention() {
   const { actor } = useActor();
-  const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
   const { isOnline } = useOnlineStatus();
 
   return useMutation({
-    mutationFn: async ({
-      interventionId,
-      clientId,
-      comments,
-      media,
-      date,
-      canEdit,
-    }: {
+    mutationFn: async (params: {
       interventionId: string;
       clientId: string;
       comments: string;
       media: ExternalBlob[];
-      date: { day: number; month: number; year: number };
-      canEdit?: boolean;
+      date: { day: bigint; month: bigint; year: bigint };
+      canEdit: boolean;
     }) => {
-      // Frontend guard: prevent unauthorized updates
-      if (canEdit === false) {
-        throw new Error('You can only update your own interventions');
-      }
-
       if (!isOnline) {
         await enqueueOfflineOperation({
           type: 'updateIntervention',
-          data: { interventionId, clientId, comments, media, date },
+          data: {
+            interventionId: params.interventionId,
+            clientId: params.clientId,
+            comments: params.comments,
+            media: params.media,
+            day: params.date.day,
+            month: params.date.month,
+            year: params.date.year,
+          },
           timestamp: Date.now(),
         });
         return;
       }
 
-      if (!actor) throw new Error('Actor not available');
+      if (!actor) throw new Error('Acteur non disponible');
       await actor.updateIntervention(
-        interventionId,
-        clientId,
-        comments,
-        media,
-        BigInt(date.day),
-        BigInt(date.month),
-        BigInt(date.year)
+        params.interventionId,
+        params.clientId,
+        params.comments,
+        params.media,
+        params.date.day,
+        params.date.month,
+        params.date.year
       );
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['interventions', variables.clientId] });
-      toast.success('Intervention updated successfully');
+      toast.success('Intervention mise à jour avec succès');
     },
     onError: (error: any) => {
-      if (error.message?.includes('You can only update your own interventions')) {
-        toast.error('Access denied: You can only update your own interventions');
-      } else if (error.message?.includes('Unauthorized')) {
-        toast.error('Access denied: You must be logged in');
-      } else {
-        toast.error(error.message || 'Error updating intervention');
-      }
+      toast.error(`Erreur: ${error.message || 'Échec de la mise à jour de l\'intervention'}`);
     },
   });
 }
 
 export function useDeleteIntervention() {
   const { actor } = useActor();
-  const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
   const { isOnline } = useOnlineStatus();
 
   return useMutation({
-    mutationFn: async ({
-      interventionId,
-      clientId,
-      canDelete,
-    }: {
-      interventionId: string;
-      clientId: string;
-      canDelete?: boolean;
-    }) => {
-      // Frontend guard: prevent unauthorized deletes
-      if (canDelete === false) {
-        throw new Error('You can only delete your own interventions');
-      }
-
+    mutationFn: async (params: { interventionId: string; clientId: string }) => {
       if (!isOnline) {
         await enqueueOfflineOperation({
           type: 'deleteIntervention',
-          data: { interventionId, clientId },
+          data: params,
           timestamp: Date.now(),
         });
         return;
       }
 
-      if (!actor) throw new Error('Actor not available');
-      await actor.deleteIntervention(interventionId, clientId);
+      if (!actor) throw new Error('Acteur non disponible');
+      await actor.deleteIntervention(params.interventionId, params.clientId);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['interventions', variables.clientId] });
-      toast.success('Intervention deleted successfully');
+      toast.success('Intervention supprimée avec succès');
     },
     onError: (error: any) => {
-      if (error.message?.includes('You can only delete your own interventions')) {
-        toast.error('Access denied: You can only delete your own interventions');
-      } else if (error.message?.includes('Unauthorized')) {
-        toast.error('Access denied: You must be logged in');
-      } else {
-        toast.error(error.message || 'Error deleting intervention');
-      }
+      toast.error(`Erreur: ${error.message || 'Échec de la suppression de l\'intervention'}`);
     },
+  });
+}
+
+export function useGetInterventionsByDate(day: bigint, month: bigint, year: bigint) {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<Intervention[]>({
+    queryKey: ['interventions', 'date', day.toString(), month.toString(), year.toString()],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getInterventionsByDate(day, month, year);
+    },
+    enabled: !!actor && !isFetching,
   });
 }

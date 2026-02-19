@@ -1,19 +1,19 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
-import { useInternetIdentity } from './useInternetIdentity';
-import type { UserProfile, UserRole } from '../backend';
+import type { UserProfile } from '../backend';
+import type { Principal } from '@icp-sdk/core/principal';
+import { toast } from 'sonner';
 
 export function useGetCallerUserProfile() {
   const { actor, isFetching: actorFetching } = useActor();
-  const { identity } = useInternetIdentity();
 
   const query = useQuery<UserProfile | null>({
-    queryKey: ['currentUserProfile', identity?.getPrincipal().toString()],
+    queryKey: ['currentUserProfile'],
     queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
+      if (!actor) throw new Error('Acteur non disponible');
       return actor.getCallerUserProfile();
     },
-    enabled: !!actor && !actorFetching && !!identity,
+    enabled: !!actor && !actorFetching,
     retry: false,
   });
 
@@ -24,39 +24,34 @@ export function useGetCallerUserProfile() {
   };
 }
 
-export function useSaveCallerUserProfile() {
-  const { actor } = useActor();
+export function useGetUserProfile(user: Principal) {
+  const { actor, isFetching } = useActor();
 
-  return async (profile: UserProfile) => {
-    if (!actor) throw new Error('Actor not available');
-    await actor.saveCallerUserProfile(profile);
-  };
-}
-
-export function useGetCallerUserRole() {
-  const { actor, isFetching: actorFetching } = useActor();
-  const { identity } = useInternetIdentity();
-
-  return useQuery<UserRole>({
-    queryKey: ['currentUserRole', identity?.getPrincipal().toString()],
+  return useQuery<UserProfile | null>({
+    queryKey: ['userProfile', user.toString()],
     queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.getCallerUserRole();
+      if (!actor) throw new Error('Acteur non disponible');
+      return actor.getUserProfile(user);
     },
-    enabled: !!actor && !actorFetching && !!identity,
+    enabled: !!actor && !isFetching && !!user,
   });
 }
 
-export function useIsCallerAdmin() {
-  const { actor, isFetching: actorFetching } = useActor();
-  const { identity } = useInternetIdentity();
+export function useSaveCallerUserProfile() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
 
-  return useQuery<boolean>({
-    queryKey: ['isCallerAdmin', identity?.getPrincipal().toString()],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.isCallerAdmin();
+  return useMutation({
+    mutationFn: async (profile: UserProfile) => {
+      if (!actor) throw new Error('Acteur non disponible');
+      await actor.saveCallerUserProfile(profile);
     },
-    enabled: !!actor && !actorFetching && !!identity,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+      toast.success('Profil enregistré avec succès');
+    },
+    onError: (error: any) => {
+      toast.error(`Erreur: ${error.message || 'Échec de l\'enregistrement du profil'}`);
+    },
   });
 }

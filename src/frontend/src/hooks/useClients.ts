@@ -6,7 +6,7 @@ import { enqueueOfflineOperation } from '../offline/outbox';
 import { useOnlineStatus } from './useOnlineStatus';
 
 export function useGetClients() {
-  const { actor, isFetching: actorFetching } = useActor();
+  const { actor, isFetching } = useActor();
 
   return useQuery<Client[]>({
     queryKey: ['clients'],
@@ -14,38 +14,20 @@ export function useGetClients() {
       if (!actor) return [];
       return actor.getClients();
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !isFetching,
   });
 }
 
 export function useGetClient(clientId: string) {
-  const { actor, isFetching: actorFetching } = useActor();
+  const { actor, isFetching } = useActor();
 
-  return useQuery<Client | null>({
+  return useQuery<Client>({
     queryKey: ['client', clientId],
     queryFn: async () => {
-      if (!actor) return null;
-      try {
-        return await actor.getClient(clientId);
-      } catch (error) {
-        console.error('Error fetching client:', error);
-        return null;
-      }
+      if (!actor) throw new Error('Acteur non disponible');
+      return actor.getClient(clientId);
     },
-    enabled: !!actor && !actorFetching && !!clientId,
-  });
-}
-
-export function useSearchClients(searchString: string) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Client[]>({
-    queryKey: ['searchClients', searchString],
-    queryFn: async () => {
-      if (!actor || !searchString) return [];
-      return actor.searchClients(searchString);
-    },
-    enabled: !!actor && !actorFetching && !!searchString,
+    enabled: !!actor && !isFetching && !!clientId,
   });
 }
 
@@ -55,13 +37,7 @@ export function useCreateOrUpdateClient() {
   const { isOnline } = useOnlineStatus();
 
   return useMutation({
-    mutationFn: async ({
-      id,
-      name,
-      address,
-      phone,
-      email,
-    }: {
+    mutationFn: async (params: {
       id: string;
       name: string;
       address: Address;
@@ -71,22 +47,27 @@ export function useCreateOrUpdateClient() {
       if (!isOnline) {
         await enqueueOfflineOperation({
           type: 'createOrUpdateClient',
-          data: { id, name, address, phone, email },
+          data: params,
           timestamp: Date.now(),
         });
         return;
       }
 
-      if (!actor) throw new Error('Actor not available');
-      await actor.createOrUpdateClient(id, name, address, phone, email);
+      if (!actor) throw new Error('Acteur non disponible');
+      await actor.createOrUpdateClient(
+        params.id,
+        params.name,
+        params.address,
+        params.phone,
+        params.email
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      queryClient.invalidateQueries({ queryKey: ['client'] });
-      toast.success('Client enregistré');
+      toast.success('Client enregistré avec succès');
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Erreur lors de l\'enregistrement');
+      toast.error(`Erreur: ${error.message || 'Échec de l\'enregistrement du client'}`);
     },
   });
 }

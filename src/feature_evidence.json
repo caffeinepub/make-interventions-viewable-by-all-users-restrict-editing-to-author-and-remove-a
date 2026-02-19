@@ -2,12 +2,31 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-a-new-authenticated-route-and-page-for-the-technical-folder-in-the-dashboard-area-and-provide-a-clear-navigation-entry-point-from-the-main-dashboard-clients-list",
-      "featureTitle": "Add a new authenticated route and page for the Technical Folder in the dashboard area, and provide a clear navigation entry point from the main dashboard (clients list).",
+      "featureId": "feature-add-a-move-action-to-each-file-in-the-technicalfilerow-component-that-opens-a-folder-selection-dialog",
+      "featureTitle": "Add a 'Move' action to each file in the TechnicalFileRow component that opens a folder selection dialog",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/pages/ClientsPage.tsx",
-        "frontend/src/pages/TechnicalFolderPage.tsx"
+        "frontend/src/components/technical-folder/TechnicalFileRow.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "camera@1.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-create-a-folder-selection-dialog-component-that-displays-the-technical-folder-hierarchy-and-allows-selecting-a-destination-folder",
+      "featureTitle": "Create a folder selection dialog component that displays the technical folder hierarchy and allows selecting a destination folder",
+      "files": [
+        "frontend/src/components/technical-folder/MoveFolderDialog.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -25,34 +44,10 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-implement-the-technical-folder-ui-to-upload-and-display-files-pdf-images-videos-independently-of-client-dossiers",
-      "featureTitle": "Implement the Technical Folder UI to upload and display files (PDF, images, videos) independently of client dossiers.",
+      "featureId": "feature-create-usemovefile-react-query-mutation-hook-that-calls-the-backend-move-function-and-invalidates-technical-folder-queries-on-success",
+      "featureTitle": "Create useMoveFile React Query mutation hook that calls the backend move function and invalidates technical folder queries on success",
       "files": [
-        "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
-        "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
-        "frontend/src/pages/TechnicalFolderPage.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "blob-storage@4.0.0",
-        "camera@1.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-3"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-extend-the-existing-media-file-picking-components-or-add-a-new-file-picker-component-so-the-app-can-select-pdfs-in-addition-to-the-current-image-video-support-without-breaking-existing-intervention-blacklist-media-flows",
-      "featureTitle": "Extend the existing media/file picking components (or add a new file picker component) so the app can select PDFs in addition to the current image/video support, without breaking existing intervention/blacklist media flows.",
-      "files": [
-        "frontend/src/components/media/FilePicker.tsx",
-        "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx"
+        "frontend/src/hooks/useTechnicalFolder.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -66,28 +61,6 @@
       ],
       "testIds": [
         "REQ-4"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-add-react-query-hooks-for-technical-folder-operations-list-upload-delete-that-call-the-new-backend-methods-and-provide-basic-error-handling-consistent-with-existing-hooks",
-      "featureTitle": "Add React Query hooks for Technical Folder operations (list, upload, delete) that call the new backend methods and provide basic error handling consistent with existing hooks.",
-      "files": [
-        "frontend/src/hooks/useTechnicalFolder.ts",
-        "frontend/src/pages/TechnicalFolderPage.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "blob-storage@4.0.0",
-        "camera@1.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-5"
       ],
       "confidence": "high"
     }

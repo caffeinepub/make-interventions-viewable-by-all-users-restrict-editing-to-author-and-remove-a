@@ -63,19 +63,22 @@ export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createOrUpdateClient(id: string, name: string, address: Address, phone: string, email: string): Promise<void>;
     deleteIntervention(interventionId: string, clientId: string): Promise<void>;
-    deleteTechnicalFile(fileId: string): Promise<void>;
+    deleteTechnicalFileWithPath(path: string): Promise<void>;
+    downloadTechnicalFileWithPath(path: string): Promise<ExternalBlob | null>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getClient(clientId: string): Promise<Client>;
     getClientInterventions(clientId: string): Promise<Array<Intervention>>;
     getClients(): Promise<Array<Client>>;
+    getInterventionsByDate(day: bigint, month: bigint, year: bigint): Promise<Array<Intervention>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     listTechnicalFiles(): Promise<Array<[string, ExternalBlob]>>;
     markAsBlacklisted(clientId: string, comments: string, media: Array<ExternalBlob>): Promise<void>;
+    moveTechnicalFile(oldPath: string, newPath: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     searchClients(searchString: string): Promise<Array<Client>>;
     unmarkAsBlacklisted(clientId: string): Promise<void>;
     updateIntervention(interventionId: string, clientId: string, comments: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint): Promise<void>;
-    uploadTechnicalFile(fileId: string, blob: ExternalBlob): Promise<void>;
+    uploadTechnicalFileWithFolderPath(path: string, blob: ExternalBlob): Promise<void>;
 }

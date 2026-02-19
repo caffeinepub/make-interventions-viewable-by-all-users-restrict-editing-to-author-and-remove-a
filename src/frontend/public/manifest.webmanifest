@@ -1,7 +1,7 @@
 {
-  "name": "Dossiers Clients",
-  "short_name": "Clients",
-  "description": "Gestion des dossiers clients et interventions",
+  "name": "Gestion des Interventions",
+  "short_name": "Interventions",
+  "description": "Application de gestion des interventions clients",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

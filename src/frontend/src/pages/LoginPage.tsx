@@ -6,27 +6,55 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, identity, isLoggingIn } = useInternetIdentity();
+  console.log('LoginPage: Rendering');
+  const { login, loginStatus, identity, isInitializing } = useInternetIdentity();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (identity) {
+      console.log('LoginPage: User authenticated, redirecting to /clients');
       navigate({ to: '/clients' });
     }
   }, [identity, navigate]);
 
+  const handleLogin = async () => {
+    try {
+      console.log('LoginPage: Starting login');
+      await login();
+    } catch (error: any) {
+      console.error('Erreur de connexion:', error);
+    }
+  };
+
+  const isLoggingIn = loginStatus === 'logging-in';
+
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <img src="/assets/generated/pwa-icon.dim_512x512.png" alt="App Icon" className="h-12 w-12" />
-          </div>
-          <CardTitle className="text-2xl">Dossiers Clients</CardTitle>
-          <CardDescription>Connectez-vous pour accéder aux dossiers clients et interventions</CardDescription>
+          <CardTitle className="text-3xl font-bold">Bienvenue</CardTitle>
+          <CardDescription>
+            Connectez-vous pour accéder à votre espace
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button onClick={login} disabled={isLoggingIn} className="w-full" size="lg">
+        <CardContent className="flex flex-col gap-4">
+          <Button
+            onClick={handleLogin}
+            disabled={isLoggingIn}
+            size="lg"
+            className="w-full"
+          >
             {isLoggingIn ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -1,53 +1,52 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useActor } from './useActor';
 import { useOnlineStatus } from './useOnlineStatus';
-import { getPendingOperationsCount, syncAllOperations } from '../offline/syncEngine';
-import { toast } from 'sonner';
+import { syncOfflineOperations } from '../offline/syncEngine';
+import { getOfflineOperations } from '../offline/outbox';
 
 export function useSync() {
+  const { actor } = useActor();
+  const { isOnline } = useOnlineStatus();
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
-  const { isOnline } = useOnlineStatus();
-  const queryClient = useQueryClient();
 
-  const updatePendingCount = useCallback(async () => {
-    const count = await getPendingOperationsCount();
-    setPendingCount(count);
+  useEffect(() => {
+    const updatePendingCount = async () => {
+      const operations = await getOfflineOperations();
+      setPendingCount(operations.length);
+    };
+
+    updatePendingCount();
+    const interval = setInterval(updatePendingCount, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    updatePendingCount();
-    const interval = setInterval(updatePendingCount, 5000);
-    return () => clearInterval(interval);
-  }, [updatePendingCount]);
+    if (isOnline && actor && pendingCount > 0 && !isSyncing) {
+      syncNow();
+    }
+  }, [isOnline, actor, pendingCount]);
 
-  const syncNow = useCallback(async () => {
-    if (!isOnline || isSyncing) return;
+  const syncNow = async () => {
+    if (!actor || isSyncing) return;
 
     setIsSyncing(true);
     try {
-      await syncAllOperations();
-      await updatePendingCount();
-      queryClient.invalidateQueries();
-      toast.success('Synchronisation terminée');
+      await syncOfflineOperations(actor);
+      const operations = await getOfflineOperations();
+      setPendingCount(operations.length);
     } catch (error) {
-      console.error('Sync error:', error);
-      toast.error('Erreur de synchronisation');
+      console.error('Erreur de synchronisation:', error);
     } finally {
       setIsSyncing(false);
     }
-  }, [isOnline, isSyncing, queryClient, updatePendingCount]);
-
-  useEffect(() => {
-    if (isOnline && pendingCount > 0 && !isSyncing) {
-      syncNow();
-    }
-  }, [isOnline, pendingCount, isSyncing, syncNow]);
+  };
 
   return {
     isSyncing,
     pendingCount,
     syncNow,
-    canSync: isOnline && pendingCount > 0 && !isSyncing,
+    canSync: isOnline && pendingCount > 0,
   };
 }

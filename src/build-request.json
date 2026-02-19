@@ -1,127 +1,119 @@
 {
   "kind": "build_request",
-  "title": "Add a global Technical Folder for PDFs, photos, and videos (independent from client dossiers)",
-  "projectName": "Technical Folder",
+  "title": "Enable moving uploaded files between technical folders",
+  "projectName": "Client Dossier",
   "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Add backend support for a global (non-client-specific) “Technical Folder” that stores uploaded files (PDF, image, and video) and allows authenticated users to list, upload, and delete files.",
-      "target": "backend",
+      "text": "Add a 'Move' action to each file in the TechnicalFileRow component that opens a folder selection dialog",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-1"
+          "msg-5"
         ],
         "quotes": [
-          "Je voudrais que tu rajoute dans le tableaux de bord un dossier technique pour pouvoir stocker des fichiers pdf et photo et video in dependament des dossiers clients"
+          "Je veux pouvoir deplacer les fichiers telechargé du dossier technique vers les differents dossiers crée"
         ]
       },
       "acceptanceCriteria": [
-        "A new backend data model exists for technical-folder items, including at least: unique id, filename, mimeType, uploadedAt timestamp, uploader Principal, and a stored blob reference (Storage.ExternalBlob).",
-        "Authenticated users (#user permission) can call a query method to list all technical-folder items (metadata + ExternalBlob reference).",
-        "Authenticated users can upload a new technical-folder item (PDF/image/video) via a shared method.",
-        "Delete is supported via a shared method, and is authorized such that the uploader can delete their own items and admins can delete any item.",
-        "Backend methods trap with an Unauthorized error when called by non-authorized principals (consistent with existing patterns in backend/main.mo).",
-        "If adding new stable state requires a migration per the project’s conditional migration policy, include a backend/migration.mo update that preserves existing data."
+        "TechnicalFileRow displays a 'Move' button or menu item alongside existing download and delete actions",
+        "Clicking 'Move' opens a dialog showing available destination folders",
+        "Dialog excludes the current folder from destination options"
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Add a new authenticated route and page for the Technical Folder in the dashboard area, and provide a clear navigation entry point from the main dashboard (clients list).",
+      "text": "Create a folder selection dialog component that displays the technical folder hierarchy and allows selecting a destination folder",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-1"
+          "msg-5"
         ],
         "quotes": [
-          "Je voudrais que tu rajoute dans le tableaux de bord un dossier technique ..."
+          "Je veux pouvoir deplacer les fichiers telechargé du dossier technique vers les differents dossiers crée"
         ]
       },
       "acceptanceCriteria": [
-        "A new route is registered in frontend/src/App.tsx for the Technical Folder page (e.g., /technical-folder).",
-        "The Technical Folder page is guarded by the existing AuthenticatedOnly component.",
-        "The main dashboard page (frontend/src/pages/ClientsPage.tsx) includes a visible, user-friendly control (button/card) that navigates to the Technical Folder page.",
-        "All user-facing text introduced for this feature is in English."
+        "Dialog shows all existing folders in the technical folder structure",
+        "User can navigate through nested folders",
+        "User can select a destination folder and confirm the move operation",
+        "Dialog includes a cancel option"
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Implement the Technical Folder UI to upload and display files (PDF, images, videos) independently of client dossiers.",
-      "target": "frontend",
+      "text": "Implement backend Motoko function to move a technical file from one folder path to another, preserving the file content and metadata",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-user-1"
+          "msg-5"
         ],
         "quotes": [
-          "... stocker des fichiers pdf et photo et video ..."
+          "Je veux pouvoir deplacer les fichiers telechargé du dossier technique vers les differents dossiers crée"
         ]
       },
       "acceptanceCriteria": [
-        "The Technical Folder page provides an upload flow that accepts PDF, image, and video files.",
-        "After upload, newly added items appear in the list without a full page refresh (React Query cache invalidation/refetch).",
-        "The list renders each item with filename and uploaded date/time; images render as thumbnails, videos render with a playable preview, and PDFs render as a downloadable/openable link using the blob direct URL.",
-        "Users can delete items they are allowed to delete, and the UI updates accordingly after deletion.",
-        "Empty state and loading state are implemented (consistent with the existing Cards/Skeleton usage)."
+        "Function accepts source file path, destination folder path, and client ID as parameters",
+        "File is removed from source location and added to destination location",
+        "File content (ExternalBlob) and metadata are preserved during the move",
+        "Function returns success/error status",
+        "Proper authorization checks ensure only users with appropriate permissions can move files"
       ]
     },
     {
       "id": "REQ-4",
-      "text": "Extend the existing media/file picking components (or add a new file picker component) so the app can select PDFs in addition to the current image/video support, without breaking existing intervention/blacklist media flows.",
+      "text": "Create useMoveFile React Query mutation hook that calls the backend move function and invalidates technical folder queries on success",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-1"
+          "msg-5"
         ],
         "quotes": [
-          "... fichiers pdf ..."
+          "Je veux pouvoir deplacer les fichiers telechargé du dossier technique vers les differents dossiers crée"
         ]
       },
       "acceptanceCriteria": [
-        "The Technical Folder upload flow can select PDFs via the browser file picker (accept includes application/pdf).",
-        "Existing intervention and blacklist media selection continues to work as before (image/video selection is unchanged).",
-        "Any new/updated UI labels in the picker components are in English (do not introduce new French labels)."
+        "Hook accepts source path, destination path, and client ID",
+        "On success, invalidates technical folder queries to refresh the file list",
+        "Shows success toast notification when file is moved",
+        "Shows error toast notification if move operation fails",
+        "Follows the same pattern as existing useTechnicalFolder hooks"
       ]
     },
     {
       "id": "REQ-5",
-      "text": "Add React Query hooks for Technical Folder operations (list, upload, delete) that call the new backend methods and provide basic error handling consistent with existing hooks.",
+      "text": "Update TechnicalFolderPage to refresh the file list after a successful move operation",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-1"
+          "msg-5"
+        ],
+        "quotes": [
+          "Je veux pouvoir deplacer les fichiers telechargé du dossier technique vers les differents dossiers crée"
         ]
       },
       "acceptanceCriteria": [
-        "A dedicated hook module exists (e.g., useTechnicalFolder*) that exposes at least: useGetTechnicalFiles, useAddTechnicalFile, useDeleteTechnicalFile.",
-        "Hooks use the existing actor access pattern (useActor) and invalidate relevant queries on success.",
-        "Errors such as Unauthorized are surfaced via existing toast patterns (sonner) with clear English messaging."
+        "File list automatically updates when a file is moved",
+        "Moved file no longer appears in the source folder",
+        "User remains on the current folder view after move operation",
+        "Loading state is shown during the move operation"
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor in backend/main.mo; do not introduce additional backend services/canisters.",
-    "Only Internet Identity is used for authentication; do not add third-party auth providers.",
-    "Do not edit files under frontend/src/components/ui or any frontend immutablePaths listed in SYSTEM_CONTEXT; compose existing UI components instead.",
-    "Do not introduce external databases or third-party storage; use the existing blob-storage mixin and Storage.ExternalBlob pattern already used for intervention/blacklist media."
+    "Maintain single-actor architecture in backend/main.mo",
+    "Follow existing patterns in useTechnicalFolder.ts for new mutation hooks",
+    "Do not modify read-only UI component sources in frontend/src/components/ui"
   ],
   "nonGoals": [
-    "Do not associate Technical Folder files with client dossiers; this feature is explicitly global/independent.",
-    "No sharing/permission management UI beyond the existing authenticated/admin model (no per-user folders or granular ACL UI).",
-    "No real-time collaboration or live updates (no websockets).",
-    "No automatic file classification, tagging, OCR, or search unless explicitly requested later."
+    "Moving multiple files at once",
+    "Renaming files during the move operation",
+    "Moving entire folders",
+    "Undo/redo functionality for move operations"
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
-  },
-  "userProfileUpdate": {
-    "goalsToAdd": [],
-    "goalsToRemove": [],
-    "preferencesToAdd": [],
-    "preferencesToRemove": [],
-    "miscToAdd": [],
-    "miscToRemove": [],
-    "fieldsToSet": {},
-    "fieldsToDelete": []
   }
 }

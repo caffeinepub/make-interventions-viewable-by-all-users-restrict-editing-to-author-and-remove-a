@@ -1,13 +1,13 @@
 # Specification
 
 ## Summary
-**Goal:** Add a global, non-client-specific Technical Folder in the dashboard where authenticated users can upload, view, and manage PDF, image, and video files.
+**Goal:** Enable users to move uploaded files between different technical folders within a client dossier.
 
 **Planned changes:**
-- Add a backend Technical Folder data model and methods for authenticated users to list and upload files, and to delete files with uploader/admin authorization.
-- Persist Technical Folder items using the existing Storage.ExternalBlob pattern and add stable-state migration if required.
-- Add a new authenticated dashboard route/page for the Technical Folder and a clear navigation entry point from the main dashboard (clients list).
-- Build the Technical Folder UI: upload flow, list rendering (thumbnails/previews/links), and delete actions with loading/empty states and React Query refresh.
-- Extend or add a file picker to support selecting PDFs (application/pdf) without breaking existing image/video flows, and add React Query hooks for list/upload/delete with basic error handling (English UI text).
+- Add a 'Move' action to each file in the file list that opens a folder selection dialog
+- Create a folder selection dialog component showing the technical folder hierarchy
+- Implement backend function to move files between folders while preserving content and metadata
+- Create React Query mutation hook for the move operation with proper query invalidation
+- Update the technical folder page to refresh the file list after successful moves
 
-**User-visible outcome:** Authenticated users can open a “Technical Folder” from the dashboard to upload PDFs/photos/videos, see them listed with previews/links and timestamps, and delete allowed items; the list updates without a full page refresh.
+**User-visible outcome:** Users can move files from one technical folder to another by clicking a 'Move' button, selecting a destination folder from a dialog, and having the file list automatically update to reflect the change.

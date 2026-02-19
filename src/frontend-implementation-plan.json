@@ -1,102 +1,73 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Technical Folder (global file storage) — frontend dashboard UI",
+  "title": "Enable moving uploaded files between technical folders",
   "requirements": [
     {
-      "id": "REQ-2",
-      "summary": "Add an authenticated dashboard route and navigation entry for the Technical Folder page.",
+      "id": "REQ-1",
+      "summary": "Add a 'Move' action to each file in the TechnicalFileRow component that opens a folder selection dialog",
       "acceptanceCriteria": [
-        "A new route is registered in frontend/src/App.tsx for the Technical Folder page (e.g., /technical-folder).",
-        "The Technical Folder page is guarded by the existing AuthenticatedOnly component.",
-        "The main dashboard page (frontend/src/pages/ClientsPage.tsx) includes a visible, user-friendly control (button/card) that navigates to the Technical Folder page.",
-        "All user-facing text introduced for this feature is in English."
+        "TechnicalFileRow displays a 'Move' button or menu item alongside existing download and delete actions",
+        "Clicking 'Move' opens a dialog showing available destination folders",
+        "Dialog excludes the current folder from destination options"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/TechnicalFolderPage.tsx",
-          "operation": "create",
-          "description": "Create the Technical Folder dashboard page component (route target) and wrap its content with AuthenticatedOnly to ensure only authenticated users can access it. Ensure all new UI text is English."
-        },
-        {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
           "operation": "modify",
-          "description": "Register the new /technical-folder route in the TanStack Router tree and wire it to TechnicalFolderPage so it is navigable."
-        },
-        {
-          "path": "frontend/src/pages/ClientsPage.tsx",
-          "operation": "modify",
-          "description": "Add a prominent navigation control (e.g., card/button near the top) labeled in English (e.g., \"Technical Folder\") that routes users to /technical-folder."
+          "description": "Add a 'Move' button to the file actions row alongside the existing download and delete buttons. When clicked, this button opens the folder selection dialog component (MoveFolderDialog). Pass the current file path and a callback to handle the move operation. Use the authorization component to verify the user has permission to move files before showing the button."
         }
       ]
     },
     {
-      "id": "REQ-3",
-      "summary": "Implement Technical Folder UI to upload, preview, list, and delete PDF/image/video files with proper loading/empty states.",
+      "id": "REQ-2",
+      "summary": "Create a folder selection dialog component that displays the technical folder hierarchy and allows selecting a destination folder",
       "acceptanceCriteria": [
-        "The Technical Folder page provides an upload flow that accepts PDF, image, and video files.",
-        "After upload, newly added items appear in the list without a full page refresh (React Query cache invalidation/refetch).",
-        "The list renders each item with filename and uploaded date/time; images render as thumbnails, videos render with a playable preview, and PDFs render as a downloadable/openable link using the blob direct URL.",
-        "Users can delete items they are allowed to delete, and the UI updates accordingly after deletion.",
-        "Empty state and loading state are implemented (consistent with the existing Cards/Skeleton usage)."
+        "Dialog shows all existing folders in the technical folder structure",
+        "User can navigate through nested folders",
+        "User can select a destination folder and confirm the move operation",
+        "Dialog includes a cancel option"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/TechnicalFolderPage.tsx",
-          "operation": "modify",
-          "description": "Implement the Technical Folder page UI: upload control (PDF/image/video), list rendering with previews (image thumbnail, video player preview, PDF open/download link via ExternalBlob direct URL), delete action per item, and loading/empty states using existing Card/Skeleton components. Use React Query invalidation/refetch so the list updates after upload/delete without a full refresh. Use the blob-storage ExternalBlob direct URL capability for previews and links. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+          "path": "frontend/src/components/technical-folder/MoveFolderDialog.tsx",
           "operation": "create",
-          "description": "Create a presentational row/card component to render a single technical-folder item (filename, uploaded date/time, preview based on mimeType, and delete action). Use blob-storage ExternalBlob.getDirectURL() for preview/link rendering. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
-          "operation": "create",
-          "description": "Create an upload card component used by TechnicalFolderPage to select a file (PDF/image/video), show basic upload progress/state, and trigger the upload mutation; keep all labels in English."
+          "description": "Create a new dialog component that displays the technical folder hierarchy in a navigable tree structure. Use the listTechnicalFiles backend method (via useTechnicalFolder hook) to retrieve all file paths and derive the folder structure from them. Allow users to select a destination folder, excluding the current folder of the file being moved. Include confirm and cancel buttons. Accept props for the current file path, onConfirm callback (receiving the selected destination path), and onCancel callback. Use shadcn/ui Dialog, ScrollArea, and Button components for consistent styling."
         }
       ]
     },
     {
       "id": "REQ-4",
-      "summary": "Add a reusable file picker that supports PDFs in addition to image/video without impacting existing media flows.",
+      "summary": "Create useMoveFile React Query mutation hook that calls the backend move function and invalidates technical folder queries on success",
       "acceptanceCriteria": [
-        "The Technical Folder upload flow can select PDFs via the browser file picker (accept includes application/pdf).",
-        "Existing intervention and blacklist media selection continues to work as before (image/video selection is unchanged).",
-        "Any new/updated UI labels in the picker components are in English (do not introduce new French labels)."
+        "Hook accepts source path, destination path, and client ID",
+        "On success, invalidates technical folder queries to refresh the file list",
+        "Shows success toast notification when file is moved",
+        "Shows error toast notification if move operation fails",
+        "Follows the same pattern as existing useTechnicalFolder hooks"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/media/FilePicker.tsx",
-          "operation": "create",
-          "description": "Add a new file picker component dedicated for selecting files (configurable accept + single/multiple) that supports PDFs (application/pdf) in addition to image/video. Keep all labels English. Use this new component for the Technical Folder so existing MediaPicker-based intervention/blacklist flows remain unchanged."
-        },
-        {
-          "path": "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
+          "path": "frontend/src/hooks/useTechnicalFolder.ts",
           "operation": "modify",
-          "description": "Wire the new FilePicker component into the Technical Folder upload UI with accept set to include application/pdf alongside image/* and video/*."
+          "description": "Add a new useMoveFile mutation hook that calls the backend moveTechnicalFile method with oldPath and newPath parameters. On success, invalidate the 'technicalFiles' query key to refresh the file list and show a success toast notification. On error, show an error toast notification. Follow the same pattern as the existing useDeleteTechnicalFile hook. Use the authorization component's access control to ensure users have appropriate permissions before allowing the move operation."
         }
       ]
     },
     {
       "id": "REQ-5",
-      "summary": "Add React Query hooks for Technical Folder list/upload/delete using the existing actor pattern and consistent toast error handling.",
+      "summary": "Update TechnicalFolderPage to refresh the file list after a successful move operation",
       "acceptanceCriteria": [
-        "A dedicated hook module exists (e.g., useTechnicalFolder*) that exposes at least: useGetTechnicalFiles, useAddTechnicalFile, useDeleteTechnicalFile.",
-        "Hooks use the existing actor access pattern (useActor) and invalidate relevant queries on success.",
-        "Errors such as Unauthorized are surfaced via existing toast patterns (sonner) with clear English messaging."
+        "File list automatically updates when a file is moved",
+        "Moved file no longer appears in the source folder",
+        "User remains on the current folder view after move operation",
+        "Loading state is shown during the move operation"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useTechnicalFolder.ts",
-          "operation": "create",
-          "description": "Create React Query hooks: useGetTechnicalFiles, useAddTechnicalFile, useDeleteTechnicalFile. Use the existing useActor access pattern and invalidate the Technical Folder query key on successful upload/delete so UI refreshes automatically. Use sonner to surface Unauthorized and generic errors with clear English messages. Use the blob-storage ExternalBlob class when constructing uploads and when rendering using direct URLs. Verify the component's usage instructions before implementing."
-        },
-        {
           "path": "frontend/src/pages/TechnicalFolderPage.tsx",
           "operation": "modify",
-          "description": "Use the new useTechnicalFolder hooks to fetch, upload, and delete technical files; ensure mutations trigger query invalidation/refetch and errors are shown via toast."
+          "description": "Integrate the MoveFolderDialog component into the page. When the move operation completes successfully (via the useMoveFile hook), the file list will automatically refresh due to query invalidation. Ensure the user remains on the current folder path after the move operation. Display a loading state while the move operation is in progress. Use the authorization component to verify the user has permission to move files before showing the move functionality."
         }
       ]
     }

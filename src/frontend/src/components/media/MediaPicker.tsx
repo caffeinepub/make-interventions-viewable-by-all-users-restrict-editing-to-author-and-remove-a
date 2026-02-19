@@ -1,94 +1,126 @@
-import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Camera, Image, Video } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Camera, Image } from 'lucide-react';
+import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useCamera } from '../../camera/useCamera';
 
 interface MediaPickerProps {
-  onMediaSelected: (files: File[]) => void;
+  onCapture: (files: File[]) => void;
 }
 
-export default function MediaPicker({ onMediaSelected }: MediaPickerProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showCamera, setShowCamera] = useState(false);
-  const { isActive, isSupported, error, startCamera, stopCamera, capturePhoto, videoRef, canvasRef } = useCamera({
-    facingMode: 'environment',
-  });
+export default function MediaPicker({ onCapture }: MediaPickerProps) {
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const {
+    isActive,
+    isSupported,
+    error,
+    isLoading,
+    startCamera,
+    stopCamera,
+    capturePhoto,
+    videoRef,
+    canvasRef,
+  } = useCamera({ facingMode: 'environment' });
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
-      onMediaSelected(files);
-    }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleOpenCamera = async () => {
-    setShowCamera(true);
+  const handleCameraOpen = async () => {
+    setIsCameraOpen(true);
     await startCamera();
   };
 
-  const handleCloseCamera = async () => {
+  const handleCameraClose = async () => {
     await stopCamera();
-    setShowCamera(false);
+    setIsCameraOpen(false);
   };
 
   const handleCapture = async () => {
-    const photo = await capturePhoto();
-    if (photo) {
-      onMediaSelected([photo]);
-      handleCloseCamera();
+    const file = await capturePhoto();
+    if (file) {
+      onCapture([file]);
+      handleCameraClose();
     }
+  };
+
+  const handleGallerySelect = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,video/*';
+    input.multiple = true;
+    input.onchange = (e) => {
+      const files = Array.from((e.target as HTMLInputElement).files || []);
+      if (files.length > 0) {
+        onCapture(files);
+      }
+    };
+    input.click();
   };
 
   return (
     <>
       <div className="flex gap-2">
-        {isSupported && (
-          <Button type="button" variant="outline" onClick={handleOpenCamera} className="flex-1">
-            <Camera className="mr-2 h-4 w-4" />
-            Photo
-          </Button>
-        )}
         <Button
           type="button"
           variant="outline"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={handleCameraOpen}
           className="flex-1"
         >
-          <Image className="mr-2 h-4 w-4" />
+          <Camera className="h-4 w-4 mr-2" />
+          Appareil photo
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleGallerySelect}
+          className="flex-1"
+        >
+          <Image className="h-4 w-4 mr-2" />
           Galerie
         </Button>
       </div>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,video/*"
-        multiple
-        onChange={handleFileSelect}
-        className="hidden"
-      />
 
-      <Dialog open={showCamera} onOpenChange={handleCloseCamera}>
+      <Dialog open={isCameraOpen} onOpenChange={handleCameraClose}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Prendre une photo</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
-              <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
-              <canvas ref={canvasRef} className="hidden" />
+            {isSupported === false && (
+              <div className="text-center text-destructive">
+                Appareil photo non pris en charge
+              </div>
+            )}
+            {error && (
+              <div className="text-center text-destructive">
+                Erreur: {error.message}
+              </div>
+            )}
+            <div className="relative w-full" style={{ aspectRatio: '4/3' }}>
+              <video
+                ref={videoRef}
+                className="w-full h-full object-cover rounded-lg"
+                playsInline
+                muted
+              />
+              <canvas ref={canvasRef} style={{ display: 'none' }} />
             </div>
-            {error && <p className="text-sm text-destructive">{error.message}</p>}
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleCloseCamera} className="flex-1">
-                Annuler
+            <div className="flex gap-2 justify-center">
+              <Button
+                onClick={handleCapture}
+                disabled={!isActive || isLoading}
+                size="lg"
+              >
+                {isLoading ? 'Chargement...' : 'Capturer'}
               </Button>
-              <Button onClick={handleCapture} disabled={!isActive} className="flex-1">
-                <Camera className="mr-2 h-4 w-4" />
-                Capturer
+              <Button
+                onClick={handleCameraClose}
+                variant="outline"
+                size="lg"
+              >
+                Annuler
               </Button>
             </div>
           </div>

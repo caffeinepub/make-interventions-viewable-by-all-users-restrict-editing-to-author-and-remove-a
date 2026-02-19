@@ -99,7 +99,12 @@ export const idlService = IDL.Service({
       [],
     ),
   'deleteIntervention' : IDL.Func([IDL.Text, IDL.Text], [], []),
-  'deleteTechnicalFile' : IDL.Func([IDL.Text], [], []),
+  'deleteTechnicalFileWithPath' : IDL.Func([IDL.Text], [], []),
+  'downloadTechnicalFileWithPath' : IDL.Func(
+      [IDL.Text],
+      [IDL.Opt(ExternalBlob)],
+      ['query'],
+    ),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getClient' : IDL.Func([IDL.Text], [Client], ['query']),
@@ -109,6 +114,11 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getClients' : IDL.Func([], [IDL.Vec(Client)], ['query']),
+  'getInterventionsByDate' : IDL.Func(
+      [IDL.Nat, IDL.Nat, IDL.Nat],
+      [IDL.Vec(Intervention)],
+      ['query'],
+    ),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
@@ -125,6 +135,7 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'moveTechnicalFile' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'searchClients' : IDL.Func([IDL.Text], [IDL.Vec(Client)], ['query']),
   'unmarkAsBlacklisted' : IDL.Func([IDL.Text], [], []),
@@ -141,7 +152,11 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
-  'uploadTechnicalFile' : IDL.Func([IDL.Text, ExternalBlob], [], []),
+  'uploadTechnicalFileWithFolderPath' : IDL.Func(
+      [IDL.Text, ExternalBlob],
+      [],
+      [],
+    ),
 });
 
 export const idlInitArgs = [];
@@ -242,7 +257,12 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'deleteIntervention' : IDL.Func([IDL.Text, IDL.Text], [], []),
-    'deleteTechnicalFile' : IDL.Func([IDL.Text], [], []),
+    'deleteTechnicalFileWithPath' : IDL.Func([IDL.Text], [], []),
+    'downloadTechnicalFileWithPath' : IDL.Func(
+        [IDL.Text],
+        [IDL.Opt(ExternalBlob)],
+        ['query'],
+      ),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getClient' : IDL.Func([IDL.Text], [Client], ['query']),
@@ -252,6 +272,11 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getClients' : IDL.Func([], [IDL.Vec(Client)], ['query']),
+    'getInterventionsByDate' : IDL.Func(
+        [IDL.Nat, IDL.Nat, IDL.Nat],
+        [IDL.Vec(Intervention)],
+        ['query'],
+      ),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
@@ -268,6 +293,7 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'moveTechnicalFile' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'searchClients' : IDL.Func([IDL.Text], [IDL.Vec(Client)], ['query']),
     'unmarkAsBlacklisted' : IDL.Func([IDL.Text], [], []),
@@ -284,7 +310,11 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
-    'uploadTechnicalFile' : IDL.Func([IDL.Text, ExternalBlob], [], []),
+    'uploadTechnicalFileWithFolderPath' : IDL.Func(
+        [IDL.Text, ExternalBlob],
+        [],
+        [],
+      ),
   });
 };
 

@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
-import { ExternalBlob } from '../backend';
+import type { ExternalBlob } from '../backend';
 import { toast } from 'sonner';
 
-export function useGetTechnicalFiles() {
-  const { actor, isFetching: actorFetching } = useActor();
+export function useListTechnicalFiles() {
+  const { actor, isFetching } = useActor();
 
   return useQuery<Array<[string, ExternalBlob]>>({
     queryKey: ['technicalFiles'],
@@ -12,7 +12,7 @@ export function useGetTechnicalFiles() {
       if (!actor) return [];
       return actor.listTechnicalFiles();
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !isFetching,
   });
 }
 
@@ -21,20 +21,16 @@ export function useUploadTechnicalFile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ fileId, blob }: { fileId: string; blob: ExternalBlob }) => {
-      if (!actor) throw new Error('Actor not available');
-      await actor.uploadTechnicalFile(fileId, blob);
+    mutationFn: async (params: { path: string; blob: ExternalBlob }) => {
+      if (!actor) throw new Error('Acteur non disponible');
+      await actor.uploadTechnicalFileWithFolderPath(params.path, params.blob);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['technicalFiles'] });
-      toast.success('File uploaded successfully');
+      toast.success('Fichier téléchargé avec succès');
     },
     onError: (error: any) => {
-      if (error.message?.includes('Unauthorized')) {
-        toast.error('Access denied: You must be logged in');
-      } else {
-        toast.error(error.message || 'Error uploading file');
-      }
+      toast.error(`Erreur: ${error.message || 'Échec du téléchargement du fichier'}`);
     },
   });
 }
@@ -44,20 +40,35 @@ export function useDeleteTechnicalFile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (fileId: string) => {
-      if (!actor) throw new Error('Actor not available');
-      await actor.deleteTechnicalFile(fileId);
+    mutationFn: async (path: string) => {
+      if (!actor) throw new Error('Acteur non disponible');
+      await actor.deleteTechnicalFileWithPath(path);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['technicalFiles'] });
-      toast.success('File deleted successfully');
+      toast.success('Fichier supprimé avec succès');
     },
     onError: (error: any) => {
-      if (error.message?.includes('Unauthorized')) {
-        toast.error('Access denied: You must be logged in');
-      } else {
-        toast.error(error.message || 'Error deleting file');
-      }
+      toast.error(`Erreur: ${error.message || 'Échec de la suppression du fichier'}`);
+    },
+  });
+}
+
+export function useMoveFile() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { oldPath: string; newPath: string }) => {
+      if (!actor) throw new Error('Acteur non disponible');
+      await actor.moveTechnicalFile(params.oldPath, params.newPath);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['technicalFiles'] });
+      toast.success('Fichier déplacé avec succès');
+    },
+    onError: (error: any) => {
+      toast.error(`Erreur: ${error.message || 'Échec du déplacement du fichier'}`);
     },
   });
 }

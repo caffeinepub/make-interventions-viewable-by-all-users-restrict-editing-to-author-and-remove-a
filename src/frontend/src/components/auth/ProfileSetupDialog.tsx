@@ -1,65 +1,60 @@
 import { useState } from 'react';
-import { useGetCallerUserProfile, useSaveCallerUserProfile } from '../../hooks/useCurrentUser';
-import { useInternetIdentity } from '../../hooks/useInternetIdentity';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { useSaveCallerUserProfile } from '../../hooks/useCurrentUser';
 
-export default function ProfileSetupDialog() {
-  const { identity } = useInternetIdentity();
-  const { data: userProfile, isLoading: profileLoading, isFetched } = useGetCallerUserProfile();
-  const saveProfile = useSaveCallerUserProfile();
+interface ProfileSetupDialogProps {
+  open: boolean;
+}
+
+export default function ProfileSetupDialog({ open }: ProfileSetupDialogProps) {
   const [name, setName] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  const { mutate: saveProfile, isPending } = useSaveCallerUserProfile();
 
-  const isAuthenticated = !!identity;
-  const showProfileSetup = isAuthenticated && !profileLoading && isFetched && userProfile === null;
-
-  const handleSave = async () => {
-    if (!name.trim()) return;
-
-    setIsSaving(true);
-    try {
-      await saveProfile({ name: name.trim() });
-      window.location.reload();
-    } catch (error) {
-      console.error('Error saving profile:', error);
-    } finally {
-      setIsSaving(false);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim()) {
+      saveProfile({ name: name.trim() });
     }
   };
 
   return (
-    <Dialog open={showProfileSetup} onOpenChange={() => {}}>
+    <Dialog open={open}>
       <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle>Bienvenue</DialogTitle>
-          <DialogDescription>Veuillez entrer votre nom pour continuer</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nom</Label>
-            <Input
-              id="name"
-              placeholder="Votre nom"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-            />
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Configuration du profil</DialogTitle>
+            <DialogDescription>
+              Veuillez entrer votre nom pour continuer
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nom</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Entrez votre nom"
+                required
+                autoFocus
+              />
+            </div>
           </div>
-          <Button onClick={handleSave} disabled={!name.trim() || isSaving} className="w-full">
-            {isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Enregistrement...
-              </>
-            ) : (
-              'Continuer'
-            )}
-          </Button>
-        </div>
+          <div className="flex justify-end gap-2">
+            <Button type="submit" disabled={!name.trim() || isPending}>
+              {isPending ? 'Enregistrement...' : 'Enregistrer'}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

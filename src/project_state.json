@@ -1,40 +1,32 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Ajouter au tableau de bord un dossier technique permettant de stocker des fichiers (PDF, photos, vidéos) indépendamment des dossiers clients.",
+  "summary": "New project",
   "architectural_notes": [],
   "known_issues": [],
   "isFixRequest": false,
   "existing_features": [
     {
-      "id": "feature-add-a-new-authenticated-route-and-page-for-the-technical-folder-in-the-dashboard-area-and-provide-a-clear-navigation-entry-point-from-the-main-dashboard-clients-list",
-      "title": "Add a new authenticated route and page for the Technical Folder in the dashboard area, and provide a clear navigation entry point from the main dashboard (clients list).",
+      "id": "feature-add-a-move-action-to-each-file-in-the-technicalfilerow-component-that-opens-a-folder-selection-dialog",
+      "title": "Add a 'Move' action to each file in the TechnicalFileRow component that opens a folder selection dialog",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-folder-selection-dialog-component-that-displays-the-technical-folder-hierarchy-and-allows-selecting-a-destination-folder",
+      "title": "Create a folder selection dialog component that displays the technical folder hierarchy and allows selecting a destination folder",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-implement-the-technical-folder-ui-to-upload-and-display-files-pdf-images-videos-independently-of-client-dossiers",
-      "title": "Implement the Technical Folder UI to upload and display files (PDF, images, videos) independently of client dossiers.",
-      "reqIds": [
-        "REQ-3"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-extend-the-existing-media-file-picking-components-or-add-a-new-file-picker-component-so-the-app-can-select-pdfs-in-addition-to-the-current-image-video-support-without-breaking-existing-intervention-blacklist-media-flows",
-      "title": "Extend the existing media/file picking components (or add a new file picker component) so the app can select PDFs in addition to the current image/video support, without breaking existing intervention/blacklist media flows.",
+      "id": "feature-create-usemovefile-react-query-mutation-hook-that-calls-the-backend-move-function-and-invalidates-technical-folder-queries-on-success",
+      "title": "Create useMoveFile React Query mutation hook that calls the backend move function and invalidates technical folder queries on success",
       "reqIds": [
         "REQ-4"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-react-query-hooks-for-technical-folder-operations-list-upload-delete-that-call-the-new-backend-methods-and-provide-basic-error-handling-consistent-with-existing-hooks",
-      "title": "Add React Query hooks for Technical Folder operations (list, upload, delete) that call the new backend methods and provide basic error handling consistent with existing hooks.",
-      "reqIds": [
-        "REQ-5"
       ],
       "version": 1
     }
@@ -42,21 +34,28 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Ajouter au tableau de bord un « dossier technique » pour stocker des fichiers (PDF, photos, vidéos) indépendamment des dossiers clients",
+      "summary": "Move uploaded files from technical folder to created folders",
       "reqIds": [],
       "status": "pending"
     },
     {
-      "id": "AR-2",
-      "summary": "Add backend support for a global (non-client-specific) “Technical Folder” that stores uploaded files (PDF, image, and video) and allows authenticated users to list, upload, and delete files.",
+      "id": "AR-4",
+      "summary": "Implement backend Motoko function to move a technical file from one folder path to another, preserving the file content and metadata",
       "reqIds": [
-        "REQ-1"
+        "REQ-3"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Update TechnicalFolderPage to refresh the file list after a successful move operation",
+      "reqIds": [
+        "REQ-5"
       ],
       "status": "pending"
     }
   ],
-  "gameProjectType": "none",
-  "projectName": "Technical Folder",
+  "projectName": "Client Dossier",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

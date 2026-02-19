@@ -1,64 +1,79 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useAddIntervention } from '../../hooks/useInterventions';
-import { ExternalBlob } from '../../backend';
 import MediaPicker from '../media/MediaPicker';
 import MediaPreview from '../media/MediaPreview';
-import { Loader2 } from 'lucide-react';
+import { ExternalBlob } from '../../backend';
 
 interface AddInterventionDialogProps {
-  clientId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  clientId: string;
 }
 
-export default function AddInterventionDialog({ clientId, open, onOpenChange }: AddInterventionDialogProps) {
+export default function AddInterventionDialog({
+  open,
+  onOpenChange,
+  clientId,
+}: AddInterventionDialogProps) {
   const today = new Date();
-  const [day, setDay] = useState(today.getDate().toString());
-  const [month, setMonth] = useState((today.getMonth() + 1).toString());
-  const [year, setYear] = useState(today.getFullYear().toString());
-  const [comments, setComments] = useState('');
+  const [formData, setFormData] = useState({
+    day: today.getDate().toString(),
+    month: (today.getMonth() + 1).toString(),
+    year: today.getFullYear().toString(),
+    comments: '',
+  });
   const [media, setMedia] = useState<ExternalBlob[]>([]);
 
-  const addIntervention = useAddIntervention();
+  const { mutate: addIntervention, isPending } = useAddIntervention();
 
-  const handleSubmit = async () => {
-    const dayNum = parseInt(day);
-    const monthNum = parseInt(month);
-    const yearNum = parseInt(year);
-
-    if (!dayNum || !monthNum || !yearNum) return;
-
-    await addIntervention.mutateAsync({
-      clientId,
-      comments: comments.trim(),
-      media,
-      date: {
-        day: dayNum,
-        month: monthNum,
-        year: yearNum,
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    addIntervention(
+      {
+        clientId,
+        comments: formData.comments,
+        media,
+        date: {
+          day: BigInt(formData.day),
+          month: BigInt(formData.month),
+          year: BigInt(formData.year),
+        },
       },
-    });
-
-    onOpenChange(false);
-    setDay(today.getDate().toString());
-    setMonth((today.getMonth() + 1).toString());
-    setYear(today.getFullYear().toString());
-    setComments('');
-    setMedia([]);
+      {
+        onSuccess: () => {
+          setFormData({
+            day: today.getDate().toString(),
+            month: (today.getMonth() + 1).toString(),
+            year: today.getFullYear().toString(),
+            comments: '',
+          });
+          setMedia([]);
+          onOpenChange(false);
+        },
+      }
+    );
   };
 
-  const handleMediaSelected = (files: File[]) => {
+  const handleMediaCapture = (files: File[]) => {
     const newMedia = files.map((file) => {
       const reader = new FileReader();
       return new Promise<ExternalBlob>((resolve) => {
         reader.onload = () => {
-          const bytes = new Uint8Array(reader.result as ArrayBuffer);
-          resolve(ExternalBlob.fromBytes(bytes));
+          const arrayBuffer = reader.result as ArrayBuffer;
+          const uint8Array = new Uint8Array(arrayBuffer);
+          resolve(ExternalBlob.fromBytes(uint8Array));
         };
         reader.readAsArrayBuffer(file);
       });
@@ -72,69 +87,90 @@ export default function AddInterventionDialog({ clientId, open, onOpenChange }: 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>New Intervention</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-2">
-            <div className="space-y-2">
-              <Label htmlFor="day">Day</Label>
-              <Input id="day" type="number" min="1" max="31" value={day} onChange={(e) => setDay(e.target.value)} />
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Nouvelle intervention</DialogTitle>
+            <DialogDescription>
+              Enregistrez les détails de l'intervention
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="grid gap-2">
+                <Label htmlFor="day">Jour *</Label>
+                <Input
+                  id="day"
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={formData.day}
+                  onChange={(e) =>
+                    setFormData({ ...formData, day: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="month">Mois *</Label>
+                <Input
+                  id="month"
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={formData.month}
+                  onChange={(e) =>
+                    setFormData({ ...formData, month: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="year">Année *</Label>
+                <Input
+                  id="year"
+                  type="number"
+                  min="2000"
+                  max="2100"
+                  value={formData.year}
+                  onChange={(e) =>
+                    setFormData({ ...formData, year: e.target.value })
+                  }
+                  required
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="month">Month</Label>
-              <Input
-                id="month"
-                type="number"
-                min="1"
-                max="12"
-                value={month}
-                onChange={(e) => setMonth(e.target.value)}
+            <div className="grid gap-2">
+              <Label htmlFor="comments">Commentaires</Label>
+              <Textarea
+                id="comments"
+                value={formData.comments}
+                onChange={(e) =>
+                  setFormData({ ...formData, comments: e.target.value })
+                }
+                placeholder="Détails de l'intervention..."
+                rows={4}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="year">Year</Label>
-              <Input
-                id="year"
-                type="number"
-                min="2000"
-                max="2100"
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-              />
+            <div className="grid gap-2">
+              <Label>Médias</Label>
+              <MediaPicker onCapture={handleMediaCapture} />
+              {media.length > 0 && <MediaPreview media={media} />}
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="comments">Comments</Label>
-            <Textarea
-              id="comments"
-              placeholder="Intervention details..."
-              value={comments}
-              onChange={(e) => setComments(e.target.value)}
-              rows={4}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Photos / Videos</Label>
-            <MediaPicker onMediaSelected={handleMediaSelected} />
-            {media.length > 0 && <MediaPreview media={media} />}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-              Cancel
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+            >
+              Annuler
             </Button>
-            <Button onClick={handleSubmit} disabled={addIntervention.isPending} className="flex-1">
-              {addIntervention.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Adding...
-                </>
-              ) : (
-                'Add'
-              )}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? 'Ajout...' : 'Ajouter'}
             </Button>
-          </div>
-        </div>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

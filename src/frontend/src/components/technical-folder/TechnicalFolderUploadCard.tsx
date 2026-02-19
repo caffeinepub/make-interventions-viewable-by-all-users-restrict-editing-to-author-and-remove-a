@@ -1,117 +1,141 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import { useUploadTechnicalFile } from '../../hooks/useTechnicalFolder';
-import { ExternalBlob } from '../../backend';
 import FilePicker from '../media/FilePicker';
+import { ExternalBlob } from '../../backend';
 
 interface TechnicalFolderUploadCardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  currentPath: string;
 }
 
-export default function TechnicalFolderUploadCard({ open, onOpenChange }: TechnicalFolderUploadCardProps) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+export default function TechnicalFolderUploadCard({
+  open,
+  onOpenChange,
+  currentPath,
+}: TechnicalFolderUploadCardProps) {
   const [fileName, setFileName] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const uploadMutation = useUploadTechnicalFile();
 
-  const handleFileSelected = (files: File[]) => {
+  const { mutate: uploadFile, isPending } = useUploadTechnicalFile();
+
+  const handleFileSelect = (files: File[]) => {
     if (files.length > 0) {
       const file = files[0];
       setSelectedFile(file);
-      setFileName(file.name);
+      if (!fileName) {
+        setFileName(file.name);
+      }
     }
   };
 
-  const handleUpload = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!selectedFile || !fileName.trim()) return;
 
-    try {
-      const arrayBuffer = await selectedFile.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      
-      const blob = ExternalBlob.fromBytes(bytes).withUploadProgress((percentage) => {
-        setUploadProgress(percentage);
-      });
+    const reader = new FileReader();
+    reader.onload = () => {
+      const arrayBuffer = reader.result as ArrayBuffer;
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const blob = ExternalBlob.fromBytes(uint8Array).withUploadProgress(
+        (percentage) => {
+          setUploadProgress(percentage);
+        }
+      );
 
-      const fileId = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      
-      await uploadMutation.mutateAsync({ fileId, blob });
-      
-      // Reset form
-      setSelectedFile(null);
-      setFileName('');
-      setUploadProgress(0);
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Upload error:', error);
-    }
-  };
+      const fullPath = currentPath
+        ? `${currentPath}/${fileName.trim()}`
+        : fileName.trim();
 
-  const handleClose = () => {
-    if (!uploadMutation.isPending) {
-      setSelectedFile(null);
-      setFileName('');
-      setUploadProgress(0);
-      onOpenChange(false);
-    }
+      uploadFile(
+        { path: fullPath, blob },
+        {
+          onSuccess: () => {
+            setFileName('');
+            setSelectedFile(null);
+            setUploadProgress(0);
+            onOpenChange(false);
+          },
+        }
+      );
+    };
+    reader.readAsArrayBuffer(selectedFile);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Upload File</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="fileName">File Name</Label>
-            <Input
-              id="fileName"
-              value={fileName}
-              onChange={(e) => setFileName(e.target.value)}
-              placeholder="Enter file name"
-              disabled={uploadMutation.isPending}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Select File</Label>
-            <FilePicker
-              onFileSelected={handleFileSelected}
-              accept="image/*,video/*,application/pdf"
-              disabled={uploadMutation.isPending}
-            />
-            {selectedFile && (
-              <p className="text-sm text-muted-foreground">
-                Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-              </p>
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Télécharger un fichier</DialogTitle>
+            <DialogDescription>
+              Sélectionnez un fichier et donnez-lui un nom
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="fileName">Nom du fichier *</Label>
+              <Input
+                id="fileName"
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+                placeholder="nom-du-fichier.pdf"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Sélectionner un fichier *</Label>
+              <FilePicker
+                onSelect={handleFileSelect}
+                accept="application/pdf,image/*,video/*"
+              />
+              {selectedFile && (
+                <p className="text-sm text-muted-foreground">
+                  Fichier sélectionné: {selectedFile.name}
+                </p>
+              )}
+            </div>
+            {isPending && uploadProgress > 0 && (
+              <div className="space-y-2">
+                <Label>Progression du téléchargement</Label>
+                <div className="w-full bg-secondary rounded-full h-2">
+                  <div
+                    className="bg-primary h-2 rounded-full transition-all"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+                <p className="text-sm text-center text-muted-foreground">
+                  {uploadProgress}%
+                </p>
+              </div>
             )}
           </div>
-
-          {uploadMutation.isPending && (
-            <div className="space-y-2">
-              <Label>Upload Progress</Label>
-              <Progress value={uploadProgress} />
-              <p className="text-sm text-muted-foreground text-center">{uploadProgress}%</p>
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={uploadMutation.isPending}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleUpload}
-            disabled={!selectedFile || !fileName.trim() || uploadMutation.isPending}
-          >
-            {uploadMutation.isPending ? 'Uploading...' : 'Upload'}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+            >
+              Annuler
+            </Button>
+            <Button type="submit" disabled={!selectedFile || !fileName.trim() || isPending}>
+              {isPending ? 'Téléchargement...' : 'Télécharger'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

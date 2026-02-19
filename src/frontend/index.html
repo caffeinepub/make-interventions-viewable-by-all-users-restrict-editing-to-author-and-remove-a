@@ -12,9 +12,20 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Dossiers Clients</title>
+    <script>
+      console.log('HTML loaded successfully');
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <noscript>
+      <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; text-align: center; font-family: system-ui, -apple-system, sans-serif;">
+        <div>
+          <h1 style="font-size: 24px; margin-bottom: 16px;">JavaScript requis</h1>
+          <p style="color: #666;">Cette application nécessite JavaScript pour fonctionner. Veuillez activer JavaScript dans votre navigateur.</p>
+        </div>
+      </div>
+    </noscript>
+    <div id="root" style="min-height: 100vh;"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
