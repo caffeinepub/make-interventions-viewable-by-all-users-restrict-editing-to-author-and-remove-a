@@ -1,71 +1,82 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Document management application for Vial Traite Service with technical folder organization, client file management, and custom branding",
+  "summary": "Vial Traite Service - Service management application with client folders, interventions tracking, and technical documentation. Fixing critical access issues and data loss problems.",
   "architectural_notes": [
-    "Frontend: React + TypeScript + Tailwind CSS for UI",
-    "Backend: Motoko on Internet Computer for secure storage",
-    "Authentication: Internet Identity (passkeys, Google, Apple, Microsoft)",
-    "Color palette: Blue #0066CC (primary), Green lime #99CC33, Orange #FF9933",
-    "Document management with hierarchical folder structure"
+    "Application uses Internet Identity for authentication",
+    "Data stored on Internet Computer backend (should be permanent)",
+    "Critical bug: Client folder section not responding to clicks",
+    "Data synchronization issues causing technical folder data loss"
   ],
-  "known_issues": [],
-  "isFixRequest": false,
-  "imageRequirements": "## Required Images\n- Vial Traite Service logo with blue text, orange leaf accents, lime green circular border, and blue cow illustration on transparent background (vial-traite-logo.dim_400x200.png)",
+  "known_issues": [
+    "Dossier Client button unresponsive - blocks access to interventions",
+    "Technical folder data lost/not loading properly",
+    "Potential data loading synchronization issues with backend",
+    "No error messages displayed when problems occur"
+  ],
+  "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-replace-the-application-logo-with-the-provided-vial-traite-service-logo-showing-blue-text-orange-leaves-green-circular-border-and-blue-cow-illustration",
-      "title": "Replace the application logo with the provided Vial Traite Service logo (showing blue text, orange leaves, green circular border, and blue cow illustration)",
+      "id": "feature-fix-the-non-responsive-dossier-client-button-navigation-that-prevents-users-from-accessing-the-client-folder-section-when-clicked",
+      "title": "Fix the non-responsive 'Dossier Client' button/navigation that prevents users from accessing the client folder section when clicked",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-apply-the-vial-traite-service-brand-color-palette-throughout-the-application-ui-primary-blue-0066cc-lime-green-99cc33-and-orange-ff9933-from-the-logo",
-      "title": "Apply the Vial Traite Service brand color palette throughout the application UI: primary blue (#0066CC), lime green (#99CC33), and orange (#FF9933) from the logo",
+      "id": "feature-restore-full-access-to-interventions-from-within-the-client-folder-section",
+      "title": "Restore full access to interventions from within the client folder section",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-implement-an-in-app-document-viewer-with-zoom-and-image-enlargement-capabilities-for-technical-folder-documents",
-      "title": "Implement an in-app document viewer with zoom and image enlargement capabilities for technical folder documents",
+      "id": "feature-recover-and-restore-the-lost-technical-folder-data-ensuring-all-previously-stored-files-and-folders-are-accessible",
+      "title": "Recover and restore the lost technical folder data, ensuring all previously stored files and folders are accessible",
       "reqIds": [
         "REQ-3"
       ],
       "version": 1
     },
     {
-      "id": "feature-enable-users-to-create-rename-and-organize-subfolders-within-the-technical-folder-to-categorize-documents-by-theme",
-      "title": "Enable users to create, rename, and organize subfolders within the technical folder to categorize documents by theme",
+      "id": "feature-add-comprehensive-error-handling-with-clear-user-friendly-error-messages-in-french-throughout-the-application-especially-for-data-loading-and-navigation-failures",
+      "title": "Add comprehensive error handling with clear, user-friendly error messages in French throughout the application, especially for data loading and navigation failures",
       "reqIds": [
         "REQ-4"
       ],
       "version": 1
     },
     {
-      "id": "feature-implement-drag-and-drop-functionality-to-move-folders-and-files-within-the-technical-folder-structure",
-      "title": "Implement drag-and-drop functionality to move folders and files within the technical folder structure",
+      "id": "feature-add-visible-loading-indicators-spinners-throughout-the-application-to-show-when-data-is-being-fetched-or-operations-are-in-progress",
+      "title": "Add visible loading indicators (spinners) throughout the application to show when data is being fetched or operations are in progress",
       "reqIds": [
         "REQ-5"
       ],
       "version": 1
     },
     {
-      "id": "feature-extend-technical-folder-support-to-handle-all-file-formats-including-images-pdfs-word-documents-excel-spreadsheets-and-other-common-document-types",
-      "title": "Extend technical folder support to handle all file formats including images, PDFs, Word documents, Excel spreadsheets, and other common document types",
+      "id": "feature-implement-automatic-retry-logic-for-failed-data-loading-operations-with-exponential-backoff",
+      "title": "Implement automatic retry logic for failed data loading operations with exponential backoff",
       "reqIds": [
         "REQ-6"
       ],
       "version": 1
     },
     {
-      "id": "feature-add-the-same-document-viewer-with-zoom-and-enlargement-capabilities-to-client-intervention-files",
-      "title": "Add the same document viewer with zoom and enlargement capabilities to client intervention files",
+      "id": "feature-add-data-export-functionality-allowing-users-to-download-their-data-as-pdf-or-json-files-for-backup-purposes",
+      "title": "Add data export functionality allowing users to download their data as PDF or JSON files for backup purposes",
       "reqIds": [
         "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-strengthen-data-persistence-and-synchronization-between-frontend-and-backend-to-prevent-future-data-loss",
+      "title": "Strengthen data persistence and synchronization between frontend and backend to prevent future data loss",
+      "reqIds": [
+        "REQ-8"
       ],
       "version": 1
     }
@@ -73,31 +84,43 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Document viewer with zoom and image enlargement functionality",
+      "summary": "Fix non-responsive 'Dossier Client' button - restore access to client folder section",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-2",
-      "summary": "Create and rename folders and subfolders with drag-and-drop organization",
+      "summary": "Restore access to interventions from client folder section",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-3",
-      "summary": "Multi-format file support (images, PDF, Word, Excel, etc.)",
+      "summary": "Recover and secure lost technical folder data",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-4",
-      "summary": "Custom branding with Vial Traite Service logo and color scheme",
+      "summary": "Add clear error messages and better error handling throughout the app",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-5",
-      "summary": "Client file management integrated with intervention records",
+      "summary": "Add loading indicators (spinners) to show data loading status",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Implement automatic retry/reload on data loading failures",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Add data export functionality (PDF/JSON) for backup purposes",
       "reqIds": [],
       "status": "pending"
     }

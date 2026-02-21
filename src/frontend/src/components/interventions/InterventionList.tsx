@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useGetClientInterventions, useDeleteIntervention } from '../../hooks/useInterventions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, RefreshCw } from 'lucide-react';
 import AddInterventionDialog from './AddInterventionDialog';
 import EditInterventionDialog from './EditInterventionDialog';
 import InterventionDetailsDialog from './InterventionDetailsDialog';
@@ -18,19 +18,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface InterventionListProps {
   clientId: string;
 }
 
 export default function InterventionList({ clientId }: InterventionListProps) {
-  const { data: interventions = [], isLoading } = useGetClientInterventions(clientId);
+  const { data: interventions = [], isLoading, isError, error } = useGetClientInterventions(clientId);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [selectedIntervention, setSelectedIntervention] = useState<Intervention | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [interventionToDelete, setInterventionToDelete] = useState<Intervention | null>(null);
+  const queryClient = useQueryClient();
 
   const { mutate: deleteIntervention } = useDeleteIntervention();
 
@@ -62,8 +64,47 @@ export default function InterventionList({ clientId }: InterventionListProps) {
     setIsDetailsDialogOpen(true);
   };
 
+  const handleRetry = () => {
+    queryClient.invalidateQueries({ queryKey: ['interventions', clientId] });
+  };
+
   if (isLoading) {
-    return <div className="text-center py-8">Chargement...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center py-8 gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Chargement des interventions...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card className="border-destructive">
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="p-3 rounded-full bg-destructive/10">
+              <RefreshCw className="h-6 w-6 text-destructive" />
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">
+                Impossible de charger les interventions
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {error instanceof Error 
+                  ? error.message.includes('Non autorisé')
+                    ? 'Accès refusé - Veuillez vous reconnecter'
+                    : 'Erreur de connexion - Vérifiez votre connexion Internet'
+                  : 'Une erreur est survenue lors du chargement des données'}
+              </p>
+              <Button onClick={handleRetry} variant="outline" size="sm">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Réessayer
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -190,6 +231,11 @@ function InterventionCard({
         </p>
         {intervention.comments && (
           <p className="line-clamp-2">{intervention.comments}</p>
+        )}
+        {intervention.media.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            📎 {intervention.media.length} fichier(s)
+          </p>
         )}
       </CardContent>
     </Card>

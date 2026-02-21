@@ -1,15 +1,16 @@
 # Specification
 
 ## Summary
-**Goal:** Add Vial Traite Service branding, implement in-app document viewer with zoom capabilities, and enable folder management with drag-and-drop for technical folders and client interventions.
+**Goal:** Fix critical navigation and data access issues in the Vial Traite Service application, including non-responsive client folder button, missing intervention access, and lost technical folder data.
 
 **Planned changes:**
-- Replace application logo with Vial Traite Service logo
-- Apply brand color palette (blue #0066CC, lime green #99CC33, orange #FF9933) throughout UI
-- Implement in-app document viewer with zoom and image enlargement for technical folder documents
-- Enable creation, renaming, and organization of subfolders within technical folder
-- Add drag-and-drop functionality to move folders and files
-- Extend technical folder support to all file formats (images, PDFs, Word, Excel, etc.)
-- Apply same document viewer with zoom to client intervention files
+- Fix non-responsive 'Dossier Client' button to enable proper navigation to client folder section
+- Restore full access to interventions from within the client folder view
+- Recover and restore lost technical folder data with all files and folders
+- Add comprehensive French error messages for data loading and navigation failures
+- Implement loading spinners throughout the application for all data fetch operations
+- Add automatic retry logic with exponential backoff for failed data operations
+- Add data export functionality (PDF and JSON) for backup purposes
+- Strengthen data persistence and synchronization to prevent future data loss
 
-**User-visible outcome:** Users can browse documents with the new Vial Traite Service branded interface, view and zoom documents directly in the app, organize files into custom subfolders by theme, and drag-and-drop files between folders for both technical documents and client intervention files.
+**User-visible outcome:** Users can reliably access the client folder section, view all interventions, see their complete technical folder data, receive clear error messages in French when issues occur, see loading indicators during operations, and export their data for backup.

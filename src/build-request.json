@@ -1,168 +1,167 @@
 {
   "kind": "build_request",
-  "title": "Add document viewer with zoom, folder management, and Vial Traite Service branding",
+  "title": "Fix Client Folder Access and Data Loss Issues",
   "projectName": "Vial Traite Service",
-  "priority": "normal",
+  "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Replace the application logo with the provided Vial Traite Service logo (showing blue text, orange leaves, green circular border, and blue cow illustration)",
+      "text": "Fix the non-responsive 'Dossier Client' button/navigation that prevents users from accessing the client folder section when clicked",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-logo-request"
+          "msg-19",
+          "msg-21"
         ],
         "quotes": [
-          "remplace le logo de lappli par le logo que je te fournie"
+          "Quand je clique sur dossier client rien ne se passe",
+          "C quand j clique sur dossier client rien ne se passe"
         ]
       },
       "acceptanceCriteria": [
-        "The Vial Traite Service logo is displayed in the application header/navigation",
-        "Logo maintains proper aspect ratio and quality",
-        "Logo is visible on all pages of the application"
+        "Clicking 'Dossier Client' successfully navigates to or opens the client folder view",
+        "Navigation response is immediate and provides visual feedback",
+        "All client folder data loads correctly after navigation"
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Apply the Vial Traite Service brand color palette throughout the application UI: primary blue (#0066CC), lime green (#99CC33), and orange (#FF9933) from the logo",
+      "text": "Restore full access to interventions from within the client folder section",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-color-request"
+          "msg-21"
         ],
         "quotes": [
-          "inclu le code couleur du logo pour le design de lappli"
+          "je nest pas acces au intervention"
         ]
       },
       "acceptanceCriteria": [
-        "Primary UI elements use blue #0066CC from the logo",
-        "Accent colors use lime green #99CC33 and orange #FF9933 appropriately",
-        "Color scheme is applied consistently across all pages and components",
-        "Colors maintain sufficient contrast for accessibility"
+        "Users can view the full list of interventions from the client folder",
+        "Intervention details, dates, and comments display correctly",
+        "Add, edit, and delete intervention actions are accessible and functional"
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Implement an in-app document viewer with zoom and image enlargement capabilities for technical folder documents",
-      "target": "frontend",
+      "text": "Recover and restore the lost technical folder data, ensuring all previously stored files and folders are accessible",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-user-viewer-request"
+          "msg-15"
         ],
         "quotes": [
-          "Je veux pouvoir consulter les documents du dossier technique directement sur l'appli en pouvant agrandir l'image est zoomer"
+          "jai perdu les données du dossier technique"
         ]
       },
       "acceptanceCriteria": [
-        "Users can open documents directly within the application",
-        "Viewer supports zoom in/out functionality",
-        "Users can enlarge images to full screen",
-        "Pinch-to-zoom works on touch devices",
-        "Viewer supports images, PDFs, and other document formats"
+        "All technical folder files and folders load from backend storage",
+        "No data is permanently lost; implement recovery mechanisms if data exists in backend",
+        "Technical folder displays complete file hierarchy with all metadata"
       ]
     },
     {
       "id": "REQ-4",
-      "text": "Enable users to create, rename, and organize subfolders within the technical folder to categorize documents by theme",
-      "target": "both",
+      "text": "Add comprehensive error handling with clear, user-friendly error messages in French throughout the application, especially for data loading and navigation failures",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-subfolder-request"
-        ],
-        "quotes": [
-          "je veux pouvoir créer des sous dossiers pour pouvoir différencier différents types de documents en les renomants en les classants par thème"
+          "msg-17",
+          "msg-19"
         ]
       },
       "acceptanceCriteria": [
-        "Users can create new subfolders with custom names",
-        "Users can rename existing folders and subfolders",
-        "Folder hierarchy is displayed clearly in the UI",
-        "Folders can be organized by user-defined themes",
-        "Folder names are validated (no slashes, non-empty)"
+        "Display informative error messages when data loading fails (e.g., 'Impossible de charger les données - Vérifiez votre connexion')",
+        "Show specific error context for different failure types (network, permissions, data not found)",
+        "Error messages appear in toast notifications or alert dialogs",
+        "All error messages are in French"
       ]
     },
     {
       "id": "REQ-5",
-      "text": "Implement drag-and-drop functionality to move folders and files within the technical folder structure",
+      "text": "Add visible loading indicators (spinners) throughout the application to show when data is being fetched or operations are in progress",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-move-request"
-        ],
-        "quotes": [
-          "pouvoir les deplacé"
+          "msg-19"
         ]
       },
       "acceptanceCriteria": [
-        "Users can drag folders to reposition them",
-        "Users can drag files between folders",
-        "Visual feedback indicates valid drop targets during drag operations",
-        "Dropped items update their location in the folder structure",
-        "Drag-and-drop works on both desktop and touch devices"
+        "Loading spinners appear when fetching clients, interventions, or technical folder data",
+        "Spinners are positioned appropriately (centered for full page loads, inline for component loads)",
+        "Loading states prevent user interaction during critical operations",
+        "Spinners automatically disappear when data loads or errors occur"
       ]
     },
     {
       "id": "REQ-6",
-      "text": "Extend technical folder support to handle all file formats including images, PDFs, Word documents, Excel spreadsheets, and other common document types",
-      "target": "both",
+      "text": "Implement automatic retry logic for failed data loading operations with exponential backoff",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-formats-request"
-        ],
-        "quotes": [
-          "toutes sortes de format"
+          "msg-19"
         ]
       },
       "acceptanceCriteria": [
-        "Technical folder accepts uploads of images (JPG, PNG, GIF, WebP, etc.)",
-        "Technical folder accepts PDFs",
-        "Technical folder accepts Word documents (.doc, .docx)",
-        "Technical folder accepts Excel spreadsheets (.xls, .xlsx)",
-        "File type icons or previews differentiate document types",
-        "All accepted formats can be downloaded"
+        "Failed queries automatically retry up to 3 times with increasing delays",
+        "User sees retry attempts indicated in loading states",
+        "After maximum retries, display clear error message with manual retry button",
+        "Retry logic applies to all critical data fetches (clients, interventions, technical folder)"
       ]
     },
     {
       "id": "REQ-7",
-      "text": "Add the same document viewer with zoom and enlargement capabilities to client intervention files",
+      "text": "Add data export functionality allowing users to download their data as PDF or JSON files for backup purposes",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-client-files-request"
-        ],
-        "quotes": [
-          "garder les fichiers clients avec meme fonctionnalite pour consulter fichier integré dans les interventions client"
+          "msg-17",
+          "msg-19"
         ]
       },
       "acceptanceCriteria": [
-        "Intervention media files can be opened in the in-app viewer",
-        "Viewer supports zoom and enlargement for intervention documents",
-        "Functionality matches the technical folder document viewer",
-        "Viewer is accessible from intervention detail views"
+        "Export button accessible from main navigation or settings area",
+        "PDF export includes formatted client list, interventions, and technical folder inventory",
+        "JSON export provides complete raw data dump of all user data",
+        "Export filename includes timestamp (e.g., 'vial-traite-backup-2024-01-15.pdf')",
+        "Export operation shows progress indicator for large datasets"
+      ]
+    },
+    {
+      "id": "REQ-8",
+      "text": "Strengthen data persistence and synchronization between frontend and backend to prevent future data loss",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-15",
+          "msg-17"
+        ]
+      },
+      "acceptanceCriteria": [
+        "All critical operations use transactions or atomic updates on backend",
+        "Frontend cache invalidation ensures fresh data after mutations",
+        "Offline operations queue properly and sync when connection restored",
+        "Add data validation checks before displaying to catch corruption early"
       ]
     }
   ],
   "constraints": [
-    "Do not modify the useInternetIdentity hook (frontend/src/hooks/useInternetIdentity.ts)",
-    "Do not modify the useActor hook (frontend/src/hooks/useActor.ts)",
-    "Do not modify main.tsx (frontend/src/main.tsx)",
-    "Do not modify UI component sources in frontend/src/components/ui",
-    "Maintain single-actor Motoko architecture in backend/main.mo",
-    "Preserve existing client file management functionality",
-    "Keep offline sync capabilities intact"
+    "Maintain existing Internet Identity authentication flow",
+    "Preserve all existing data structures in backend (Client, Intervention, TechnicalFile)",
+    "Keep French language interface throughout the application",
+    "Do not modify immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui/*",
+    "Maintain offline-first architecture with operation queueing",
+    "Use existing React Query infrastructure for data fetching and caching"
   ],
   "nonGoals": [
-    "Real-time collaboration features",
-    "Version control for documents",
-    "Document editing within the app",
-    "OCR or text extraction from documents",
-    "Cloud storage integration beyond Internet Computer",
-    "Multi-language interface (French is primary)"
+    "Redesigning the overall UI layout or navigation structure",
+    "Adding new features beyond fixing the identified issues",
+    "Changing the authentication mechanism",
+    "Migrating to different state management libraries",
+    "Adding real-time synchronization or WebSocket connections"
   ],
   "imageRequirements": {
-    "required": [
-      "Vial Traite Service logo with blue text, orange leaf accents, lime green circular border, and blue cow illustration on transparent background (vial-traite-logo.dim_400x200.png)"
-    ],
+    "required": [],
     "edits": []
   }
 }

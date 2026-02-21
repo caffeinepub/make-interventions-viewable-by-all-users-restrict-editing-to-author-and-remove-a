@@ -4,30 +4,48 @@ import { useGetClients } from '../hooks/useClients';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, FolderOpen } from 'lucide-react';
+import { Plus, Search, FolderOpen, Loader2, RefreshCw, Download } from 'lucide-react';
 import CreateClientDialog from '../components/clients/CreateClientDialog';
 import MobileLayout from '../components/layout/MobileLayout';
 import AppBadge from '../components/common/AppBadge';
+import ExportDataDialog from '../components/export/ExportDataDialog';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function ClientsPage() {
-  const { data: clients = [], isLoading } = useGetClients();
+  const { data: clients = [], isLoading, isError, error } = useGetClients();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const filteredClients = clients.filter((client) =>
     client.info.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleRetry = () => {
+    queryClient.invalidateQueries({ queryKey: ['clients'] });
+  };
 
   return (
     <MobileLayout>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Clients</h1>
-          <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Ajouter
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => setIsExportDialogOpen(true)} 
+              size="sm"
+              variant="outline"
+              title="Exporter les données"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter
+            </Button>
+          </div>
         </div>
 
         <Card
@@ -51,13 +69,41 @@ export default function ClientsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
+            disabled={isLoading}
           />
         </div>
 
         {isLoading ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Chargement...
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Chargement des clients...</p>
           </div>
+        ) : isError ? (
+          <Card className="border-destructive">
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center gap-4 text-center">
+                <div className="p-3 rounded-full bg-destructive/10">
+                  <RefreshCw className="h-6 w-6 text-destructive" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-2">
+                    Impossible de charger les clients
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {error instanceof Error 
+                      ? error.message.includes('Non autorisé')
+                        ? 'Accès refusé - Veuillez vous reconnecter'
+                        : 'Erreur de connexion - Vérifiez votre connexion Internet'
+                      : 'Une erreur est survenue lors du chargement des données'}
+                  </p>
+                  <Button onClick={handleRetry} variant="outline">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Réessayer
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         ) : filteredClients.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             {searchQuery ? 'Aucun client trouvé' : 'Aucun client'}
@@ -103,6 +149,11 @@ export default function ClientsPage() {
       <CreateClientDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
+      />
+
+      <ExportDataDialog
+        open={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
       />
     </MobileLayout>
   );

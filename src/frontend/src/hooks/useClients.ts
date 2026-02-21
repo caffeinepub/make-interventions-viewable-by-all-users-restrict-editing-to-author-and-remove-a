@@ -15,6 +15,8 @@ export function useGetClients() {
       return actor.getClients();
     },
     enabled: !!actor && !isFetching,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 }
 
@@ -28,6 +30,8 @@ export function useGetClient(clientId: string) {
       return actor.getClient(clientId);
     },
     enabled: !!actor && !isFetching && !!clientId,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 }
 
@@ -64,10 +68,18 @@ export function useCreateOrUpdateClient() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['client'] });
       toast.success('Client enregistré avec succès');
     },
     onError: (error: any) => {
-      toast.error(`Erreur: ${error.message || 'Échec de l\'enregistrement du client'}`);
+      const message = error.message || 'Échec de l\'enregistrement du client';
+      if (message.includes('Non autorisé')) {
+        toast.error('Accès refusé - Veuillez vous reconnecter');
+      } else if (message.includes('liste noire')) {
+        toast.error('Les clients sur la liste noire ne peuvent pas être modifiés');
+      } else {
+        toast.error(`Erreur: ${message}`);
+      }
     },
   });
 }

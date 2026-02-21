@@ -13,6 +13,9 @@ export function useListTechnicalFiles() {
       return actor.listTechnicalFiles();
     },
     enabled: !!actor && !isFetching,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 1000 * 60 * 2,
   });
 }
 
@@ -30,7 +33,14 @@ export function useUploadTechnicalFile() {
       toast.success('Fichier téléchargé avec succès');
     },
     onError: (error: any) => {
-      toast.error(`Erreur: ${error.message || 'Échec du téléchargement du fichier'}`);
+      const message = error.message || 'Échec du téléchargement du fichier';
+      if (message.includes('Non autorisé')) {
+        toast.error('Accès refusé - Veuillez vous reconnecter');
+      } else if (message.includes('non valide')) {
+        toast.error('Chemin de fichier non valide');
+      } else {
+        toast.error(`Erreur: ${message}`);
+      }
     },
   });
 }
@@ -49,7 +59,14 @@ export function useDeleteTechnicalFile() {
       toast.success('Fichier supprimé avec succès');
     },
     onError: (error: any) => {
-      toast.error(`Erreur: ${error.message || 'Échec de la suppression du fichier'}`);
+      const message = error.message || 'Échec de la suppression du fichier';
+      if (message.includes('Non autorisé')) {
+        toast.error('Accès refusé - Veuillez vous reconnecter');
+      } else if (message.includes('introuvable')) {
+        toast.error('Fichier introuvable - Veuillez rafraîchir la page');
+      } else {
+        toast.error(`Erreur: ${message}`);
+      }
     },
   });
 }
@@ -68,7 +85,14 @@ export function useMoveFile() {
       toast.success('Fichier déplacé avec succès');
     },
     onError: (error: any) => {
-      toast.error(`Erreur: ${error.message || 'Échec du déplacement du fichier'}`);
+      const message = error.message || 'Échec du déplacement du fichier';
+      if (message.includes('Non autorisé')) {
+        toast.error('Accès refusé - Veuillez vous reconnecter');
+      } else if (message.includes('n\'existe pas')) {
+        toast.error('Fichier introuvable');
+      } else {
+        toast.error(`Erreur: ${message}`);
+      }
     },
   });
 }
@@ -87,7 +111,14 @@ export function useCreateFolder() {
       toast.success('Dossier créé avec succès');
     },
     onError: (error: any) => {
-      toast.error(`Erreur: ${error.message || 'Échec de la création du dossier'}`);
+      const message = error.message || 'Échec de la création du dossier';
+      if (message.includes('Non autorisé')) {
+        toast.error('Accès refusé - Veuillez vous reconnecter');
+      } else if (message.includes('non valide')) {
+        toast.error('Nom de dossier non valide');
+      } else {
+        toast.error(`Erreur: ${message}`);
+      }
     },
   });
 }
@@ -106,7 +137,14 @@ export function useRenameFolder() {
       toast.success('Dossier renommé avec succès');
     },
     onError: (error: any) => {
-      toast.error(`Erreur: ${error.message || 'Échec du renommage du dossier'}`);
+      const message = error.message || 'Échec du renommage du dossier';
+      if (message.includes('Non autorisé')) {
+        toast.error('Accès refusé - Veuillez vous reconnecter');
+      } else if (message.includes('introuvable')) {
+        toast.error('Dossier introuvable');
+      } else {
+        toast.error(`Erreur: ${message}`);
+      }
     },
   });
 }

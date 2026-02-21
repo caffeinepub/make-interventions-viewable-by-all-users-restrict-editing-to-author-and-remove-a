@@ -1,193 +1,239 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Add document viewer with zoom, folder management, and Vial Traite Service branding",
+  "title": "Fix Client Folder Access and Data Loss Issues",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Replace the application logo with the provided Vial Traite Service logo",
+      "summary": "Fix the non-responsive 'Dossier Client' button/navigation that prevents users from accessing the client folder section when clicked",
       "acceptanceCriteria": [
-        "The Vial Traite Service logo is displayed in the application header/navigation",
-        "Logo maintains proper aspect ratio and quality",
-        "Logo is visible on all pages of the application"
+        "Clicking 'Dossier Client' successfully navigates to or opens the client folder view",
+        "Navigation response is immediate and provides visual feedback",
+        "All client folder data loads correctly after navigation"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/layout/MobileLayout.tsx",
+          "path": "frontend/src/pages/ClientsPage.tsx",
           "operation": "modify",
-          "description": "Update the header section to display the Vial Traite Service logo from frontend/public/assets/generated/vial-traite-logo.dim_400x200.png instead of the current text-based title. Ensure the logo is sized appropriately for mobile navigation and maintains proper aspect ratio."
+          "description": "Debug and fix the navigation handler for client dossier links. Ensure the onClick handler properly navigates to /clients/:clientId route using TanStack Router's navigation. Add visual feedback (loading state, hover effects) to indicate the button is interactive. Verify the client ID is correctly passed to the navigation function."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Verify the /clients/:clientId route is properly registered and active. Ensure route parameters are correctly configured and the ClientDossierPage component is properly linked. Check for any route guards or conditions that might block navigation."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Apply the Vial Traite Service brand color palette throughout the application UI",
+      "summary": "Restore full access to interventions from within the client folder section",
       "acceptanceCriteria": [
-        "Primary UI elements use blue #0066CC from the logo",
-        "Accent colors use lime green #99CC33 and orange #FF9933 appropriately",
-        "Color scheme is applied consistently across all pages and components",
-        "Colors maintain sufficient contrast for accessibility"
+        "Users can view the full list of interventions from the client folder",
+        "Intervention details, dates, and comments display correctly",
+        "Add, edit, and delete intervention actions are accessible and functional"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/index.css",
+          "path": "frontend/src/pages/ClientDossierPage.tsx",
           "operation": "modify",
-          "description": "Update the CSS custom properties to define the Vial Traite Service brand colors: primary blue (#0066CC), lime green (#99CC33), and orange (#FF9933). Replace or extend existing color variables to use these brand colors for primary, accent, and secondary UI elements while maintaining accessibility contrast ratios."
+          "description": "Ensure the interventions tab correctly loads and displays the InterventionList component. Verify the clientId prop is properly passed to InterventionList. Check that the tab switching logic doesn't interfere with intervention data fetching. Add error boundaries around the interventions section to catch and display any loading failures."
         },
         {
-          "path": "frontend/tailwind.config.js",
+          "path": "frontend/src/components/interventions/InterventionList.tsx",
           "operation": "modify",
-          "description": "Extend the Tailwind color configuration to include Vial Traite Service brand colors as custom color utilities (vial-blue, vial-green, vial-orange) so they can be used throughout the application with Tailwind classes."
-        },
-        {
-          "path": "frontend/src/components/layout/MobileLayout.tsx",
-          "operation": "modify",
-          "description": "Update header background colors and button styles to use the Vial Traite Service brand colors (blue for primary actions, green/orange for accents)."
+          "description": "Review and fix any conditional rendering that might hide interventions. Ensure the useClientInterventions hook is called with the correct clientId. Verify all action buttons (add, edit, delete) are visible and properly wired to their respective handlers. Add null/empty state handling with clear messaging."
         }
       ]
     },
     {
       "id": "REQ-3",
-      "summary": "Implement an in-app document viewer with zoom and image enlargement capabilities for technical folder documents",
+      "summary": "Recover and restore the lost technical folder data, ensuring all previously stored files and folders are accessible",
       "acceptanceCriteria": [
-        "Users can open documents directly within the application",
-        "Viewer supports zoom in/out functionality",
-        "Users can enlarge images to full screen",
-        "Pinch-to-zoom works on touch devices",
-        "Viewer supports images, PDFs, and other document formats"
+        "All technical folder files and folders load from backend storage",
+        "No data is permanently lost; implement recovery mechanisms if data exists in backend",
+        "Technical folder displays complete file hierarchy with all metadata"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/technical-folder/DocumentViewer.tsx",
-          "operation": "create",
-          "description": "Create a full-featured document viewer component supporting images, PDFs, and other document formats with zoom, pan, and fullscreen capabilities. Include touch gesture support for pinch-to-zoom on mobile devices. Accept an ExternalBlob as input and use getDirectURL() for display. Include controls for zoom in/out, reset, and fullscreen toggle. Handle different file types with appropriate rendering (images with img/canvas, PDFs with iframe or PDF.js if needed)."
+          "path": "frontend/src/pages/TechnicalFolderPage.tsx",
+          "operation": "modify",
+          "description": "Add robust error handling and retry logic to the useTechnicalFiles query. Implement a recovery mechanism that attempts to reload technical folder data on mount and after errors. Add a manual refresh button to allow users to retry loading. Display the full folder hierarchy with proper path parsing. Check for any query invalidation issues that might cause data to disappear."
         },
         {
-          "path": "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+          "path": "frontend/src/hooks/useTechnicalFolder.ts",
           "operation": "modify",
-          "description": "Add a button to open files in the new DocumentViewer component. When a file is clicked, open a modal/dialog containing the DocumentViewer instead of directly opening the file URL. Wire the DocumentViewer with the file's ExternalBlob."
+          "description": "Review the listTechnicalFiles query configuration. Ensure staleTime and cacheTime settings preserve data appropriately. Add retry logic with exponential backoff (retry: 3, retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000)). Verify query keys are stable and don't cause unnecessary refetches. Add onError handler to log technical folder loading failures."
         }
       ]
     },
     {
       "id": "REQ-4",
-      "summary": "Enable users to create, rename, and organize subfolders within the technical folder to categorize documents by theme",
+      "summary": "Add comprehensive error handling with clear, user-friendly error messages in French throughout the application",
       "acceptanceCriteria": [
-        "Users can create new subfolders with custom names",
-        "Users can rename existing folders and subfolders",
-        "Folder hierarchy is displayed clearly in the UI",
-        "Folders can be organized by user-defined themes",
-        "Folder names are validated (no slashes, non-empty)"
+        "Display informative error messages when data loading fails (e.g., 'Impossible de charger les données - Vérifiez votre connexion')",
+        "Show specific error context for different failure types (network, permissions, data not found)",
+        "Error messages appear in toast notifications or alert dialogs",
+        "All error messages are in French"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/technical-folder/CreateFolderDialog.tsx",
+          "path": "frontend/src/hooks/useClients.ts",
           "operation": "modify",
-          "description": "Update the CreateFolderDialog to support creating subfolders at any level in the hierarchy, not just at the root. Accept the current folder path as a prop so new folders are created within the current location. Maintain existing validation rules (no slashes, non-empty names)."
+          "description": "Add French error messages to all query and mutation onError handlers. Map error types to user-friendly messages: network errors → 'Impossible de charger les données - Vérifiez votre connexion', permission errors → 'Accès refusé', not found → 'Données introuvables'. Use toast notifications to display errors. Add error context (which operation failed) to help users understand what went wrong."
         },
         {
-          "path": "frontend/src/components/technical-folder/RenameFolderDialog.tsx",
-          "operation": "create",
-          "description": "Create a dialog component for renaming existing folders. Accept the folder's current path as input, extract the folder name, allow editing the name (with validation: no slashes, non-empty), and call the backend's renameFolder method with the old path and new name. Show success/error toasts and refresh the file list on success."
+          "path": "frontend/src/hooks/useInterventions.ts",
+          "operation": "modify",
+          "description": "Add French error messages to intervention queries and mutations. Include specific messages for add/update/delete failures. Use toast notifications for mutation errors. Add error context such as client name or intervention date to help users identify which operation failed."
         },
         {
           "path": "frontend/src/hooks/useTechnicalFolder.ts",
           "operation": "modify",
-          "description": "Add a useRenameFolder mutation hook that calls actor.renameFolder(oldPath, newName) and invalidates the technical files query on success. Include error handling and toast notifications."
+          "description": "Add French error messages for all technical folder operations (upload, delete, move, rename). Provide specific messages for file size limits, invalid paths, missing files, and permission errors. Use toast notifications to display errors with actionable guidance (e.g., 'Fichier introuvable - Veuillez rafraîchir la page')."
         },
         {
-          "path": "frontend/src/pages/TechnicalFolderPage.tsx",
+          "path": "frontend/src/components/common/ErrorBoundary.tsx",
           "operation": "modify",
-          "description": "Update the TechnicalFolderPage to display folders with rename actions. Add a rename button/icon for each folder that opens the RenameFolderDialog. Ensure the folder hierarchy is clearly visualized with proper indentation or tree structure. Update breadcrumb navigation to support multi-level folder paths."
+          "description": "Update error boundary to display French error messages. Add more detailed error information including error type and suggested actions. Include a 'Réessayer' (retry) button alongside the reload button. Improve the visual design to be less alarming while still clearly indicating an error occurred."
         }
       ]
     },
     {
       "id": "REQ-5",
-      "summary": "Implement drag-and-drop functionality to move folders and files within the technical folder structure",
+      "summary": "Add visible loading indicators (spinners) throughout the application to show when data is being fetched or operations are in progress",
       "acceptanceCriteria": [
-        "Users can drag folders to reposition them",
-        "Users can drag files between folders",
-        "Visual feedback indicates valid drop targets during drag operations",
-        "Dropped items update their location in the folder structure",
-        "Drag-and-drop works on both desktop and touch devices"
+        "Loading spinners appear when fetching clients, interventions, or technical folder data",
+        "Spinners are positioned appropriately (centered for full page loads, inline for component loads)",
+        "Loading states prevent user interaction during critical operations",
+        "Spinners automatically disappear when data loads or errors occur"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/technical-folder/DraggableFileItem.tsx",
-          "operation": "create",
-          "description": "Create a wrapper component for file/folder items that implements HTML5 drag-and-drop API. Handle dragstart, dragover, dragend events and provide visual feedback during drag operations. Accept file/folder path and type as props. Support both mouse and touch events for mobile compatibility."
+          "path": "frontend/src/pages/ClientsPage.tsx",
+          "operation": "modify",
+          "description": "Add a centered loading spinner that displays while the useClients query is loading (isLoading state). Use a Loader2 icon with spin animation. Position the spinner in the center of the page content area. Ensure the spinner disappears when data loads or an error occurs. Disable the search input and other interactive elements during loading."
         },
         {
-          "path": "frontend/src/components/technical-folder/DroppableFolderTarget.tsx",
-          "operation": "create",
-          "description": "Create a droppable folder component that accepts dragged files/folders. Handle drop events, validate the drop target (prevent dropping into itself or invalid paths), and trigger the moveTechnicalFile mutation from useTechnicalFolder. Provide visual feedback when a draggable item is over a valid drop target."
+          "path": "frontend/src/pages/ClientDossierPage.tsx",
+          "operation": "modify",
+          "description": "Add loading spinners for both the client data query and the interventions query. Show a page-level spinner while client data loads, then show inline spinners for each tab's content (interventions, contact info, blacklist) as they load. Use Loader2 icons with appropriate sizing for different contexts."
         },
         {
           "path": "frontend/src/pages/TechnicalFolderPage.tsx",
           "operation": "modify",
-          "description": "Integrate DraggableFileItem and DroppableFolderTarget components into the file list rendering. Wrap file items with DraggableFileItem and folder items with both DraggableFileItem and DroppableFolderTarget to allow drag-and-drop reordering and moving files between folders."
+          "description": "Add a centered loading spinner while technical files are being fetched. Show inline spinners for folder navigation actions (opening folders, moving files). Display upload progress spinners during file upload operations. Ensure spinners don't interfere with the breadcrumb navigation."
         },
         {
-          "path": "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+          "path": "frontend/src/components/interventions/InterventionList.tsx",
           "operation": "modify",
-          "description": "Wrap the file row component with DraggableFileItem functionality so individual files can be dragged to new locations in the folder hierarchy."
+          "description": "Add a loading spinner that displays while interventions are being fetched. Show inline spinners on action buttons during mutation operations (add, edit, delete). Disable buttons and show loading state during operations to prevent duplicate submissions."
+        },
+        {
+          "path": "frontend/src/pages/DashboardPage.tsx",
+          "operation": "modify",
+          "description": "Add a loading spinner while interventions for the selected date are being fetched. Position the spinner in the interventions list area. Ensure the calendar remains interactive while data loads."
         }
       ]
     },
     {
       "id": "REQ-6",
-      "summary": "Extend technical folder support to handle all file formats including images, PDFs, Word documents, Excel spreadsheets, and other common document types",
+      "summary": "Implement automatic retry logic for failed data loading operations with exponential backoff",
       "acceptanceCriteria": [
-        "Technical folder accepts uploads of images (JPG, PNG, GIF, WebP, etc.)",
-        "Technical folder accepts PDFs",
-        "Technical folder accepts Word documents (.doc, .docx)",
-        "Technical folder accepts Excel spreadsheets (.xls, .xlsx)",
-        "File type icons or previews differentiate document types",
-        "All accepted formats can be downloaded"
+        "Failed queries automatically retry up to 3 times with increasing delays",
+        "User sees retry attempts indicated in loading states",
+        "After maximum retries, display clear error message with manual retry button",
+        "Retry logic applies to all critical data fetches (clients, interventions, technical folder)"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
+          "path": "frontend/src/hooks/useClients.ts",
           "operation": "modify",
-          "description": "Update the file picker accept attribute to allow all common document formats: images (image/*), PDFs (application/pdf), Word documents (.doc, .docx, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document), Excel (.xls, .xlsx, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet), and other common formats. Remove any restrictive file type filters."
+          "description": "Add retry configuration to all client-related queries: retry: 3, retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000). This creates exponential backoff: 1s, 2s, 4s with a 30s maximum. Add a custom onError handler that logs retry attempts. Include retry count in error messages when max retries are exhausted."
         },
         {
-          "path": "frontend/src/components/technical-folder/FileTypeIcon.tsx",
-          "operation": "create",
-          "description": "Create a utility component that displays appropriate icons for different file types based on file extension or MIME type. Support icons for images, PDFs, Word documents, Excel spreadsheets, and generic document types. Use existing UI icon components or add necessary icons."
+          "path": "frontend/src/hooks/useInterventions.ts",
+          "operation": "modify",
+          "description": "Add retry configuration with exponential backoff to intervention queries. Use the same retry: 3, retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000) pattern. Add logging for retry attempts. Update error messages to indicate that retries were attempted before failure."
         },
         {
-          "path": "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+          "path": "frontend/src/hooks/useTechnicalFolder.ts",
           "operation": "modify",
-          "description": "Integrate FileTypeIcon component to display appropriate icons for each file type. Update the preview logic to handle non-image formats gracefully (show icon instead of broken image)."
+          "description": "Add retry configuration with exponential backoff to the listTechnicalFiles query and downloadTechnicalFileWithPath query. Use retry: 3, retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000). Log retry attempts and include retry information in error messages."
         },
         {
-          "path": "frontend/src/components/technical-folder/DocumentViewer.tsx",
+          "path": "frontend/src/pages/ClientsPage.tsx",
           "operation": "modify",
-          "description": "Extend the DocumentViewer to handle additional file formats beyond images. For PDFs, use an iframe or embed element. For Word/Excel documents, provide a download option with a message that these formats require external viewers. Detect file type from the ExternalBlob URL or filename extension."
+          "description": "Add a manual 'Réessayer' (retry) button that appears when data loading fails after automatic retries. Wire the button to call queryClient.invalidateQueries for the clients query. Show the button in a centered error state component that replaces the normal content."
+        },
+        {
+          "path": "frontend/src/pages/TechnicalFolderPage.tsx",
+          "operation": "modify",
+          "description": "Add a manual 'Réessayer' (retry) button for technical folder loading failures. Position it prominently in the error state. Wire it to invalidate the technical files query. Include explanatory text in French about what went wrong and that automatic retries were attempted."
         }
       ]
     },
     {
       "id": "REQ-7",
-      "summary": "Add the same document viewer with zoom and enlargement capabilities to client intervention files",
+      "summary": "Add data export functionality allowing users to download their data as PDF or JSON files for backup purposes",
       "acceptanceCriteria": [
-        "Intervention media files can be opened in the in-app viewer",
-        "Viewer supports zoom and enlargement for intervention documents",
-        "Functionality matches the technical folder document viewer",
-        "Viewer is accessible from intervention detail views"
+        "Export button accessible from main navigation or settings area",
+        "PDF export includes formatted client list, interventions, and technical folder inventory",
+        "JSON export provides complete raw data dump of all user data",
+        "Export filename includes timestamp (e.g., 'vial-traite-backup-2024-01-15.pdf')",
+        "Export operation shows progress indicator for large datasets"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/interventions/InterventionDetailsDialog.tsx",
-          "operation": "modify",
-          "description": "Add a button or clickable media preview in the intervention details that opens the DocumentViewer (created for REQ-3) in a modal/dialog. Pass the intervention's media ExternalBlob items to the viewer. Ensure users can navigate between multiple media items if the intervention has several attachments."
+          "path": "frontend/src/components/export/ExportDataDialog.tsx",
+          "operation": "create",
+          "description": "Create a new dialog component for data export with two options: PDF and JSON. Add format selection radio buttons. Include an export button that fetches all data (clients, interventions, technical folder inventory) and generates the selected format. Show a progress indicator during data collection and file generation. Use jsPDF library for PDF generation with proper formatting. For JSON, stringify the complete data structure. Generate filename with current date: `vial-traite-backup-${new Date().toISOString().split('T')[0]}.${format}`. Trigger browser download of the generated file."
         },
         {
-          "path": "frontend/src/components/media/MediaPreview.tsx",
+          "path": "frontend/src/hooks/useDataExport.ts",
+          "operation": "create",
+          "description": "Create a custom hook that aggregates data from multiple queries (clients, interventions, technical files list) for export. Provide methods for fetching all data, formatting for PDF/JSON, and triggering downloads. Handle loading states and errors. Return export progress percentage for UI feedback. Use Promise.all to fetch data efficiently. Include error handling for partial data failures."
+        },
+        {
+          "path": "frontend/src/components/layout/MobileLayout.tsx",
           "operation": "modify",
-          "description": "Make the media preview items clickable and open the DocumentViewer in a modal when clicked. This provides zoom and enlargement capabilities for intervention media across the application wherever MediaPreview is used."
+          "description": "Add an 'Exporter les données' button or menu item in the header navigation. Position it near the logout button or in a menu dropdown. Wire it to open the ExportDataDialog. Use a Download icon from Lucide. Ensure it's only visible to authenticated users."
+        }
+      ]
+    },
+    {
+      "id": "REQ-8",
+      "summary": "Strengthen data persistence and synchronization between frontend and backend to prevent future data loss",
+      "acceptanceCriteria": [
+        "All critical operations use transactions or atomic updates on backend",
+        "Frontend cache invalidation ensures fresh data after mutations",
+        "Offline operations queue properly and sync when connection restored",
+        "Add data validation checks before displaying to catch corruption early"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useClients.ts",
+          "operation": "modify",
+          "description": "Review and strengthen cache invalidation logic after mutations. Ensure createOrUpdateClient mutation invalidates both 'clients' and individual client queries. Add optimistic updates with proper rollback on error. Verify offline operation queueing properly persists mutations when offline. Add data validation before returning query results to catch malformed data early."
+        },
+        {
+          "path": "frontend/src/hooks/useInterventions.ts",
+          "operation": "modify",
+          "description": "Strengthen cache invalidation after intervention mutations. Ensure add/update/delete operations invalidate both client-specific intervention queries and date-based queries. Add optimistic updates with rollback. Verify offline queueing correctly serializes ExternalBlob media. Add validation for intervention data structure before rendering."
+        },
+        {
+          "path": "frontend/src/hooks/useTechnicalFolder.ts",
+          "operation": "modify",
+          "description": "Improve cache invalidation after file operations (upload, delete, move, rename). Ensure listTechnicalFiles query refreshes after every mutation. Add optimistic updates for immediate UI feedback. Verify ExternalBlob serialization in offline queue. Add validation to check file paths are well-formed before operations."
+        },
+        {
+          "path": "frontend/src/offline/syncEngine.ts",
+          "operation": "modify",
+          "description": "Review and strengthen the sync engine's operation processing. Add transaction-like behavior where possible (mark operations as in-progress, commit on success, rollback on failure). Improve error handling to distinguish between permanent failures (bad data) and temporary failures (network issues). Add logging for all sync attempts. Ensure failed operations are retried appropriately without blocking the queue."
+        },
+        {
+          "path": "frontend/src/hooks/useSync.ts",
+          "operation": "modify",
+          "description": "Add validation checks before syncing queued operations. Ensure operations have valid data structures before attempting to send to backend. Add detailed error reporting for sync failures. Implement a mechanism to detect and report corrupted queue entries. Provide a manual queue inspection/repair function for troubleshooting."
         }
       ]
     }

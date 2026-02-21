@@ -16,6 +16,8 @@ export function useGetClientInterventions(clientId: string) {
       return actor.getClientInterventions(clientId);
     },
     enabled: !!actor && !isFetching && !!clientId,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 }
 
@@ -59,10 +61,18 @@ export function useAddIntervention() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['interventions', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['interventions', 'date'] });
       toast.success('Intervention ajoutée avec succès');
     },
     onError: (error: any) => {
-      toast.error(`Erreur: ${error.message || 'Échec de l\'ajout de l\'intervention'}`);
+      const message = error.message || 'Échec de l\'ajout de l\'intervention';
+      if (message.includes('Non autorisé')) {
+        toast.error('Accès refusé - Veuillez vous reconnecter');
+      } else if (message.includes('non trouvé')) {
+        toast.error('Client introuvable');
+      } else {
+        toast.error(`Erreur: ${message}`);
+      }
     },
   });
 }
@@ -111,10 +121,18 @@ export function useUpdateIntervention() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['interventions', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['interventions', 'date'] });
       toast.success('Intervention mise à jour avec succès');
     },
     onError: (error: any) => {
-      toast.error(`Erreur: ${error.message || 'Échec de la mise à jour de l\'intervention'}`);
+      const message = error.message || 'Échec de la mise à jour de l\'intervention';
+      if (message.includes('Non autorisé')) {
+        toast.error('Accès refusé - Vous ne pouvez modifier que vos propres interventions');
+      } else if (message.includes('non trouvé')) {
+        toast.error('Intervention introuvable');
+      } else {
+        toast.error(`Erreur: ${message}`);
+      }
     },
   });
 }
@@ -140,10 +158,18 @@ export function useDeleteIntervention() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['interventions', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['interventions', 'date'] });
       toast.success('Intervention supprimée avec succès');
     },
     onError: (error: any) => {
-      toast.error(`Erreur: ${error.message || 'Échec de la suppression de l\'intervention'}`);
+      const message = error.message || 'Échec de la suppression de l\'intervention';
+      if (message.includes('Non autorisé')) {
+        toast.error('Accès refusé - Vous ne pouvez supprimer que vos propres interventions');
+      } else if (message.includes('non trouvé')) {
+        toast.error('Intervention introuvable');
+      } else {
+        toast.error(`Erreur: ${message}`);
+      }
     },
   });
 }
@@ -158,5 +184,7 @@ export function useGetInterventionsByDate(day: bigint, month: bigint, year: bigi
       return actor.getInterventionsByDate(day, month, year);
     },
     enabled: !!actor && !isFetching,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 }

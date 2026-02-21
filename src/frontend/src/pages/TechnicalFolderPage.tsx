@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import MobileLayout from '../components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FolderPlus, Upload, Edit2 } from 'lucide-react';
+import { ArrowLeft, FolderPlus, Upload, Edit2, Loader2, RefreshCw } from 'lucide-react';
 import { useListTechnicalFiles } from '../hooks/useTechnicalFolder';
 import TechnicalFileRow from '../components/technical-folder/TechnicalFileRow';
 import TechnicalFolderUploadCard from '../components/technical-folder/TechnicalFolderUploadCard';
@@ -17,14 +17,16 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function TechnicalFolderPage() {
   const navigate = useNavigate();
-  const { data: files = [], isLoading } = useListTechnicalFiles();
+  const { data: files = [], isLoading, isError, error } = useListTechnicalFiles();
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
   const [renameFolderPath, setRenameFolderPath] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState<string[]>([]);
+  const queryClient = useQueryClient();
 
   const currentPathString = currentPath.join('/');
 
@@ -65,6 +67,10 @@ export default function TechnicalFolderPage() {
     setRenameFolderPath(folderPath);
   };
 
+  const handleRetry = () => {
+    queryClient.invalidateQueries({ queryKey: ['technicalFiles'] });
+  };
+
   return (
     <MobileLayout>
       <div className="space-y-4">
@@ -81,6 +87,7 @@ export default function TechnicalFolderPage() {
             variant="outline"
             size="icon"
             onClick={() => setIsCreateFolderDialogOpen(true)}
+            disabled={isLoading}
           >
             <FolderPlus className="h-4 w-4" />
           </Button>
@@ -88,6 +95,7 @@ export default function TechnicalFolderPage() {
             variant="default"
             size="icon"
             onClick={() => setIsUploadDialogOpen(true)}
+            disabled={isLoading}
           >
             <Upload className="h-4 w-4" />
           </Button>
@@ -129,8 +137,31 @@ export default function TechnicalFolderPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Chargement...
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-muted-foreground">Chargement des fichiers...</p>
+              </div>
+            ) : isError ? (
+              <div className="flex flex-col items-center gap-4 text-center py-8">
+                <div className="p-3 rounded-full bg-destructive/10">
+                  <RefreshCw className="h-6 w-6 text-destructive" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-2">
+                    Impossible de charger les fichiers
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {error instanceof Error 
+                      ? error.message.includes('Non autorisé')
+                        ? 'Accès refusé - Veuillez vous reconnecter'
+                        : 'Erreur de connexion - Vérifiez votre connexion Internet'
+                      : 'Une erreur est survenue lors du chargement des données'}
+                  </p>
+                  <Button onClick={handleRetry} variant="outline">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Réessayer
+                  </Button>
+                </div>
               </div>
             ) : folders.size === 0 && filesList.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">

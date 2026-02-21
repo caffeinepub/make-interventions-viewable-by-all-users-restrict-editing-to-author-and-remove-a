@@ -1,45 +1,25 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-21T00:57:37.239Z",
-  "summary": "The implementation covers most requirements including document viewer (REQ-3, REQ-7), folder management (REQ-4), file format support (REQ-6), and branding (REQ-1, REQ-2). However, drag-and-drop functionality (REQ-5) appears missing from the diff, and some acceptance criteria for REQ-3 and REQ-5 lack clear evidence.",
-  "missing_requirements": [
-    {
-      "id": "REQ-5",
-      "requirement": "Implement drag-and-drop functionality to move folders and files within the technical folder structure",
-      "reason": "No drag-and-drop implementation found in the diff. TechnicalFileRow.tsx and TechnicalFolderPage.tsx show move functionality via dialogs/buttons (MoveFolderDialog, FolderInput button), but no draggable/droppable attributes, drag event handlers, or visual drop feedback as specified in acceptance criteria.",
-      "evidence": [
-        "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
-        "frontend/src/pages/TechnicalFolderPage.tsx"
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "requirement": "Pinch-to-zoom works on touch devices (acceptance criteria)",
-      "reason": "DocumentViewer.tsx includes handleTouchStart/Move/End functions and getDistance helper for pinch detection, but the implementation is only applied to images. PDFs and other formats use iframe/embed which may not support the custom pinch-to-zoom implementation. Partial coverage.",
-      "evidence": [
-        "frontend/src/components/technical-folder/DocumentViewer.tsx"
-      ]
-    }
-  ],
+  "generatedAt": "2026-02-21T01:19:30.271Z",
+  "summary": "The implementation addresses all 8 requirements with comprehensive changes across frontend hooks, pages, and components. Loading spinners, error handling with French messages, retry logic with exponential backoff, and data export functionality (JSON/PDF) have been added. Navigation to client dossier is improved, interventions are accessible from the client folder, and technical folder data loading is enhanced. Data persistence improvements include offline operation queueing and proper cache invalidation.",
+  "missing_requirements": [],
   "hallucinated_features": [],
-  "confidence": 0.82,
+  "confidence": 0.95,
   "changed_files": [
-    "backend/main.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/interventions/InterventionDetailsDialog.tsx",
-    "frontend/src/components/layout/MobileLayout.tsx",
-    "frontend/src/components/media/MediaPreview.tsx",
-    "frontend/src/components/technical-folder/CreateFolderDialog.tsx",
-    "frontend/src/components/technical-folder/DocumentViewer.tsx",
-    "frontend/src/components/technical-folder/FileTypeIcon.tsx",
-    "frontend/src/components/technical-folder/RenameFolderDialog.tsx",
-    "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
-    "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
+    "frontend/src/components/common/ErrorBoundary.tsx",
+    "frontend/src/components/export/ExportDataDialog.tsx",
+    "frontend/src/components/interventions/InterventionList.tsx",
+    "frontend/src/hooks/useClients.ts",
+    "frontend/src/hooks/useDataExport.ts",
+    "frontend/src/hooks/useInterventions.ts",
     "frontend/src/hooks/useTechnicalFolder.ts",
-    "frontend/src/index.css",
+    "frontend/src/offline/syncEngine.ts",
+    "frontend/src/pages/ClientDossierPage.tsx",
+    "frontend/src/pages/ClientsPage.tsx",
+    "frontend/src/pages/DashboardPage.tsx",
     "frontend/src/pages/TechnicalFolderPage.tsx",
-    "frontend/tailwind.config.js",
     "project_state.json"
   ]
 }

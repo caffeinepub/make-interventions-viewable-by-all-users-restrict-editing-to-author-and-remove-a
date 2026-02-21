@@ -65,10 +65,12 @@ export async function syncOfflineOperations(actor: backendInterface): Promise<vo
 
       if (op.id !== undefined) {
         await removeOfflineOperation(op.id);
+        console.log(`Opération ${op.type} synchronisée avec succès`);
       }
     } catch (error: any) {
-      console.error('Échec de la synchronisation de l\'opération:', error);
+      console.error(`Échec de la synchronisation de l'opération ${op.type}:`, error);
 
+      // Remove unauthorized operations from queue
       if (
         error.message?.includes('Non autorisé') &&
         (op.type === 'updateIntervention' || op.type === 'deleteIntervention')
@@ -78,6 +80,8 @@ export async function syncOfflineOperations(actor: backendInterface): Promise<vo
           await removeOfflineOperation(op.id);
         }
       }
+      
+      // Don't throw - continue with next operation
     }
   }
 }

@@ -2,10 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-replace-the-application-logo-with-the-provided-vial-traite-service-logo-showing-blue-text-orange-leaves-green-circular-border-and-blue-cow-illustration",
-      "featureTitle": "Replace the application logo with the provided Vial Traite Service logo (showing blue text, orange leaves, green circular border, and blue cow illustration)",
+      "featureId": "feature-fix-the-non-responsive-dossier-client-button-navigation-that-prevents-users-from-accessing-the-client-folder-section-when-clicked",
+      "featureTitle": "Fix the non-responsive 'Dossier Client' button/navigation that prevents users from accessing the client folder section when clicked",
       "files": [
-        "frontend/src/components/layout/MobileLayout.tsx"
+        "frontend/src/pages/ClientsPage.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -23,12 +23,11 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-apply-the-vial-traite-service-brand-color-palette-throughout-the-application-ui-primary-blue-0066cc-lime-green-99cc33-and-orange-ff9933-from-the-logo",
-      "featureTitle": "Apply the Vial Traite Service brand color palette throughout the application UI: primary blue (#0066CC), lime green (#99CC33), and orange (#FF9933) from the logo",
+      "featureId": "feature-restore-full-access-to-interventions-from-within-the-client-folder-section",
+      "featureTitle": "Restore full access to interventions from within the client folder section",
       "files": [
-        "frontend/src/components/layout/MobileLayout.tsx",
-        "frontend/src/index.css",
-        "frontend/tailwind.config.js"
+        "frontend/src/components/interventions/InterventionList.tsx",
+        "frontend/src/pages/ClientDossierPage.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -46,11 +45,11 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-implement-an-in-app-document-viewer-with-zoom-and-image-enlargement-capabilities-for-technical-folder-documents",
-      "featureTitle": "Implement an in-app document viewer with zoom and image enlargement capabilities for technical folder documents",
+      "featureId": "feature-recover-and-restore-the-lost-technical-folder-data-ensuring-all-previously-stored-files-and-folders-are-accessible",
+      "featureTitle": "Recover and restore the lost technical folder data, ensuring all previously stored files and folders are accessible",
       "files": [
-        "frontend/src/components/technical-folder/DocumentViewer.tsx",
-        "frontend/src/components/technical-folder/TechnicalFileRow.tsx"
+        "frontend/src/hooks/useTechnicalFolder.ts",
+        "frontend/src/pages/TechnicalFolderPage.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -68,13 +67,13 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-enable-users-to-create-rename-and-organize-subfolders-within-the-technical-folder-to-categorize-documents-by-theme",
-      "featureTitle": "Enable users to create, rename, and organize subfolders within the technical folder to categorize documents by theme",
+      "featureId": "feature-add-comprehensive-error-handling-with-clear-user-friendly-error-messages-in-french-throughout-the-application-especially-for-data-loading-and-navigation-failures",
+      "featureTitle": "Add comprehensive error handling with clear, user-friendly error messages in French throughout the application, especially for data loading and navigation failures",
       "files": [
-        "frontend/src/components/technical-folder/CreateFolderDialog.tsx",
-        "frontend/src/components/technical-folder/RenameFolderDialog.tsx",
-        "frontend/src/hooks/useTechnicalFolder.ts",
-        "frontend/src/pages/TechnicalFolderPage.tsx"
+        "frontend/src/components/common/ErrorBoundary.tsx",
+        "frontend/src/hooks/useClients.ts",
+        "frontend/src/hooks/useInterventions.ts",
+        "frontend/src/hooks/useTechnicalFolder.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -92,10 +91,13 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-implement-drag-and-drop-functionality-to-move-folders-and-files-within-the-technical-folder-structure",
-      "featureTitle": "Implement drag-and-drop functionality to move folders and files within the technical folder structure",
+      "featureId": "feature-add-visible-loading-indicators-spinners-throughout-the-application-to-show-when-data-is-being-fetched-or-operations-are-in-progress",
+      "featureTitle": "Add visible loading indicators (spinners) throughout the application to show when data is being fetched or operations are in progress",
       "files": [
-        "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+        "frontend/src/components/interventions/InterventionList.tsx",
+        "frontend/src/pages/ClientDossierPage.tsx",
+        "frontend/src/pages/ClientsPage.tsx",
+        "frontend/src/pages/DashboardPage.tsx",
         "frontend/src/pages/TechnicalFolderPage.tsx"
       ],
       "components": [
@@ -114,13 +116,14 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-extend-technical-folder-support-to-handle-all-file-formats-including-images-pdfs-word-documents-excel-spreadsheets-and-other-common-document-types",
-      "featureTitle": "Extend technical folder support to handle all file formats including images, PDFs, Word documents, Excel spreadsheets, and other common document types",
+      "featureId": "feature-implement-automatic-retry-logic-for-failed-data-loading-operations-with-exponential-backoff",
+      "featureTitle": "Implement automatic retry logic for failed data loading operations with exponential backoff",
       "files": [
-        "frontend/src/components/technical-folder/DocumentViewer.tsx",
-        "frontend/src/components/technical-folder/FileTypeIcon.tsx",
-        "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
-        "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx"
+        "frontend/src/hooks/useClients.ts",
+        "frontend/src/hooks/useInterventions.ts",
+        "frontend/src/hooks/useTechnicalFolder.ts",
+        "frontend/src/pages/ClientsPage.tsx",
+        "frontend/src/pages/TechnicalFolderPage.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -138,11 +141,11 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-add-the-same-document-viewer-with-zoom-and-enlargement-capabilities-to-client-intervention-files",
-      "featureTitle": "Add the same document viewer with zoom and enlargement capabilities to client intervention files",
+      "featureId": "feature-add-data-export-functionality-allowing-users-to-download-their-data-as-pdf-or-json-files-for-backup-purposes",
+      "featureTitle": "Add data export functionality allowing users to download their data as PDF or JSON files for backup purposes",
       "files": [
-        "frontend/src/components/interventions/InterventionDetailsDialog.tsx",
-        "frontend/src/components/media/MediaPreview.tsx"
+        "frontend/src/components/export/ExportDataDialog.tsx",
+        "frontend/src/hooks/useDataExport.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -156,6 +159,30 @@
       ],
       "testIds": [
         "REQ-7"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-strengthen-data-persistence-and-synchronization-between-frontend-and-backend-to-prevent-future-data-loss",
+      "featureTitle": "Strengthen data persistence and synchronization between frontend and backend to prevent future data loss",
+      "files": [
+        "frontend/src/hooks/useClients.ts",
+        "frontend/src/hooks/useInterventions.ts",
+        "frontend/src/hooks/useTechnicalFolder.ts",
+        "frontend/src/offline/syncEngine.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "camera@1.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-8"
       ],
       "confidence": "high"
     }
