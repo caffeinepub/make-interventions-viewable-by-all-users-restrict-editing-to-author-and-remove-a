@@ -1,13 +1,15 @@
 # Specification
 
 ## Summary
-**Goal:** Enable users to move uploaded files between different technical folders within a client dossier.
+**Goal:** Add Vial Traite Service branding, implement in-app document viewer with zoom capabilities, and enable folder management with drag-and-drop for technical folders and client interventions.
 
 **Planned changes:**
-- Add a 'Move' action to each file in the file list that opens a folder selection dialog
-- Create a folder selection dialog component showing the technical folder hierarchy
-- Implement backend function to move files between folders while preserving content and metadata
-- Create React Query mutation hook for the move operation with proper query invalidation
-- Update the technical folder page to refresh the file list after successful moves
+- Replace application logo with Vial Traite Service logo
+- Apply brand color palette (blue #0066CC, lime green #99CC33, orange #FF9933) throughout UI
+- Implement in-app document viewer with zoom and image enlargement for technical folder documents
+- Enable creation, renaming, and organization of subfolders within technical folder
+- Add drag-and-drop functionality to move folders and files
+- Extend technical folder support to all file formats (images, PDFs, Word, Excel, etc.)
+- Apply same document viewer with zoom to client intervention files
 
-**User-visible outcome:** Users can move files from one technical folder to another by clicking a 'Move' button, selecting a destination folder from a dialog, and having the file list automatically update to reflect the change.
+**User-visible outcome:** Users can browse documents with the new Vial Traite Service branded interface, view and zoom documents directly in the app, organize files into custom subfolders by theme, and drag-and-drop files between folders for both technical documents and client intervention files.

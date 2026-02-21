@@ -76,7 +76,7 @@ export default function InterventionDetailsDialog({
             {intervention.media.length > 0 && (
               <div className="grid gap-2">
                 <Label>Médias</Label>
-                <MediaPreview media={intervention.media} />
+                <MediaPreview media={intervention.media} clickable />
               </div>
             )}
           </div>

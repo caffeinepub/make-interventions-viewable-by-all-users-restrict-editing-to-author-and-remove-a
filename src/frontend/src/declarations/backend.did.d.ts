@@ -80,6 +80,7 @@ export interface _SERVICE {
     undefined
   >,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'createFolder' : ActorMethod<[string], undefined>,
   'createOrUpdateClient' : ActorMethod<
     [string, string, Address, string, string],
     undefined
@@ -104,6 +105,7 @@ export interface _SERVICE {
     undefined
   >,
   'moveTechnicalFile' : ActorMethod<[string, string], undefined>,
+  'renameFolder' : ActorMethod<[string, string], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'searchClients' : ActorMethod<[string], Array<Client>>,
   'unmarkAsBlacklisted' : ActorMethod<[string], undefined>,

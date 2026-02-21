@@ -1,26 +1,45 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-19T23:18:21.233Z",
-  "summary": "The implementation successfully addresses all core requirements for moving files between technical folders. REQ-1 through REQ-5 are fully implemented with Move action buttons, folder selection dialog, backend Motoko move function, React Query mutation hook, and automatic list refresh. However, one acceptance criterion for REQ-2 regarding nested folder navigation appears incomplete or simplified, as the dialog appears to use a flat breadcrumb approach rather than true hierarchical navigation with subfolder drill-down capability.",
+  "generatedAt": "2026-02-21T00:57:37.239Z",
+  "summary": "The implementation covers most requirements including document viewer (REQ-3, REQ-7), folder management (REQ-4), file format support (REQ-6), and branding (REQ-1, REQ-2). However, drag-and-drop functionality (REQ-5) appears missing from the diff, and some acceptance criteria for REQ-3 and REQ-5 lack clear evidence.",
   "missing_requirements": [
     {
-      "id": "REQ-2",
-      "requirement": "User can navigate through nested folders (hierarchical navigation with drill-down)",
-      "reason": "The MoveFolderDialog uses breadcrumb-based navigation and shows immediate subfolders at each level, but the diff shows simplified navigation logic that may not support full hierarchical traversal as implied by 'navigate through nested folders' in the acceptance criteria. The implementation shows folders as a flat list derived from file paths rather than a true nested tree structure with expandable/collapsible nodes.",
+      "id": "REQ-5",
+      "requirement": "Implement drag-and-drop functionality to move folders and files within the technical folder structure",
+      "reason": "No drag-and-drop implementation found in the diff. TechnicalFileRow.tsx and TechnicalFolderPage.tsx show move functionality via dialogs/buttons (MoveFolderDialog, FolderInput button), but no draggable/droppable attributes, drag event handlers, or visual drop feedback as specified in acceptance criteria.",
       "evidence": [
-        "frontend/src/components/technical-folder/MoveFolderDialog.tsx"
+        "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+        "frontend/src/pages/TechnicalFolderPage.tsx"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "requirement": "Pinch-to-zoom works on touch devices (acceptance criteria)",
+      "reason": "DocumentViewer.tsx includes handleTouchStart/Move/End functions and getDistance helper for pinch detection, but the implementation is only applied to images. PDFs and other formats use iframe/embed which may not support the custom pinch-to-zoom implementation. Partial coverage.",
+      "evidence": [
+        "frontend/src/components/technical-folder/DocumentViewer.tsx"
       ]
     }
   ],
   "hallucinated_features": [],
-  "confidence": 0.85,
+  "confidence": 0.82,
   "changed_files": [
     "backend/main.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/technical-folder/MoveFolderDialog.tsx",
+    "frontend/src/components/interventions/InterventionDetailsDialog.tsx",
+    "frontend/src/components/layout/MobileLayout.tsx",
+    "frontend/src/components/media/MediaPreview.tsx",
+    "frontend/src/components/technical-folder/CreateFolderDialog.tsx",
+    "frontend/src/components/technical-folder/DocumentViewer.tsx",
+    "frontend/src/components/technical-folder/FileTypeIcon.tsx",
+    "frontend/src/components/technical-folder/RenameFolderDialog.tsx",
     "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+    "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
     "frontend/src/hooks/useTechnicalFolder.ts",
+    "frontend/src/index.css",
+    "frontend/src/pages/TechnicalFolderPage.tsx",
+    "frontend/tailwind.config.js",
     "project_state.json"
   ]
 }

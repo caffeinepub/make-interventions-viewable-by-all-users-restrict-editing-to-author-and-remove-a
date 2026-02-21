@@ -72,3 +72,41 @@ export function useMoveFile() {
     },
   });
 }
+
+export function useCreateFolder() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (path: string) => {
+      if (!actor) throw new Error('Acteur non disponible');
+      await actor.createFolder(path);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['technicalFiles'] });
+      toast.success('Dossier créé avec succès');
+    },
+    onError: (error: any) => {
+      toast.error(`Erreur: ${error.message || 'Échec de la création du dossier'}`);
+    },
+  });
+}
+
+export function useRenameFolder() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { oldPath: string; newName: string }) => {
+      if (!actor) throw new Error('Acteur non disponible');
+      await actor.renameFolder(params.oldPath, params.newName);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['technicalFiles'] });
+      toast.success('Dossier renommé avec succès');
+    },
+    onError: (error: any) => {
+      toast.error(`Erreur: ${error.message || 'Échec du renommage du dossier'}`);
+    },
+  });
+}

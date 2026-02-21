@@ -11,8 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useUploadTechnicalFile } from '../../hooks/useTechnicalFolder';
-import FilePicker from '../media/FilePicker';
 import { ExternalBlob } from '../../backend';
+import { Progress } from '@/components/ui/progress';
 
 interface TechnicalFolderUploadCardProps {
   open: boolean;
@@ -28,12 +28,11 @@ export default function TechnicalFolderUploadCard({
   const [fileName, setFileName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-
   const { mutate: uploadFile, isPending } = useUploadTechnicalFile();
 
-  const handleFileSelect = (files: File[]) => {
-    if (files.length > 0) {
-      const file = files[0];
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
       setSelectedFile(file);
       if (!fileName) {
         setFileName(file.name);
@@ -45,19 +44,15 @@ export default function TechnicalFolderUploadCard({
     e.preventDefault();
     if (!selectedFile || !fileName.trim()) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const arrayBuffer = reader.result as ArrayBuffer;
+    try {
+      const arrayBuffer = await selectedFile.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
-      const blob = ExternalBlob.fromBytes(uint8Array).withUploadProgress(
-        (percentage) => {
-          setUploadProgress(percentage);
-        }
-      );
+      
+      const blob = ExternalBlob.fromBytes(uint8Array).withUploadProgress((percentage) => {
+        setUploadProgress(percentage);
+      });
 
-      const fullPath = currentPath
-        ? `${currentPath}/${fileName.trim()}`
-        : fileName.trim();
+      const fullPath = currentPath ? `${currentPath}/${fileName}` : fileName;
 
       uploadFile(
         { path: fullPath, blob },
@@ -68,56 +63,69 @@ export default function TechnicalFolderUploadCard({
             setUploadProgress(0);
             onOpenChange(false);
           },
+          onError: () => {
+            setUploadProgress(0);
+          },
         }
       );
-    };
-    reader.readAsArrayBuffer(selectedFile);
+    } catch (error) {
+      console.error('Erreur lors de la préparation du fichier:', error);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleClose = () => {
+    if (!isPending) {
+      setFileName('');
+      setSelectedFile(null);
+      setUploadProgress(0);
+      onOpenChange(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Télécharger un fichier</DialogTitle>
             <DialogDescription>
-              Sélectionnez un fichier et donnez-lui un nom
+              Sélectionnez un fichier à télécharger dans le dossier technique
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="file">Fichier *</Label>
+              <Input
+                id="file"
+                type="file"
+                onChange={handleFileSelect}
+                disabled={isPending}
+                accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                required
+              />
+            </div>
             <div className="grid gap-2">
               <Label htmlFor="fileName">Nom du fichier *</Label>
               <Input
                 id="fileName"
                 value={fileName}
                 onChange={(e) => setFileName(e.target.value)}
-                placeholder="nom-du-fichier.pdf"
+                placeholder="document.pdf"
+                disabled={isPending}
                 required
               />
             </div>
-            <div className="grid gap-2">
-              <Label>Sélectionner un fichier *</Label>
-              <FilePicker
-                onSelect={handleFileSelect}
-                accept="application/pdf,image/*,video/*"
-              />
-              {selectedFile && (
-                <p className="text-sm text-muted-foreground">
-                  Fichier sélectionné: {selectedFile.name}
-                </p>
-              )}
-            </div>
+            {currentPath && (
+              <p className="text-sm text-muted-foreground">
+                Chemin: {currentPath}/{fileName || '...'}
+              </p>
+            )}
             {isPending && uploadProgress > 0 && (
               <div className="space-y-2">
-                <Label>Progression du téléchargement</Label>
-                <div className="w-full bg-secondary rounded-full h-2">
-                  <div
-                    className="bg-primary h-2 rounded-full transition-all"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
+                <Progress value={uploadProgress} />
                 <p className="text-sm text-center text-muted-foreground">
-                  {uploadProgress}%
+                  Téléchargement: {Math.round(uploadProgress)}%
                 </p>
               </div>
             )}
@@ -126,12 +134,12 @@ export default function TechnicalFolderUploadCard({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={handleClose}
               disabled={isPending}
             >
               Annuler
             </Button>
-            <Button type="submit" disabled={!selectedFile || !fileName.trim() || isPending}>
+            <Button type="submit" disabled={isPending || !selectedFile || !fileName.trim()}>
               {isPending ? 'Téléchargement...' : 'Télécharger'}
             </Button>
           </DialogFooter>

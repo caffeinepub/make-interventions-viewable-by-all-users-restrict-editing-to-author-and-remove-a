@@ -3,11 +3,12 @@ import { useNavigate } from '@tanstack/react-router';
 import MobileLayout from '../components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FolderPlus, Upload } from 'lucide-react';
+import { ArrowLeft, FolderPlus, Upload, Edit2 } from 'lucide-react';
 import { useListTechnicalFiles } from '../hooks/useTechnicalFolder';
 import TechnicalFileRow from '../components/technical-folder/TechnicalFileRow';
 import TechnicalFolderUploadCard from '../components/technical-folder/TechnicalFolderUploadCard';
 import CreateFolderDialog from '../components/technical-folder/CreateFolderDialog';
+import RenameFolderDialog from '../components/technical-folder/RenameFolderDialog';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -22,6 +23,7 @@ export default function TechnicalFolderPage() {
   const { data: files = [], isLoading } = useListTechnicalFiles();
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
+  const [renameFolderPath, setRenameFolderPath] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState<string[]>([]);
 
   const currentPathString = currentPath.join('/');
@@ -54,6 +56,13 @@ export default function TechnicalFolderPage() {
 
   const handleBreadcrumbClick = (index: number) => {
     setCurrentPath(currentPath.slice(0, index));
+  };
+
+  const handleRenameFolder = (folderName: string) => {
+    const folderPath = currentPath.length === 0 
+      ? folderName 
+      : `${currentPathString}/${folderName}`;
+    setRenameFolderPath(folderPath);
   };
 
   return (
@@ -132,13 +141,29 @@ export default function TechnicalFolderPage() {
                 {Array.from(folders).map((folderName) => (
                   <Card
                     key={folderName}
-                    className="cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => handleFolderClick(folderName)}
+                    className="hover:bg-accent/50 transition-colors"
                   >
                     <CardHeader className="py-3">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        📁 {folderName}
-                      </CardTitle>
+                      <div className="flex items-center justify-between">
+                        <div 
+                          className="flex items-center gap-2 flex-1 cursor-pointer"
+                          onClick={() => handleFolderClick(folderName)}
+                        >
+                          <span className="text-2xl">📁</span>
+                          <CardTitle className="text-sm">{folderName}</CardTitle>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRenameFolder(folderName);
+                          }}
+                          title="Renommer le dossier"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </CardHeader>
                   </Card>
                 ))}
@@ -162,6 +187,14 @@ export default function TechnicalFolderPage() {
         onOpenChange={setIsCreateFolderDialogOpen}
         currentPath={currentPathString}
       />
+
+      {renameFolderPath && (
+        <RenameFolderDialog
+          open={!!renameFolderPath}
+          onOpenChange={(open) => !open && setRenameFolderPath(null)}
+          folderPath={renameFolderPath}
+        />
+      )}
     </MobileLayout>
   );
 }

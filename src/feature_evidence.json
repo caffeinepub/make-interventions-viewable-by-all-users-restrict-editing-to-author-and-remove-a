@@ -2,10 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-a-move-action-to-each-file-in-the-technicalfilerow-component-that-opens-a-folder-selection-dialog",
-      "featureTitle": "Add a 'Move' action to each file in the TechnicalFileRow component that opens a folder selection dialog",
+      "featureId": "feature-replace-the-application-logo-with-the-provided-vial-traite-service-logo-showing-blue-text-orange-leaves-green-circular-border-and-blue-cow-illustration",
+      "featureTitle": "Replace the application logo with the provided Vial Traite Service logo (showing blue text, orange leaves, green circular border, and blue cow illustration)",
       "files": [
-        "frontend/src/components/technical-folder/TechnicalFileRow.tsx"
+        "frontend/src/components/layout/MobileLayout.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -23,10 +23,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-create-a-folder-selection-dialog-component-that-displays-the-technical-folder-hierarchy-and-allows-selecting-a-destination-folder",
-      "featureTitle": "Create a folder selection dialog component that displays the technical folder hierarchy and allows selecting a destination folder",
+      "featureId": "feature-apply-the-vial-traite-service-brand-color-palette-throughout-the-application-ui-primary-blue-0066cc-lime-green-99cc33-and-orange-ff9933-from-the-logo",
+      "featureTitle": "Apply the Vial Traite Service brand color palette throughout the application UI: primary blue (#0066CC), lime green (#99CC33), and orange (#FF9933) from the logo",
       "files": [
-        "frontend/src/components/technical-folder/MoveFolderDialog.tsx"
+        "frontend/src/components/layout/MobileLayout.tsx",
+        "frontend/src/index.css",
+        "frontend/tailwind.config.js"
       ],
       "components": [
         "authorization@4.0.0",
@@ -44,10 +46,35 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-create-usemovefile-react-query-mutation-hook-that-calls-the-backend-move-function-and-invalidates-technical-folder-queries-on-success",
-      "featureTitle": "Create useMoveFile React Query mutation hook that calls the backend move function and invalidates technical folder queries on success",
+      "featureId": "feature-implement-an-in-app-document-viewer-with-zoom-and-image-enlargement-capabilities-for-technical-folder-documents",
+      "featureTitle": "Implement an in-app document viewer with zoom and image enlargement capabilities for technical folder documents",
       "files": [
-        "frontend/src/hooks/useTechnicalFolder.ts"
+        "frontend/src/components/technical-folder/DocumentViewer.tsx",
+        "frontend/src/components/technical-folder/TechnicalFileRow.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "camera@1.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-enable-users-to-create-rename-and-organize-subfolders-within-the-technical-folder-to-categorize-documents-by-theme",
+      "featureTitle": "Enable users to create, rename, and organize subfolders within the technical folder to categorize documents by theme",
+      "files": [
+        "frontend/src/components/technical-folder/CreateFolderDialog.tsx",
+        "frontend/src/components/technical-folder/RenameFolderDialog.tsx",
+        "frontend/src/hooks/useTechnicalFolder.ts",
+        "frontend/src/pages/TechnicalFolderPage.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -61,6 +88,74 @@
       ],
       "testIds": [
         "REQ-4"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-implement-drag-and-drop-functionality-to-move-folders-and-files-within-the-technical-folder-structure",
+      "featureTitle": "Implement drag-and-drop functionality to move folders and files within the technical folder structure",
+      "files": [
+        "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+        "frontend/src/pages/TechnicalFolderPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "camera@1.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-5"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-extend-technical-folder-support-to-handle-all-file-formats-including-images-pdfs-word-documents-excel-spreadsheets-and-other-common-document-types",
+      "featureTitle": "Extend technical folder support to handle all file formats including images, PDFs, Word documents, Excel spreadsheets, and other common document types",
+      "files": [
+        "frontend/src/components/technical-folder/DocumentViewer.tsx",
+        "frontend/src/components/technical-folder/FileTypeIcon.tsx",
+        "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+        "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "camera@1.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-6"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-the-same-document-viewer-with-zoom-and-enlargement-capabilities-to-client-intervention-files",
+      "featureTitle": "Add the same document viewer with zoom and enlargement capabilities to client intervention files",
+      "files": [
+        "frontend/src/components/interventions/InterventionDetailsDialog.tsx",
+        "frontend/src/components/media/MediaPreview.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "camera@1.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-7"
       ],
       "confidence": "high"
     }

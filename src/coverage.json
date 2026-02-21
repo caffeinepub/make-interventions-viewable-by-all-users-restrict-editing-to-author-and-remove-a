@@ -1,63 +1,115 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-19T23:18:21.236Z",
+  "generatedAt": "2026-02-21T00:57:37.243Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 5,
-    "implemented": 3,
+    "total": 7,
+    "implemented": 7,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Add a 'Move' action to each file in the TechnicalFileRow component that opens a folder selection dialog",
+        "summary": "Replace the application logo with the provided Vial Traite Service logo (showing blue text, orange leaves, green circular border, and blue cow illustration)",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/technical-folder/TechnicalFileRow.tsx"
+          "frontend/src/components/layout/MobileLayout.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/technical-folder/TechnicalFileRow.tsx"
+          "frontend/src/components/layout/MobileLayout.tsx"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Create a folder selection dialog component that displays the technical folder hierarchy and allows selecting a destination folder",
+        "summary": "Apply the Vial Traite Service brand color palette throughout the application UI: primary blue (#0066CC), lime green (#99CC33), and orange (#FF9933) from the logo",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/technical-folder/MoveFolderDialog.tsx"
+          "frontend/src/index.css",
+          "frontend/tailwind.config.js",
+          "frontend/src/components/layout/MobileLayout.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/technical-folder/MoveFolderDialog.tsx"
+          "frontend/src/index.css",
+          "frontend/tailwind.config.js",
+          "frontend/src/components/layout/MobileLayout.tsx"
         ]
       },
       {
         "id": "REQ-3",
-        "summary": "Implement backend Motoko function to move a technical file from one folder path to another, preserving the file content and metadata",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "summary": "Implement an in-app document viewer with zoom and image enlargement capabilities for technical folder documents",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/technical-folder/DocumentViewer.tsx",
+          "frontend/src/components/technical-folder/TechnicalFileRow.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/technical-folder/DocumentViewer.tsx",
+          "frontend/src/components/technical-folder/TechnicalFileRow.tsx"
+        ]
       },
       {
         "id": "REQ-4",
-        "summary": "Create useMoveFile React Query mutation hook that calls the backend move function and invalidates technical folder queries on success",
+        "summary": "Enable users to create, rename, and organize subfolders within the technical folder to categorize documents by theme",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useTechnicalFolder.ts"
+          "frontend/src/components/technical-folder/CreateFolderDialog.tsx",
+          "frontend/src/components/technical-folder/RenameFolderDialog.tsx",
+          "frontend/src/hooks/useTechnicalFolder.ts",
+          "frontend/src/pages/TechnicalFolderPage.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useTechnicalFolder.ts"
+          "frontend/src/components/technical-folder/CreateFolderDialog.tsx",
+          "frontend/src/components/technical-folder/RenameFolderDialog.tsx",
+          "frontend/src/hooks/useTechnicalFolder.ts",
+          "frontend/src/pages/TechnicalFolderPage.tsx"
         ]
       },
       {
         "id": "REQ-5",
-        "summary": "Update TechnicalFolderPage to refresh the file list after a successful move operation",
-        "status": "missing",
+        "summary": "Implement drag-and-drop functionality to move folders and files within the technical folder structure",
+        "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/TechnicalFolderPage.tsx"
+          "frontend/src/components/technical-folder/DraggableFileItem.tsx",
+          "frontend/src/components/technical-folder/DroppableFolderTarget.tsx",
+          "frontend/src/pages/TechnicalFolderPage.tsx",
+          "frontend/src/components/technical-folder/TechnicalFileRow.tsx"
         ],
-        "matchedFiles": []
+        "matchedFiles": [
+          "frontend/src/pages/TechnicalFolderPage.tsx",
+          "frontend/src/components/technical-folder/TechnicalFileRow.tsx"
+        ]
+      },
+      {
+        "id": "REQ-6",
+        "summary": "Extend technical folder support to handle all file formats including images, PDFs, Word documents, Excel spreadsheets, and other common document types",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
+          "frontend/src/components/technical-folder/FileTypeIcon.tsx",
+          "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+          "frontend/src/components/technical-folder/DocumentViewer.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
+          "frontend/src/components/technical-folder/FileTypeIcon.tsx",
+          "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+          "frontend/src/components/technical-folder/DocumentViewer.tsx"
+        ]
+      },
+      {
+        "id": "REQ-7",
+        "summary": "Add the same document viewer with zoom and enlargement capabilities to client intervention files",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/interventions/InterventionDetailsDialog.tsx",
+          "frontend/src/components/media/MediaPreview.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/interventions/InterventionDetailsDialog.tsx",
+          "frontend/src/components/media/MediaPreview.tsx"
+        ]
       }
     ]
   },
@@ -67,13 +119,24 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
+    "frontend/public/assets/generated/vial-traite-logo.dim_400x200.png",
     "frontend/src/backend.d.ts",
     "frontend/src/backend.ts",
-    "frontend/src/components/technical-folder/MoveFolderDialog.tsx",
+    "frontend/src/components/interventions/InterventionDetailsDialog.tsx",
+    "frontend/src/components/layout/MobileLayout.tsx",
+    "frontend/src/components/media/MediaPreview.tsx",
+    "frontend/src/components/technical-folder/CreateFolderDialog.tsx",
+    "frontend/src/components/technical-folder/DocumentViewer.tsx",
+    "frontend/src/components/technical-folder/FileTypeIcon.tsx",
+    "frontend/src/components/technical-folder/RenameFolderDialog.tsx",
     "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+    "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
     "frontend/src/declarations/backend.did.d.ts",
     "frontend/src/declarations/backend.did.js",
     "frontend/src/hooks/useTechnicalFolder.ts",
+    "frontend/src/index.css",
+    "frontend/src/pages/TechnicalFolderPage.tsx",
+    "frontend/tailwind.config.js",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

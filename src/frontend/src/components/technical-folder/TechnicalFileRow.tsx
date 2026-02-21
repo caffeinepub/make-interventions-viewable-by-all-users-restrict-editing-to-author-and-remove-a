@@ -1,6 +1,6 @@
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Download, FolderInput } from 'lucide-react';
+import { Trash2, FolderInput, Eye } from 'lucide-react';
 import { useDeleteTechnicalFile, useMoveFile } from '../../hooks/useTechnicalFolder';
 import type { ExternalBlob } from '../../backend';
 import { useState } from 'react';
@@ -15,6 +15,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import MoveFolderDialog from './MoveFolderDialog';
+import DocumentViewer from './DocumentViewer';
+import FileTypeIcon from './FileTypeIcon';
 
 interface TechnicalFileRowProps {
   path: string;
@@ -26,6 +28,7 @@ export default function TechnicalFileRow({ path, blob }: TechnicalFileRowProps) 
   const { mutate: moveFile, isPending: isMoving } = useMoveFile();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const fileName = path.split('/').pop() || path;
   const fileExtension = fileName.split('.').pop()?.toLowerCase();
@@ -39,64 +42,29 @@ export default function TechnicalFileRow({ path, blob }: TechnicalFileRowProps) 
     moveFile({ oldPath: path, newPath: destinationPath });
   };
 
-  const handleDownload = async () => {
-    try {
-      const bytes = await blob.getBytes();
-      const blobObj = new Blob([bytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blobObj);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Erreur de téléchargement:', error);
-    }
+  const handleView = () => {
+    setViewerOpen(true);
   };
 
   const renderPreview = () => {
     const directUrl = blob.getDirectURL();
 
-    if (fileExtension === 'pdf') {
-      return (
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">📄</span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownload}
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Télécharger PDF
-          </Button>
-        </div>
-      );
-    }
-
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension || '')) {
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(fileExtension || '')) {
       return (
         <img
           src={directUrl}
           alt={fileName}
-          className="w-16 h-16 object-cover rounded"
+          className="w-12 h-12 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={handleView}
         />
       );
     }
 
-    if (['mp4', 'webm', 'ogg'].includes(fileExtension || '')) {
-      return (
-        <video
-          src={directUrl}
-          className="w-16 h-16 object-cover rounded"
-          controls
-        />
-      );
-    }
-
-    return <span className="text-2xl">📎</span>;
+    return (
+      <div className="w-12 h-12 flex items-center justify-center bg-muted rounded">
+        <FileTypeIcon fileName={fileName} className="h-6 w-6 text-muted-foreground" />
+      </div>
+    );
   };
 
   return (
@@ -109,6 +77,14 @@ export default function TechnicalFileRow({ path, blob }: TechnicalFileRowProps) 
               <CardTitle className="text-sm truncate">{fileName}</CardTitle>
             </div>
             <div className="flex items-center gap-1 shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleView}
+                title="Voir le fichier"
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -154,6 +130,13 @@ export default function TechnicalFileRow({ path, blob }: TechnicalFileRowProps) 
         onOpenChange={setMoveDialogOpen}
         currentFilePath={path}
         onConfirm={handleMove}
+      />
+
+      <DocumentViewer
+        open={viewerOpen}
+        onOpenChange={setViewerOpen}
+        blob={blob}
+        fileName={fileName}
       />
     </>
   );

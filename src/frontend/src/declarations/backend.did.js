@@ -93,6 +93,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'createFolder' : IDL.Func([IDL.Text], [], []),
   'createOrUpdateClient' : IDL.Func(
       [IDL.Text, IDL.Text, Address, IDL.Text, IDL.Text],
       [],
@@ -136,6 +137,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'moveTechnicalFile' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'renameFolder' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'searchClients' : IDL.Func([IDL.Text], [IDL.Vec(Client)], ['query']),
   'unmarkAsBlacklisted' : IDL.Func([IDL.Text], [], []),
@@ -251,6 +253,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'createFolder' : IDL.Func([IDL.Text], [], []),
     'createOrUpdateClient' : IDL.Func(
         [IDL.Text, IDL.Text, Address, IDL.Text, IDL.Text],
         [],
@@ -294,6 +297,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'moveTechnicalFile' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'renameFolder' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'searchClients' : IDL.Func([IDL.Text], [IDL.Vec(Client)], ['query']),
     'unmarkAsBlacklisted' : IDL.Func([IDL.Text], [], []),

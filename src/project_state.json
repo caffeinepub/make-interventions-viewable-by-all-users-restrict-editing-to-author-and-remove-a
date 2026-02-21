@@ -1,32 +1,71 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "New project",
-  "architectural_notes": [],
+  "summary": "Document management application for Vial Traite Service with technical folder organization, client file management, and custom branding",
+  "architectural_notes": [
+    "Frontend: React + TypeScript + Tailwind CSS for UI",
+    "Backend: Motoko on Internet Computer for secure storage",
+    "Authentication: Internet Identity (passkeys, Google, Apple, Microsoft)",
+    "Color palette: Blue #0066CC (primary), Green lime #99CC33, Orange #FF9933",
+    "Document management with hierarchical folder structure"
+  ],
   "known_issues": [],
   "isFixRequest": false,
+  "imageRequirements": "## Required Images\n- Vial Traite Service logo with blue text, orange leaf accents, lime green circular border, and blue cow illustration on transparent background (vial-traite-logo.dim_400x200.png)",
   "existing_features": [
     {
-      "id": "feature-add-a-move-action-to-each-file-in-the-technicalfilerow-component-that-opens-a-folder-selection-dialog",
-      "title": "Add a 'Move' action to each file in the TechnicalFileRow component that opens a folder selection dialog",
+      "id": "feature-replace-the-application-logo-with-the-provided-vial-traite-service-logo-showing-blue-text-orange-leaves-green-circular-border-and-blue-cow-illustration",
+      "title": "Replace the application logo with the provided Vial Traite Service logo (showing blue text, orange leaves, green circular border, and blue cow illustration)",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-create-a-folder-selection-dialog-component-that-displays-the-technical-folder-hierarchy-and-allows-selecting-a-destination-folder",
-      "title": "Create a folder selection dialog component that displays the technical folder hierarchy and allows selecting a destination folder",
+      "id": "feature-apply-the-vial-traite-service-brand-color-palette-throughout-the-application-ui-primary-blue-0066cc-lime-green-99cc33-and-orange-ff9933-from-the-logo",
+      "title": "Apply the Vial Traite Service brand color palette throughout the application UI: primary blue (#0066CC), lime green (#99CC33), and orange (#FF9933) from the logo",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-create-usemovefile-react-query-mutation-hook-that-calls-the-backend-move-function-and-invalidates-technical-folder-queries-on-success",
-      "title": "Create useMoveFile React Query mutation hook that calls the backend move function and invalidates technical folder queries on success",
+      "id": "feature-implement-an-in-app-document-viewer-with-zoom-and-image-enlargement-capabilities-for-technical-folder-documents",
+      "title": "Implement an in-app document viewer with zoom and image enlargement capabilities for technical folder documents",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-enable-users-to-create-rename-and-organize-subfolders-within-the-technical-folder-to-categorize-documents-by-theme",
+      "title": "Enable users to create, rename, and organize subfolders within the technical folder to categorize documents by theme",
       "reqIds": [
         "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-drag-and-drop-functionality-to-move-folders-and-files-within-the-technical-folder-structure",
+      "title": "Implement drag-and-drop functionality to move folders and files within the technical folder structure",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-extend-technical-folder-support-to-handle-all-file-formats-including-images-pdfs-word-documents-excel-spreadsheets-and-other-common-document-types",
+      "title": "Extend technical folder support to handle all file formats including images, PDFs, Word documents, Excel spreadsheets, and other common document types",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-the-same-document-viewer-with-zoom-and-enlargement-capabilities-to-client-intervention-files",
+      "title": "Add the same document viewer with zoom and enlargement capabilities to client intervention files",
+      "reqIds": [
+        "REQ-7"
       ],
       "version": 1
     }
@@ -34,28 +73,36 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Move uploaded files from technical folder to created folders",
+      "summary": "Document viewer with zoom and image enlargement functionality",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Create and rename folders and subfolders with drag-and-drop organization",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Multi-format file support (images, PDF, Word, Excel, etc.)",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-4",
-      "summary": "Implement backend Motoko function to move a technical file from one folder path to another, preserving the file content and metadata",
-      "reqIds": [
-        "REQ-3"
-      ],
+      "summary": "Custom branding with Vial Traite Service logo and color scheme",
+      "reqIds": [],
       "status": "pending"
     },
     {
-      "id": "AR-6",
-      "summary": "Update TechnicalFolderPage to refresh the file list after a successful move operation",
-      "reqIds": [
-        "REQ-5"
-      ],
+      "id": "AR-5",
+      "summary": "Client file management integrated with intervention records",
+      "reqIds": [],
       "status": "pending"
     }
   ],
-  "projectName": "Client Dossier",
+  "projectName": "Vial Traite Service",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

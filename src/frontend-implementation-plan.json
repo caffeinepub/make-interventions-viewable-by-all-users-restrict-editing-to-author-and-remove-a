@@ -1,73 +1,193 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Enable moving uploaded files between technical folders",
+  "title": "Add document viewer with zoom, folder management, and Vial Traite Service branding",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Add a 'Move' action to each file in the TechnicalFileRow component that opens a folder selection dialog",
+      "summary": "Replace the application logo with the provided Vial Traite Service logo",
       "acceptanceCriteria": [
-        "TechnicalFileRow displays a 'Move' button or menu item alongside existing download and delete actions",
-        "Clicking 'Move' opens a dialog showing available destination folders",
-        "Dialog excludes the current folder from destination options"
+        "The Vial Traite Service logo is displayed in the application header/navigation",
+        "Logo maintains proper aspect ratio and quality",
+        "Logo is visible on all pages of the application"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+          "path": "frontend/src/components/layout/MobileLayout.tsx",
           "operation": "modify",
-          "description": "Add a 'Move' button to the file actions row alongside the existing download and delete buttons. When clicked, this button opens the folder selection dialog component (MoveFolderDialog). Pass the current file path and a callback to handle the move operation. Use the authorization component to verify the user has permission to move files before showing the button."
+          "description": "Update the header section to display the Vial Traite Service logo from frontend/public/assets/generated/vial-traite-logo.dim_400x200.png instead of the current text-based title. Ensure the logo is sized appropriately for mobile navigation and maintains proper aspect ratio."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Create a folder selection dialog component that displays the technical folder hierarchy and allows selecting a destination folder",
+      "summary": "Apply the Vial Traite Service brand color palette throughout the application UI",
       "acceptanceCriteria": [
-        "Dialog shows all existing folders in the technical folder structure",
-        "User can navigate through nested folders",
-        "User can select a destination folder and confirm the move operation",
-        "Dialog includes a cancel option"
+        "Primary UI elements use blue #0066CC from the logo",
+        "Accent colors use lime green #99CC33 and orange #FF9933 appropriately",
+        "Color scheme is applied consistently across all pages and components",
+        "Colors maintain sufficient contrast for accessibility"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/technical-folder/MoveFolderDialog.tsx",
+          "path": "frontend/src/index.css",
+          "operation": "modify",
+          "description": "Update the CSS custom properties to define the Vial Traite Service brand colors: primary blue (#0066CC), lime green (#99CC33), and orange (#FF9933). Replace or extend existing color variables to use these brand colors for primary, accent, and secondary UI elements while maintaining accessibility contrast ratios."
+        },
+        {
+          "path": "frontend/tailwind.config.js",
+          "operation": "modify",
+          "description": "Extend the Tailwind color configuration to include Vial Traite Service brand colors as custom color utilities (vial-blue, vial-green, vial-orange) so they can be used throughout the application with Tailwind classes."
+        },
+        {
+          "path": "frontend/src/components/layout/MobileLayout.tsx",
+          "operation": "modify",
+          "description": "Update header background colors and button styles to use the Vial Traite Service brand colors (blue for primary actions, green/orange for accents)."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Implement an in-app document viewer with zoom and image enlargement capabilities for technical folder documents",
+      "acceptanceCriteria": [
+        "Users can open documents directly within the application",
+        "Viewer supports zoom in/out functionality",
+        "Users can enlarge images to full screen",
+        "Pinch-to-zoom works on touch devices",
+        "Viewer supports images, PDFs, and other document formats"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/technical-folder/DocumentViewer.tsx",
           "operation": "create",
-          "description": "Create a new dialog component that displays the technical folder hierarchy in a navigable tree structure. Use the listTechnicalFiles backend method (via useTechnicalFolder hook) to retrieve all file paths and derive the folder structure from them. Allow users to select a destination folder, excluding the current folder of the file being moved. Include confirm and cancel buttons. Accept props for the current file path, onConfirm callback (receiving the selected destination path), and onCancel callback. Use shadcn/ui Dialog, ScrollArea, and Button components for consistent styling."
+          "description": "Create a full-featured document viewer component supporting images, PDFs, and other document formats with zoom, pan, and fullscreen capabilities. Include touch gesture support for pinch-to-zoom on mobile devices. Accept an ExternalBlob as input and use getDirectURL() for display. Include controls for zoom in/out, reset, and fullscreen toggle. Handle different file types with appropriate rendering (images with img/canvas, PDFs with iframe or PDF.js if needed)."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+          "operation": "modify",
+          "description": "Add a button to open files in the new DocumentViewer component. When a file is clicked, open a modal/dialog containing the DocumentViewer instead of directly opening the file URL. Wire the DocumentViewer with the file's ExternalBlob."
         }
       ]
     },
     {
       "id": "REQ-4",
-      "summary": "Create useMoveFile React Query mutation hook that calls the backend move function and invalidates technical folder queries on success",
+      "summary": "Enable users to create, rename, and organize subfolders within the technical folder to categorize documents by theme",
       "acceptanceCriteria": [
-        "Hook accepts source path, destination path, and client ID",
-        "On success, invalidates technical folder queries to refresh the file list",
-        "Shows success toast notification when file is moved",
-        "Shows error toast notification if move operation fails",
-        "Follows the same pattern as existing useTechnicalFolder hooks"
+        "Users can create new subfolders with custom names",
+        "Users can rename existing folders and subfolders",
+        "Folder hierarchy is displayed clearly in the UI",
+        "Folders can be organized by user-defined themes",
+        "Folder names are validated (no slashes, non-empty)"
       ],
       "file_operations": [
         {
+          "path": "frontend/src/components/technical-folder/CreateFolderDialog.tsx",
+          "operation": "modify",
+          "description": "Update the CreateFolderDialog to support creating subfolders at any level in the hierarchy, not just at the root. Accept the current folder path as a prop so new folders are created within the current location. Maintain existing validation rules (no slashes, non-empty names)."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/RenameFolderDialog.tsx",
+          "operation": "create",
+          "description": "Create a dialog component for renaming existing folders. Accept the folder's current path as input, extract the folder name, allow editing the name (with validation: no slashes, non-empty), and call the backend's renameFolder method with the old path and new name. Show success/error toasts and refresh the file list on success."
+        },
+        {
           "path": "frontend/src/hooks/useTechnicalFolder.ts",
           "operation": "modify",
-          "description": "Add a new useMoveFile mutation hook that calls the backend moveTechnicalFile method with oldPath and newPath parameters. On success, invalidate the 'technicalFiles' query key to refresh the file list and show a success toast notification. On error, show an error toast notification. Follow the same pattern as the existing useDeleteTechnicalFile hook. Use the authorization component's access control to ensure users have appropriate permissions before allowing the move operation."
+          "description": "Add a useRenameFolder mutation hook that calls actor.renameFolder(oldPath, newName) and invalidates the technical files query on success. Include error handling and toast notifications."
+        },
+        {
+          "path": "frontend/src/pages/TechnicalFolderPage.tsx",
+          "operation": "modify",
+          "description": "Update the TechnicalFolderPage to display folders with rename actions. Add a rename button/icon for each folder that opens the RenameFolderDialog. Ensure the folder hierarchy is clearly visualized with proper indentation or tree structure. Update breadcrumb navigation to support multi-level folder paths."
         }
       ]
     },
     {
       "id": "REQ-5",
-      "summary": "Update TechnicalFolderPage to refresh the file list after a successful move operation",
+      "summary": "Implement drag-and-drop functionality to move folders and files within the technical folder structure",
       "acceptanceCriteria": [
-        "File list automatically updates when a file is moved",
-        "Moved file no longer appears in the source folder",
-        "User remains on the current folder view after move operation",
-        "Loading state is shown during the move operation"
+        "Users can drag folders to reposition them",
+        "Users can drag files between folders",
+        "Visual feedback indicates valid drop targets during drag operations",
+        "Dropped items update their location in the folder structure",
+        "Drag-and-drop works on both desktop and touch devices"
       ],
       "file_operations": [
         {
+          "path": "frontend/src/components/technical-folder/DraggableFileItem.tsx",
+          "operation": "create",
+          "description": "Create a wrapper component for file/folder items that implements HTML5 drag-and-drop API. Handle dragstart, dragover, dragend events and provide visual feedback during drag operations. Accept file/folder path and type as props. Support both mouse and touch events for mobile compatibility."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/DroppableFolderTarget.tsx",
+          "operation": "create",
+          "description": "Create a droppable folder component that accepts dragged files/folders. Handle drop events, validate the drop target (prevent dropping into itself or invalid paths), and trigger the moveTechnicalFile mutation from useTechnicalFolder. Provide visual feedback when a draggable item is over a valid drop target."
+        },
+        {
           "path": "frontend/src/pages/TechnicalFolderPage.tsx",
           "operation": "modify",
-          "description": "Integrate the MoveFolderDialog component into the page. When the move operation completes successfully (via the useMoveFile hook), the file list will automatically refresh due to query invalidation. Ensure the user remains on the current folder path after the move operation. Display a loading state while the move operation is in progress. Use the authorization component to verify the user has permission to move files before showing the move functionality."
+          "description": "Integrate DraggableFileItem and DroppableFolderTarget components into the file list rendering. Wrap file items with DraggableFileItem and folder items with both DraggableFileItem and DroppableFolderTarget to allow drag-and-drop reordering and moving files between folders."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+          "operation": "modify",
+          "description": "Wrap the file row component with DraggableFileItem functionality so individual files can be dragged to new locations in the folder hierarchy."
+        }
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "summary": "Extend technical folder support to handle all file formats including images, PDFs, Word documents, Excel spreadsheets, and other common document types",
+      "acceptanceCriteria": [
+        "Technical folder accepts uploads of images (JPG, PNG, GIF, WebP, etc.)",
+        "Technical folder accepts PDFs",
+        "Technical folder accepts Word documents (.doc, .docx)",
+        "Technical folder accepts Excel spreadsheets (.xls, .xlsx)",
+        "File type icons or previews differentiate document types",
+        "All accepted formats can be downloaded"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
+          "operation": "modify",
+          "description": "Update the file picker accept attribute to allow all common document formats: images (image/*), PDFs (application/pdf), Word documents (.doc, .docx, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document), Excel (.xls, .xlsx, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet), and other common formats. Remove any restrictive file type filters."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/FileTypeIcon.tsx",
+          "operation": "create",
+          "description": "Create a utility component that displays appropriate icons for different file types based on file extension or MIME type. Support icons for images, PDFs, Word documents, Excel spreadsheets, and generic document types. Use existing UI icon components or add necessary icons."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+          "operation": "modify",
+          "description": "Integrate FileTypeIcon component to display appropriate icons for each file type. Update the preview logic to handle non-image formats gracefully (show icon instead of broken image)."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/DocumentViewer.tsx",
+          "operation": "modify",
+          "description": "Extend the DocumentViewer to handle additional file formats beyond images. For PDFs, use an iframe or embed element. For Word/Excel documents, provide a download option with a message that these formats require external viewers. Detect file type from the ExternalBlob URL or filename extension."
+        }
+      ]
+    },
+    {
+      "id": "REQ-7",
+      "summary": "Add the same document viewer with zoom and enlargement capabilities to client intervention files",
+      "acceptanceCriteria": [
+        "Intervention media files can be opened in the in-app viewer",
+        "Viewer supports zoom and enlargement for intervention documents",
+        "Functionality matches the technical folder document viewer",
+        "Viewer is accessible from intervention detail views"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/interventions/InterventionDetailsDialog.tsx",
+          "operation": "modify",
+          "description": "Add a button or clickable media preview in the intervention details that opens the DocumentViewer (created for REQ-3) in a modal/dialog. Pass the intervention's media ExternalBlob items to the viewer. Ensure users can navigate between multiple media items if the intervention has several attachments."
+        },
+        {
+          "path": "frontend/src/components/media/MediaPreview.tsx",
+          "operation": "modify",
+          "description": "Make the media preview items clickable and open the DocumentViewer in a modal when clicked. This provides zoom and enlargement capabilities for intervention media across the application wherever MediaPreview is used."
         }
       ]
     }

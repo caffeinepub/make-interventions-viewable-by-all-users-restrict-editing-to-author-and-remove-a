@@ -1,119 +1,168 @@
 {
   "kind": "build_request",
-  "title": "Enable moving uploaded files between technical folders",
-  "projectName": "Client Dossier",
+  "title": "Add document viewer with zoom, folder management, and Vial Traite Service branding",
+  "projectName": "Vial Traite Service",
   "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Add a 'Move' action to each file in the TechnicalFileRow component that opens a folder selection dialog",
+      "text": "Replace the application logo with the provided Vial Traite Service logo (showing blue text, orange leaves, green circular border, and blue cow illustration)",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-5"
+          "msg-user-logo-request"
         ],
         "quotes": [
-          "Je veux pouvoir deplacer les fichiers telechargé du dossier technique vers les differents dossiers crée"
+          "remplace le logo de lappli par le logo que je te fournie"
         ]
       },
       "acceptanceCriteria": [
-        "TechnicalFileRow displays a 'Move' button or menu item alongside existing download and delete actions",
-        "Clicking 'Move' opens a dialog showing available destination folders",
-        "Dialog excludes the current folder from destination options"
+        "The Vial Traite Service logo is displayed in the application header/navigation",
+        "Logo maintains proper aspect ratio and quality",
+        "Logo is visible on all pages of the application"
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Create a folder selection dialog component that displays the technical folder hierarchy and allows selecting a destination folder",
+      "text": "Apply the Vial Traite Service brand color palette throughout the application UI: primary blue (#0066CC), lime green (#99CC33), and orange (#FF9933) from the logo",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-5"
+          "msg-user-color-request"
         ],
         "quotes": [
-          "Je veux pouvoir deplacer les fichiers telechargé du dossier technique vers les differents dossiers crée"
+          "inclu le code couleur du logo pour le design de lappli"
         ]
       },
       "acceptanceCriteria": [
-        "Dialog shows all existing folders in the technical folder structure",
-        "User can navigate through nested folders",
-        "User can select a destination folder and confirm the move operation",
-        "Dialog includes a cancel option"
+        "Primary UI elements use blue #0066CC from the logo",
+        "Accent colors use lime green #99CC33 and orange #FF9933 appropriately",
+        "Color scheme is applied consistently across all pages and components",
+        "Colors maintain sufficient contrast for accessibility"
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Implement backend Motoko function to move a technical file from one folder path to another, preserving the file content and metadata",
-      "target": "backend",
+      "text": "Implement an in-app document viewer with zoom and image enlargement capabilities for technical folder documents",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-5"
+          "msg-user-viewer-request"
         ],
         "quotes": [
-          "Je veux pouvoir deplacer les fichiers telechargé du dossier technique vers les differents dossiers crée"
+          "Je veux pouvoir consulter les documents du dossier technique directement sur l'appli en pouvant agrandir l'image est zoomer"
         ]
       },
       "acceptanceCriteria": [
-        "Function accepts source file path, destination folder path, and client ID as parameters",
-        "File is removed from source location and added to destination location",
-        "File content (ExternalBlob) and metadata are preserved during the move",
-        "Function returns success/error status",
-        "Proper authorization checks ensure only users with appropriate permissions can move files"
+        "Users can open documents directly within the application",
+        "Viewer supports zoom in/out functionality",
+        "Users can enlarge images to full screen",
+        "Pinch-to-zoom works on touch devices",
+        "Viewer supports images, PDFs, and other document formats"
       ]
     },
     {
       "id": "REQ-4",
-      "text": "Create useMoveFile React Query mutation hook that calls the backend move function and invalidates technical folder queries on success",
-      "target": "frontend",
+      "text": "Enable users to create, rename, and organize subfolders within the technical folder to categorize documents by theme",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-5"
+          "msg-user-subfolder-request"
         ],
         "quotes": [
-          "Je veux pouvoir deplacer les fichiers telechargé du dossier technique vers les differents dossiers crée"
+          "je veux pouvoir créer des sous dossiers pour pouvoir différencier différents types de documents en les renomants en les classants par thème"
         ]
       },
       "acceptanceCriteria": [
-        "Hook accepts source path, destination path, and client ID",
-        "On success, invalidates technical folder queries to refresh the file list",
-        "Shows success toast notification when file is moved",
-        "Shows error toast notification if move operation fails",
-        "Follows the same pattern as existing useTechnicalFolder hooks"
+        "Users can create new subfolders with custom names",
+        "Users can rename existing folders and subfolders",
+        "Folder hierarchy is displayed clearly in the UI",
+        "Folders can be organized by user-defined themes",
+        "Folder names are validated (no slashes, non-empty)"
       ]
     },
     {
       "id": "REQ-5",
-      "text": "Update TechnicalFolderPage to refresh the file list after a successful move operation",
+      "text": "Implement drag-and-drop functionality to move folders and files within the technical folder structure",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-5"
+          "msg-user-move-request"
         ],
         "quotes": [
-          "Je veux pouvoir deplacer les fichiers telechargé du dossier technique vers les differents dossiers crée"
+          "pouvoir les deplacé"
         ]
       },
       "acceptanceCriteria": [
-        "File list automatically updates when a file is moved",
-        "Moved file no longer appears in the source folder",
-        "User remains on the current folder view after move operation",
-        "Loading state is shown during the move operation"
+        "Users can drag folders to reposition them",
+        "Users can drag files between folders",
+        "Visual feedback indicates valid drop targets during drag operations",
+        "Dropped items update their location in the folder structure",
+        "Drag-and-drop works on both desktop and touch devices"
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "text": "Extend technical folder support to handle all file formats including images, PDFs, Word documents, Excel spreadsheets, and other common document types",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-user-formats-request"
+        ],
+        "quotes": [
+          "toutes sortes de format"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Technical folder accepts uploads of images (JPG, PNG, GIF, WebP, etc.)",
+        "Technical folder accepts PDFs",
+        "Technical folder accepts Word documents (.doc, .docx)",
+        "Technical folder accepts Excel spreadsheets (.xls, .xlsx)",
+        "File type icons or previews differentiate document types",
+        "All accepted formats can be downloaded"
+      ]
+    },
+    {
+      "id": "REQ-7",
+      "text": "Add the same document viewer with zoom and enlargement capabilities to client intervention files",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-user-client-files-request"
+        ],
+        "quotes": [
+          "garder les fichiers clients avec meme fonctionnalite pour consulter fichier integré dans les interventions client"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Intervention media files can be opened in the in-app viewer",
+        "Viewer supports zoom and enlargement for intervention documents",
+        "Functionality matches the technical folder document viewer",
+        "Viewer is accessible from intervention detail views"
       ]
     }
   ],
   "constraints": [
-    "Maintain single-actor architecture in backend/main.mo",
-    "Follow existing patterns in useTechnicalFolder.ts for new mutation hooks",
-    "Do not modify read-only UI component sources in frontend/src/components/ui"
+    "Do not modify the useInternetIdentity hook (frontend/src/hooks/useInternetIdentity.ts)",
+    "Do not modify the useActor hook (frontend/src/hooks/useActor.ts)",
+    "Do not modify main.tsx (frontend/src/main.tsx)",
+    "Do not modify UI component sources in frontend/src/components/ui",
+    "Maintain single-actor Motoko architecture in backend/main.mo",
+    "Preserve existing client file management functionality",
+    "Keep offline sync capabilities intact"
   ],
   "nonGoals": [
-    "Moving multiple files at once",
-    "Renaming files during the move operation",
-    "Moving entire folders",
-    "Undo/redo functionality for move operations"
+    "Real-time collaboration features",
+    "Version control for documents",
+    "Document editing within the app",
+    "OCR or text extraction from documents",
+    "Cloud storage integration beyond Internet Computer",
+    "Multi-language interface (French is primary)"
   ],
   "imageRequirements": {
-    "required": [],
+    "required": [
+      "Vial Traite Service logo with blue text, orange leaf accents, lime green circular border, and blue cow illustration on transparent background (vial-traite-logo.dim_400x200.png)"
+    ],
     "edits": []
   }
 }

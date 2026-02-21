@@ -35,21 +35,36 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
     <div className="min-h-screen flex flex-col bg-background">
       <ConnectivityStatusBar />
       
-      <header className="sticky top-0 z-10 bg-background border-b">
+      <header className="sticky top-0 z-10 bg-primary border-b border-primary-foreground/10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <img 
+              src="/assets/generated/vial-traite-logo.dim_400x200.png" 
+              alt="Vial Traite Service" 
+              className="h-10 w-auto object-contain"
+            />
+          </div>
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={handleDashboardClick}
+              className="text-primary-foreground hover:bg-primary-foreground/10"
             >
               <LayoutDashboard className="h-5 w-5" />
             </Button>
-            <span className="font-semibold">{userProfile?.name || 'Utilisateur'}</span>
+            <span className="font-semibold text-primary-foreground text-sm hidden sm:inline">
+              {userProfile?.name || 'Utilisateur'}
+            </span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleLogout}
+              className="text-primary-foreground hover:bg-primary-foreground/10"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleLogout}>
-            <LogOut className="h-5 w-5" />
-          </Button>
         </div>
       </header>
 

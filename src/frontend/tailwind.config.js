@@ -49,6 +49,13 @@ export default {
           DEFAULT: 'oklch(var(--card))',
           foreground: 'oklch(var(--card-foreground))',
         },
+        success: {
+          DEFAULT: 'oklch(var(--success) / <alpha-value>)',
+          foreground: 'oklch(var(--success-foreground))',
+        },
+        'vial-blue': 'oklch(0.55 0.25 250)',
+        'vial-green': 'oklch(0.75 0.18 130)',
+        'vial-orange': 'oklch(0.70 0.20 45)',
       },
       borderRadius: {
         lg: 'var(--radius)',

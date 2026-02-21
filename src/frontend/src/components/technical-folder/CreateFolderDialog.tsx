@@ -10,7 +10,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { useCreateFolder } from '../../hooks/useTechnicalFolder';
 
 interface CreateFolderDialogProps {
   open: boolean;
@@ -24,24 +24,26 @@ export default function CreateFolderDialog({
   currentPath,
 }: CreateFolderDialogProps) {
   const [folderName, setFolderName] = useState('');
+  const { mutate: createFolder, isPending } = useCreateFolder();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!folderName.trim()) {
-      toast.error('Le nom du dossier ne peut pas être vide');
       return;
     }
 
     if (folderName.includes('/')) {
-      toast.error('Le nom du dossier ne peut pas contenir de "/"');
       return;
     }
 
-    toast.info(
-      `Pour créer le dossier "${folderName}", téléchargez un fichier dans ce dossier`
-    );
-    setFolderName('');
-    onOpenChange(false);
+    const fullPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+
+    createFolder(fullPath, {
+      onSuccess: () => {
+        setFolderName('');
+        onOpenChange(false);
+      },
+    });
   };
 
   return (
@@ -62,8 +64,14 @@ export default function CreateFolderDialog({
                 value={folderName}
                 onChange={(e) => setFolderName(e.target.value)}
                 placeholder="nom-du-dossier"
+                disabled={isPending}
                 required
               />
+              {folderName.includes('/') && (
+                <p className="text-sm text-destructive">
+                  Le nom du dossier ne peut pas contenir de "/"
+                </p>
+              )}
             </div>
             {currentPath && (
               <p className="text-sm text-muted-foreground">
@@ -76,11 +84,12 @@ export default function CreateFolderDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              disabled={isPending}
             >
               Annuler
             </Button>
-            <Button type="submit" disabled={!folderName.trim()}>
-              Créer
+            <Button type="submit" disabled={isPending || !folderName.trim() || folderName.includes('/')}>
+              {isPending ? 'Création...' : 'Créer'}
             </Button>
           </DialogFooter>
         </form>

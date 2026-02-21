@@ -584,4 +584,108 @@ actor {
       case (null) { Runtime.trap("The file to be moved does not exist") };
     };
   };
+
+  public shared ({ caller }) func createFolder(path : Text) : async () {
+    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: only authenticated users can create folders");
+    };
+
+    // Split the path to get folder hierarchy
+    let parts = path.split(#char('/')).toArray();
+    if (parts.size() == 0) {
+      Runtime.trap("Invalid path. You need to specify folder name");
+    };
+
+    let topLevelFolderName = parts[0];
+    let remainingPath = parts.sliceToArray(1, parts.size());
+
+    // Create or get top-level folder
+    let topLevelFolder = switch (technicalFolder.get(topLevelFolderName)) {
+      case (null) {
+        {
+          name = topLevelFolderName;
+          files = Map.empty<Text, Storage.ExternalBlob>();
+          subfolders = Map.empty<Text, Folder>();
+        };
+      };
+      case (?folder) { folder };
+    };
+
+    // Create nested subfolders if needed
+    let updatedTopLevelFolder = createSubfolders(topLevelFolder, remainingPath);
+
+    // Update the technicalFolder map with the modified folder structure
+    technicalFolder.add(topLevelFolderName, updatedTopLevelFolder);
+  };
+
+  public shared ({ caller }) func renameFolder(
+    oldPath : Text,
+    newName : Text,
+  ) : async () {
+    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: only authenticated users can rename folders");
+    };
+
+    // Split the old path to find the folder to rename
+    let parts = oldPath.split(#char('/')).toArray();
+    if (parts.size() == 0) {
+      Runtime.trap("Invalid path. You need to specify folder name");
+    };
+
+    let topLevelFolderName = parts[0];
+    let remainingPath = parts.sliceToArray(1, parts.size());
+
+    switch (technicalFolder.get(topLevelFolderName)) {
+      case (null) { Runtime.trap("Top-level folder not found") };
+      case (?rootFolder) {
+        if (remainingPath.size() == 0) {
+          // Renaming a top-level folder
+          let renamedFolder = { rootFolder with name = newName };
+          technicalFolder.remove(topLevelFolderName);
+          technicalFolder.add(newName, renamedFolder);
+        } else {
+          // Renaming a subfolder
+          let updatedRootFolder = switch (renameSubfolderInPath(rootFolder, remainingPath, newName)) {
+            case (true) { rootFolder };
+            case (false) { Runtime.trap("Failed to rename folder in the specified path") };
+          };
+          technicalFolder.add(topLevelFolderName, updatedRootFolder);
+        };
+      };
+    };
+  };
+
+  // Helper function to recursively rename subfolder in path hierarchy
+  func renameSubfolderInPath(folder : Folder, pathParts : [Text], newName : Text) : Bool {
+    if (pathParts.size() == 0) {
+      false;
+    } else if (pathParts.size() == 1) {
+      // We're at the folder to be renamed
+      let folderToRename = pathParts[0];
+      switch (folder.subfolders.get(folderToRename)) {
+        case (null) { false };
+        case (?subfolder) {
+          // Update the folder name
+          let renamedFolder = { subfolder with name = newName };
+          folder.subfolders.remove(folderToRename);
+          folder.subfolders.add(newName, renamedFolder);
+          true;
+        };
+      };
+    } else {
+      let currentFolderName = pathParts[0];
+      let remainingParts = pathParts.sliceToArray(1, pathParts.size() : Nat);
+
+      switch (folder.subfolders.get(currentFolderName)) {
+        case (null) { false };
+        case (?subfolder) {
+          let renamed = renameSubfolderInPath(subfolder, remainingParts, newName);
+          if (renamed) {
+            folder.subfolders.add(currentFolderName, subfolder);
+          };
+          renamed;
+        };
+      };
+    };
+  };
 };

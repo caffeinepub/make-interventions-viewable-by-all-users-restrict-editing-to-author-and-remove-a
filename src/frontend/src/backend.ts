@@ -154,6 +154,7 @@ export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     addIntervention(clientId: string, comments: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createFolder(path: string): Promise<void>;
     createOrUpdateClient(id: string, name: string, address: Address, phone: string, email: string): Promise<void>;
     deleteIntervention(interventionId: string, clientId: string): Promise<void>;
     deleteTechnicalFileWithPath(path: string): Promise<void>;
@@ -169,6 +170,7 @@ export interface backendInterface {
     listTechnicalFiles(): Promise<Array<[string, ExternalBlob]>>;
     markAsBlacklisted(clientId: string, comments: string, media: Array<ExternalBlob>): Promise<void>;
     moveTechnicalFile(oldPath: string, newPath: string): Promise<void>;
+    renameFolder(oldPath: string, newName: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     searchClients(searchString: string): Promise<Array<Client>>;
     unmarkAsBlacklisted(clientId: string): Promise<void>;
@@ -301,6 +303,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n10(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async createFolder(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createFolder(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createFolder(arg0);
             return result;
         }
     }
@@ -511,6 +527,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.moveTechnicalFile(arg0, arg1);
+            return result;
+        }
+    }
+    async renameFolder(arg0: string, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.renameFolder(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.renameFolder(arg0, arg1);
             return result;
         }
     }
