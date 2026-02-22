@@ -2,14 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-deploy-draft-version-14-to-production-environment",
-      "featureTitle": "Deploy Draft Version 14 to production environment",
+      "featureId": "feature-fix-the-client-folder-navigation-so-that-clicking-on-a-client-folder-properly-displays-the-client-details-page-with-coordinates-interventions-and-photos",
+      "featureTitle": "Fix the client folder navigation so that clicking on a client folder properly displays the client details page with coordinates, interventions, and photos",
       "files": [
-        "frontend/public/manifest.webmanifest",
-        "frontend/src/App.tsx",
-        "frontend/src/components/media/MediaPreview.tsx",
-        "frontend/src/hooks/useClients.ts",
-        "frontend/src/hooks/useTechnicalFolder.ts"
+        "frontend/src/pages/ClientsPage.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -23,6 +19,48 @@
       ],
       "testIds": [
         "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-verify-that-the-routing-from-the-clients-list-page-to-the-clientdossierpage-is-working-correctly-with-proper-client-id-parameter-passing",
+      "featureTitle": "Verify that the routing from the clients list page to the ClientDossierPage is working correctly with proper client ID parameter passing",
+      "files": [
+        "frontend/src/pages/ClientDossierPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "camera@1.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-the-clientdossierpage-properly-displays-all-client-information-sections-including-contact-details-interventions-list-with-photos-and-blacklist-panel",
+      "featureTitle": "Ensure the ClientDossierPage properly displays all client information sections including contact details, interventions list with photos, and blacklist panel",
+      "files": [
+        "frontend/src/pages/ClientDossierPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "camera@1.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
       ],
       "confidence": "high"
     }

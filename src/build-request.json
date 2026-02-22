@@ -1,35 +1,70 @@
 {
   "kind": "build_request",
-  "title": "Publish Draft Version 14 to production",
+  "title": "Fix client folder access to show details, interventions, and photos",
+  "projectName": "Vial Traite Service",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Deploy Draft Version 14 to production environment",
-      "target": "both",
+      "text": "Fix the client folder navigation so that clicking on a client folder properly displays the client details page with coordinates, interventions, and photos",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-last"
+          "msg-7"
         ],
         "quotes": [
-          "Publie"
+          "Quand je clique sur un dossier client je nest pas acces au dossier(coordonnéintetvention photo.."
         ]
       },
       "acceptanceCriteria": [
-        "Draft Version 14 is successfully published to production",
-        "All client data, photos, and interventions remain intact after publication",
-        "The production deployment is accessible to users"
+        "Clicking on a client folder navigates to the client dossier page",
+        "Client coordinates are visible on the dossier page",
+        "Client interventions list is displayed and accessible",
+        "Client photos and media are visible in the interventions section"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Verify that the routing from the clients list page to the ClientDossierPage is working correctly with proper client ID parameter passing",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-7"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Client ID is correctly passed through the route parameters",
+        "ClientDossierPage receives and uses the client ID to fetch data",
+        "No console errors related to routing or parameter extraction"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Ensure the ClientDossierPage properly displays all client information sections including contact details, interventions list with photos, and blacklist panel",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-7"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Client name, address, city, state, zip code are displayed",
+        "Phone and email are shown if available",
+        "InterventionList component renders and displays all interventions",
+        "Media/photos attached to interventions are visible",
+        "BlacklistPanel is rendered and functional"
       ]
     }
   ],
   "constraints": [
-    "Preserve all existing client data, interventions, photos, and technical folder files during deployment",
-    "Do not modify any application code or features during publication"
+    "Do not modify backend data structures or API endpoints",
+    "Maintain existing authentication and authorization logic",
+    "Preserve offline functionality and sync capabilities"
   ],
   "nonGoals": [
-    "Adding new features",
-    "Modifying existing functionality",
-    "Changing the user interface"
+    "Adding new features to the client dossier page",
+    "Changing the visual design or layout",
+    "Modifying the intervention or photo capture workflows"
   ],
   "imageRequirements": {
     "required": [],

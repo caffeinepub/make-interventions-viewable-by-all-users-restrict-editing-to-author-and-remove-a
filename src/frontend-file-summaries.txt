@@ -1,8 +1,8 @@
 {
   "frontend/src/App.tsx": "Main application component with routing, authentication, and error boundary setup, cleaned for production deployment.",
   "frontend/src/pages/LoginPage.tsx": "Login page with Internet Identity authentication, loading state during initialization, automatic redirect to clients list after successful login, and spinner feedback, all text translated to French.",
-  "frontend/src/pages/ClientsPage.tsx": "Client list page with enhanced error handling displaying detailed error messages, console logging references for debugging, manual retry button, and improved error state UI with AlertCircle icon.",
-  "frontend/src/pages/ClientDossierPage.tsx": "Client detail page with comprehensive error handling for both client and intervention data, separate retry buttons for each section, detailed error messages with console logging references, and improved loading states, now using correct prop names for child components.",
+  "frontend/src/pages/ClientsPage.tsx": "Client list page with search functionality, proper navigation using TanStack Router's navigate function to client dossier page, error handling with retry button, and improved loading states with correct default imports.",
+  "frontend/src/pages/ClientDossierPage.tsx": "Client detail page with proper route parameter extraction using useParams hook, comprehensive error handling for missing clients, separate retry buttons, detailed error messages, and improved loading states with correct default imports and prop names for child components.",
   "frontend/src/hooks/useCurrentUser.ts": "React Query hooks for fetching and saving user profiles, all toast notification messages translated to French.",
   "frontend/src/hooks/useClients.ts": "React Query hooks for client operations with proper error handling and offline support, cleaned for production.",
   "frontend/src/hooks/useInterventions.ts": "React Query hooks for intervention operations with offline support and proper error handling, cleaned for production deployment.",

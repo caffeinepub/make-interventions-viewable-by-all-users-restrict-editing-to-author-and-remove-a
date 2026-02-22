@@ -3,20 +3,38 @@
   "projectStateVersion": 3,
   "summary": "New project",
   "architectural_notes": [],
-  "known_issues": [],
-  "isFixRequest": false,
+  "known_issues": [
+    "Client folder details (coordinates, interventions, photos) not accessible when clicking on a client folder"
+  ],
+  "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-deploy-draft-version-14-to-production-environment",
-      "title": "Deploy Draft Version 14 to production environment",
+      "id": "feature-fix-the-client-folder-navigation-so-that-clicking-on-a-client-folder-properly-displays-the-client-details-page-with-coordinates-interventions-and-photos",
+      "title": "Fix the client folder navigation so that clicking on a client folder properly displays the client details page with coordinates, interventions, and photos",
       "reqIds": [
         "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-verify-that-the-routing-from-the-clients-list-page-to-the-clientdossierpage-is-working-correctly-with-proper-client-id-parameter-passing",
+      "title": "Verify that the routing from the clients list page to the ClientDossierPage is working correctly with proper client ID parameter passing",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-clientdossierpage-properly-displays-all-client-information-sections-including-contact-details-interventions-list-with-photos-and-blacklist-panel",
+      "title": "Ensure the ClientDossierPage properly displays all client information sections including contact details, interventions list with photos, and blacklist panel",
+      "reqIds": [
+        "REQ-3"
       ],
       "version": 1
     }
   ],
   "new_feature_requests": [],
-  "projectName": "Publish Draft Version 14 to production",
+  "projectName": "Vial Traite Service",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

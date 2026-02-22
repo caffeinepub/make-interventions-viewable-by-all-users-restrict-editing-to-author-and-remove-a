@@ -1,10 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Publish Draft Version 14 to production environment.
+**Goal:** Fix client folder navigation to properly display client details, interventions, and photos.
 
 **Planned changes:**
-- Deploy Draft Version 14 to production
-- Ensure all client data, photos, interventions, and technical folder files are preserved during deployment
+- Fix routing from clients list to client dossier page to ensure proper navigation
+- Verify client ID parameter is correctly passed and received in ClientDossierPage
+- Ensure all client information sections render properly (coordinates, interventions, photos, blacklist panel)
+- Resolve any console errors preventing the dossier page from displaying
 
-**User-visible outcome:** The production version of the application is updated with Draft Version 14, maintaining all existing data and functionality.
+**User-visible outcome:** Users can click on a client folder and successfully view the complete client dossier including contact details, intervention history with photos, and blacklist status.

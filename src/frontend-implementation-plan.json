@@ -1,41 +1,76 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Publish Draft Version 14 to production",
+  "title": "Fix client folder access to show details, interventions, and photos",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Deploy Draft Version 14 to production environment with data preservation",
+      "summary": "Fix the client folder navigation so that clicking on a client folder properly displays the client details page with coordinates, interventions, and photos",
       "acceptanceCriteria": [
-        "Draft Version 14 is successfully published to production",
-        "All client data, photos, and interventions remain intact after publication",
-        "The production deployment is accessible to users"
+        "Clicking on a client folder navigates to the client dossier page",
+        "Client coordinates are visible on the dossier page",
+        "Client interventions list is displayed and accessible",
+        "Client photos and media are visible in the interventions section"
       ],
       "file_operations": [
         {
-          "path": "frontend/public/manifest.webmanifest",
+          "path": "frontend/src/pages/ClientsPage.tsx",
           "operation": "modify",
-          "description": "Update manifest version metadata to reflect Draft Version 14 publication. Increment version number to indicate production release status."
+          "description": "Fix the navigation link for client folders to properly route to the ClientDossierPage with the correct client ID parameter. Ensure the Card or link element uses the router's Link component or navigate function with the correct route path format (/clients/:clientId). Verify that the client.info.name is being used as a clickable element that triggers navigation."
         },
         {
           "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Remove or disable any development-only console logging statements to ensure clean production deployment. Verify that all debugging console.log calls are removed from the main application entry point."
+          "description": "Verify the route definition for the client dossier page uses the correct path pattern (/clients/:clientId or similar) and that the route is properly registered in the router configuration. Ensure the clientId parameter is correctly defined in the route."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Verify that the routing from the clients list page to the ClientDossierPage is working correctly with proper client ID parameter passing",
+      "acceptanceCriteria": [
+        "Client ID is correctly passed through the route parameters",
+        "ClientDossierPage receives and uses the client ID to fetch data",
+        "No console errors related to routing or parameter extraction"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/ClientDossierPage.tsx",
+          "operation": "modify",
+          "description": "Ensure the component correctly extracts the clientId from route parameters using TanStack Router's useParams hook or similar mechanism. Verify the clientId is being passed to the useQuery hook for fetching client data and to the InterventionList component as a prop. Add error handling for missing or invalid clientId parameters."
         },
         {
-          "path": "frontend/src/components/media/MediaPreview.tsx",
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Remove extensive console logging for debugging that was mentioned in file summary. Clean up debug statements to prepare for production deployment."
+          "description": "Review the route configuration to ensure the client dossier route properly defines the clientId parameter and that it matches the navigation pattern used in ClientsPage. Confirm the route component is correctly set to ClientDossierPage."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Ensure the ClientDossierPage properly displays all client information sections including contact details, interventions list with photos, and blacklist panel",
+      "acceptanceCriteria": [
+        "Client name, address, city, state, zip code are displayed",
+        "Phone and email are shown if available",
+        "InterventionList component renders and displays all interventions",
+        "Media/photos attached to interventions are visible",
+        "BlacklistPanel is rendered and functional"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/ClientDossierPage.tsx",
+          "operation": "modify",
+          "description": "Verify that all client information fields (name, address.street, address.city, address.state, address.zip, phone, email) are being rendered in the UI. Ensure the InterventionList component is properly instantiated with the clientId prop. Confirm the BlacklistPanel component is included and receives the necessary client data. Add proper conditional rendering for optional fields like phone and email."
         },
         {
-          "path": "frontend/src/hooks/useClients.ts",
+          "path": "frontend/src/components/interventions/InterventionList.tsx",
           "operation": "modify",
-          "description": "Remove extensive logging mentioned in file summary. Ensure production-ready error handling without verbose debug output."
+          "description": "Ensure the component correctly fetches interventions using the clientId prop and renders each intervention with its associated media. Verify that the MediaPreview component or similar is being used to display intervention photos. Confirm that intervention details including date, comments, and media are all accessible and visible in the list."
         },
         {
-          "path": "frontend/src/hooks/useTechnicalFolder.ts",
+          "path": "frontend/src/components/blacklist/BlacklistPanel.tsx",
           "operation": "modify",
-          "description": "Remove comprehensive logging for debugging mentioned in file summary. Prepare hook for production use with minimal necessary logging."
+          "description": "Verify the component receives and displays client blacklist information including blacklist comments and media. Ensure the component properly handles both blacklisted and non-blacklisted states and displays the appropriate UI for each case."
         }
       ]
     }
