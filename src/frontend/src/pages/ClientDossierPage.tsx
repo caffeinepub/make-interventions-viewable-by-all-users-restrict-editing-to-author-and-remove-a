@@ -1,28 +1,45 @@
-import { useParams, useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
+import { useParams } from '@tanstack/react-router';
 import { useGetClient } from '../hooks/useClients';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useGetClientInterventions } from '../hooks/useInterventions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Loader2, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { Pencil, Plus, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import EditClientDialog from '../components/clients/EditClientDialog';
+import AddInterventionDialog from '../components/interventions/AddInterventionDialog';
 import InterventionList from '../components/interventions/InterventionList';
 import BlacklistPanel from '../components/blacklist/BlacklistPanel';
 import MobileLayout from '../components/layout/MobileLayout';
+import AppBadge from '../components/common/AppBadge';
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function ClientDossierPage() {
   const { clientId } = useParams({ from: '/clients/$clientId' });
-  const navigate = useNavigate();
-  const { data: client, isLoading, isError, error } = useGetClient(clientId);
+  const { data: client, isLoading: clientLoading, isError: clientError, error: clientErrorObj, refetch: refetchClient } = useGetClient(clientId);
+  const { data: interventions = [], isLoading: interventionsLoading, isError: interventionsError, error: interventionsErrorObj, refetch: refetchInterventions } = useGetClientInterventions(clientId);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddInterventionOpen, setIsAddInterventionOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const handleRetry = () => {
+  console.log('[ClientDossierPage] Rendering for clientId:', clientId);
+  console.log('[ClientDossierPage] Client loading:', clientLoading, 'error:', clientError);
+  console.log('[ClientDossierPage] Interventions loading:', interventionsLoading, 'error:', interventionsError);
+  console.log('[ClientDossierPage] Client data:', client ? { name: client.info.name, isBlacklisted: client.isBlacklisted } : 'null');
+  console.log('[ClientDossierPage] Interventions count:', interventions.length);
+
+  const handleRetryClient = () => {
+    console.log('[ClientDossierPage] Retrying client data fetch');
     queryClient.invalidateQueries({ queryKey: ['client', clientId] });
+    refetchClient();
   };
 
-  if (isLoading) {
+  const handleRetryInterventions = () => {
+    console.log('[ClientDossierPage] Retrying interventions data fetch');
+    queryClient.invalidateQueries({ queryKey: ['interventions', clientId] });
+    refetchInterventions();
+  };
+
+  if (clientLoading) {
     return (
       <MobileLayout>
         <div className="flex flex-col items-center justify-center py-12 gap-3">
@@ -33,38 +50,33 @@ export default function ClientDossierPage() {
     );
   }
 
-  if (isError) {
+  if (clientError || !client) {
     return (
       <MobileLayout>
         <Card className="border-destructive">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center gap-4 text-center">
               <div className="p-3 rounded-full bg-destructive/10">
-                <RefreshCw className="h-6 w-6 text-destructive" />
+                <AlertCircle className="h-6 w-6 text-destructive" />
               </div>
               <div>
                 <h3 className="font-semibold text-lg mb-2">
-                  Impossible de charger le dossier client
+                  Impossible de charger le client
                 </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {error instanceof Error 
-                    ? error.message.includes('Non autorisé')
+                <p className="text-sm text-muted-foreground mb-2">
+                  {clientErrorObj instanceof Error 
+                    ? clientErrorObj.message.includes('Non autorisé')
                       ? 'Accès refusé - Veuillez vous reconnecter'
-                      : error.message.includes('non trouvé')
-                      ? 'Client introuvable'
-                      : 'Erreur de connexion - Vérifiez votre connexion Internet'
+                      : clientErrorObj.message
                     : 'Une erreur est survenue lors du chargement des données'}
                 </p>
-                <div className="flex gap-2 justify-center">
-                  <Button onClick={() => navigate({ to: '/clients' })} variant="outline">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Retour
-                  </Button>
-                  <Button onClick={handleRetry}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Réessayer
-                  </Button>
-                </div>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Vérifiez la console du navigateur (F12) pour plus de détails
+                </p>
+                <Button onClick={handleRetryClient} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Réessayer
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -73,91 +85,114 @@ export default function ClientDossierPage() {
     );
   }
 
-  if (!client) {
-    return (
-      <MobileLayout>
-        <div className="text-center py-8">
-          <p className="text-muted-foreground mb-4">Client non trouvé</p>
-          <Button onClick={() => navigate({ to: '/clients' })} variant="outline">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour aux clients
-          </Button>
-        </div>
-      </MobileLayout>
-    );
-  }
-
   return (
     <MobileLayout>
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate({ to: '/clients' })}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-2xl font-bold flex-1">{client.info.name}</h1>
-          {!client.isBlacklisted && (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setIsEditDialogOpen(true)}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CardTitle>{client.info.name}</CardTitle>
+                {client.isBlacklisted && (
+                  <AppBadge variant="destructive">Liste noire</AppBadge>
+                )}
+              </div>
+              {!client.isBlacklisted && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsEditDialogOpen(true)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="font-medium">Adresse:</span>
+                <p className="text-muted-foreground">{client.info.address.street}</p>
+                <p className="text-muted-foreground">
+                  {client.info.address.city}, {client.info.address.state}{' '}
+                  {client.info.address.zip}
+                </p>
+              </div>
+              <div>
+                <span className="font-medium">Téléphone:</span>
+                <p className="text-muted-foreground">{client.info.phone}</p>
+              </div>
+              <div>
+                <span className="font-medium">Email:</span>
+                <p className="text-muted-foreground">{client.info.email}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <Tabs defaultValue="interventions" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="interventions">Interventions</TabsTrigger>
-            <TabsTrigger value="info">Informations</TabsTrigger>
-            <TabsTrigger value="blacklist">Liste noire</TabsTrigger>
-          </TabsList>
+        <BlacklistPanel clientId={clientId} client={client} />
 
-          <TabsContent value="interventions" className="space-y-4">
-            <InterventionList clientId={clientId} />
-          </TabsContent>
-
-          <TabsContent value="info" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Coordonnées</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Interventions</CardTitle>
+              <Button size="sm" onClick={() => setIsAddInterventionOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {interventionsLoading ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-3">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Chargement des interventions...</p>
+              </div>
+            ) : interventionsError ? (
+              <div className="flex flex-col items-center gap-4 text-center py-8">
+                <div className="p-3 rounded-full bg-destructive/10">
+                  <AlertCircle className="h-6 w-6 text-destructive" />
+                </div>
                 <div>
-                  <p className="text-muted-foreground">Adresse</p>
-                  <p className="font-medium">{client.info.address.street}</p>
-                  <p className="font-medium">
-                    {client.info.address.city}, {client.info.address.state}{' '}
-                    {client.info.address.zip}
+                  <h3 className="font-semibold mb-2">
+                    Impossible de charger les interventions
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {interventionsErrorObj instanceof Error 
+                      ? interventionsErrorObj.message.includes('Non autorisé')
+                        ? 'Accès refusé - Veuillez vous reconnecter'
+                        : interventionsErrorObj.message
+                      : 'Une erreur est survenue'}
                   </p>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Vérifiez la console du navigateur (F12) pour plus de détails
+                  </p>
+                  <Button onClick={handleRetryInterventions} variant="outline" size="sm">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Réessayer
+                  </Button>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Téléphone</p>
-                  <p className="font-medium">{client.info.phone}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Email</p>
-                  <p className="font-medium">{client.info.email}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="blacklist" className="space-y-4">
-            <BlacklistPanel clientId={clientId} client={client} />
-          </TabsContent>
-        </Tabs>
+              </div>
+            ) : (
+              <InterventionList clientId={clientId} />
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <EditClientDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
+      {client && (
+        <EditClientDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          currentClient={client}
+          clientId={clientId}
+        />
+      )}
+
+      <AddInterventionDialog
+        open={isAddInterventionOpen}
+        onOpenChange={setIsAddInterventionOpen}
         clientId={clientId}
-        currentClient={client}
       />
     </MobileLayout>
   );

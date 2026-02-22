@@ -26,6 +26,10 @@ actor {
   let userProfiles = Map.empty<Principal, UserProfile>();
   let accessControlState = Auth.initState();
 
+  // Media storage (conceptual)
+  // In practice, large files like photos should be stored off-chain and referenced here
+  let mediaStorage = Map.empty<Text, MediaItem>();
+
   include MixinStorage();
   include MixinAuthorization(accessControlState);
 
@@ -72,6 +76,13 @@ actor {
 
   public type UserProfile = {
     name : Text;
+  };
+
+  public type MediaItem = {
+    id : Text;
+    owner : Principal;
+    file : Storage.ExternalBlob;
+    createdAt : Time.Time;
   };
 
   // User Profile methods
@@ -376,6 +387,53 @@ actor {
     matchingInterventions.toArray();
   };
 
+  // Media Management - FIXED: Added authorization checks
+  public query ({ caller }) func getMediaItem(mediaId : Text) : async ?MediaItem {
+    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent accéder aux médias");
+    };
+    mediaStorage.get(mediaId);
+  };
+
+  public query ({ caller }) func listAllMediaItems() : async [MediaItem] {
+    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent lister les médias");
+    };
+    mediaStorage.values().toArray();
+  };
+
+  public shared ({ caller }) func uploadMediaItem(file : Storage.ExternalBlob) : async Text {
+    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent télécharger des médias");
+    };
+    let mediaId = caller.toText().concat(Time.now().toText());
+    let mediaItem : MediaItem = {
+      id = mediaId;
+      owner = caller;
+      file;
+      createdAt = Time.now();
+    };
+    mediaStorage.add(mediaId, mediaItem);
+    mediaId;
+  };
+
+  public shared ({ caller }) func deleteMediaItem(mediaId : Text) : async () {
+    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent supprimer des médias");
+    };
+    switch (mediaStorage.get(mediaId)) {
+      case (null) {
+        Runtime.trap("Élément média introuvable");
+      };
+      case (?mediaItem) {
+        if (mediaItem.owner != caller and not Auth.isAdmin(accessControlState, caller)) {
+          Runtime.trap("Non autorisé : vous ne pouvez supprimer que vos propres médias");
+        };
+        mediaStorage.remove(mediaId);
+      };
+    };
+  };
+
   // Technical Folder Management
   public query ({ caller }) func listTechnicalFiles() : async [(Text, Storage.ExternalBlob)] {
     if (not (Auth.hasPermission(accessControlState, caller, #user))) {
@@ -464,7 +522,7 @@ actor {
     let remainingPath = parts.sliceToArray(1, parts.size() - 1 : Nat);
 
     // Get or create top-level folder
-    let topLevelFolder = switch (technicalFolder.get(topLevelFolderName)) {
+    var topLevelFolder = switch (technicalFolder.get(topLevelFolderName)) {
       case (null) {
         {
           name = topLevelFolderName;
@@ -475,37 +533,36 @@ actor {
       case (?folder) { folder };
     };
 
-    // Recursively create/get subfolders
-    let finalFolder = createSubfolders(topLevelFolder, remainingPath);
-
-    // Add file to final folder
-    finalFolder.files.add(fileName, blob);
+    // Recursively create/get subfolders and add file
+    topLevelFolder := createSubfoldersAndAddFile(topLevelFolder, remainingPath, fileName, blob);
     technicalFolder.add(topLevelFolderName, topLevelFolder);
   };
 
-  // Helper function to create/find nested subfolders
-  func createSubfolders(folder : Folder, subfolders : [Text]) : Folder {
+  // Helper function to create/find nested subfolders and add file
+  func createSubfoldersAndAddFile(folder : Folder, subfolders : [Text], fileName : Text, blob : Storage.ExternalBlob) : Folder {
     if (subfolders.size() == 0) {
+      folder.files.add(fileName, blob);
       return folder;
     };
 
     let currentFolderName = subfolders[0];
     let remainingSubfolders = subfolders.sliceToArray(1, subfolders.size() : Nat);
 
-    let currentFolder = switch (folder.subfolders.get(currentFolderName)) {
+    var currentFolder = switch (folder.subfolders.get(currentFolderName)) {
       case (null) {
         let newSubfolder : Folder = {
           name = currentFolderName;
           files = Map.empty<Text, Storage.ExternalBlob>();
           subfolders = Map.empty<Text, Folder>();
         };
-        folder.subfolders.add(currentFolderName, newSubfolder);
         newSubfolder;
       };
       case (?existingFolder) { existingFolder };
     };
 
-    createSubfolders(currentFolder, remainingSubfolders);
+    currentFolder := createSubfoldersAndAddFile(currentFolder, remainingSubfolders, fileName, blob);
+    folder.subfolders.add(currentFolderName, currentFolder);
+    folder;
   };
 
   public shared ({ caller }) func deleteTechnicalFileWithPath(path : Text) : async () {
@@ -525,26 +582,27 @@ actor {
     switch (technicalFolder.get(topLevelFolderName)) {
       case (null) { Runtime.trap("Dossier de niveau supérieur introuvable") };
       case (?folder) {
-        switch (deleteFileInPath(folder, remainingPath, fileName)) {
-          case (true) {
-            if (remainingPath.size() == 0 and folder.files.size() == 0 and folder.subfolders.size() == 0) {
-              technicalFolder.remove(topLevelFolderName);
-            };
-          };
-          case (false) { Runtime.trap("Fichier introuvable dans le chemin spécifié") };
+        let (fileDeleted, updatedFolder) = deleteFileInPath(folder, remainingPath, fileName);
+        if (not fileDeleted) {
+          Runtime.trap("Fichier introuvable dans le chemin spécifié");
+        };
+        if (updatedFolder.files.size() == 0 and updatedFolder.subfolders.size() == 0) {
+          technicalFolder.remove(topLevelFolderName);
+        } else {
+          technicalFolder.add(topLevelFolderName, updatedFolder);
         };
       };
     };
   };
 
   // Helper function to recursively delete file in path hierarchy
-  func deleteFileInPath(folder : Folder, pathParts : [Text], fileName : Text) : Bool {
+  func deleteFileInPath(folder : Folder, pathParts : [Text], fileName : Text) : (Bool, Folder) {
     if (pathParts.size() == 0) {
       switch (folder.files.get(fileName)) {
-        case (null) { false };
+        case (null) { (false, folder) };
         case (?_) {
           folder.files.remove(fileName);
-          true;
+          (true, folder);
         };
       };
     } else {
@@ -552,13 +610,17 @@ actor {
       let remainingParts = pathParts.sliceToArray(1, pathParts.size() : Nat);
 
       switch (folder.subfolders.get(currentFolderName)) {
-        case (null) { false };
+        case (null) { (false, folder) };
         case (?subfolder) {
-          let fileDeleted = deleteFileInPath(subfolder, remainingParts, fileName);
-          if (fileDeleted and subfolder.files.size() == 0 and subfolder.subfolders.size() == 0) {
-            folder.subfolders.remove(currentFolderName);
+          let (fileDeleted, updatedSubfolder) = deleteFileInPath(subfolder, remainingParts, fileName);
+          if (fileDeleted) {
+            if (updatedSubfolder.files.size() == 0 and updatedSubfolder.subfolders.size() == 0) {
+              folder.subfolders.remove(currentFolderName);
+            } else {
+              folder.subfolders.add(currentFolderName, updatedSubfolder);
+            };
           };
-          fileDeleted;
+          (fileDeleted, folder);
         };
       };
     };
@@ -569,38 +631,50 @@ actor {
     newPath : Text,
   ) : async () {
     if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: only authenticated users can move technical files");
+      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent déplacer des fichiers techniques");
     };
 
     // Find the file at the old path
-    switch (await downloadTechnicalFileWithPath(oldPath)) {
-      case (?blob) {
-        // Upload the file to the new path
-        await uploadTechnicalFileWithFolderPath(newPath, blob);
+    let parts = oldPath.split(#char('/')).toArray();
+    if (parts.size() == 0) {
+      Runtime.trap("Chemin invalide");
+    };
 
-        // Delete the original file from the old path
-        await deleteTechnicalFileWithPath(oldPath);
+    let topLevelFolderName = parts[0];
+    let remainingPath = parts.sliceToArray(1, parts.size() : Nat);
+
+    switch (technicalFolder.get(topLevelFolderName)) {
+      case (null) { Runtime.trap("Dossier de niveau supérieur introuvable") };
+      case (?folder) {
+        switch (findFileInPath(folder, remainingPath)) {
+          case (null) { Runtime.trap("Le fichier à déplacer n'existe pas") };
+          case (?blob) {
+            // Upload the file to the new path
+            await uploadTechnicalFileWithFolderPath(newPath, blob);
+            // Delete the original file from the old path
+            await deleteTechnicalFileWithPath(oldPath);
+          };
+        };
       };
-      case (null) { Runtime.trap("The file to be moved does not exist") };
     };
   };
 
   public shared ({ caller }) func createFolder(path : Text) : async () {
     if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: only authenticated users can create folders");
+      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent créer des dossiers");
     };
 
     // Split the path to get folder hierarchy
     let parts = path.split(#char('/')).toArray();
     if (parts.size() == 0) {
-      Runtime.trap("Invalid path. You need to specify folder name");
+      Runtime.trap("Chemin invalide. Vous devez spécifier le nom du dossier");
     };
 
     let topLevelFolderName = parts[0];
     let remainingPath = parts.sliceToArray(1, parts.size());
 
     // Create or get top-level folder
-    let topLevelFolder = switch (technicalFolder.get(topLevelFolderName)) {
+    var topLevelFolder = switch (technicalFolder.get(topLevelFolderName)) {
       case (null) {
         {
           name = topLevelFolderName;
@@ -612,10 +686,36 @@ actor {
     };
 
     // Create nested subfolders if needed
-    let updatedTopLevelFolder = createSubfolders(topLevelFolder, remainingPath);
+    topLevelFolder := createSubfolders(topLevelFolder, remainingPath);
 
     // Update the technicalFolder map with the modified folder structure
-    technicalFolder.add(topLevelFolderName, updatedTopLevelFolder);
+    technicalFolder.add(topLevelFolderName, topLevelFolder);
+  };
+
+  // Helper function to create/find nested subfolders
+  func createSubfolders(folder : Folder, subfolders : [Text]) : Folder {
+    if (subfolders.size() == 0) {
+      return folder;
+    };
+
+    let currentFolderName = subfolders[0];
+    let remainingSubfolders = subfolders.sliceToArray(1, subfolders.size() : Nat);
+
+    var currentFolder = switch (folder.subfolders.get(currentFolderName)) {
+      case (null) {
+        let newSubfolder : Folder = {
+          name = currentFolderName;
+          files = Map.empty<Text, Storage.ExternalBlob>();
+          subfolders = Map.empty<Text, Folder>();
+        };
+        newSubfolder;
+      };
+      case (?existingFolder) { existingFolder };
+    };
+
+    currentFolder := createSubfolders(currentFolder, remainingSubfolders);
+    folder.subfolders.add(currentFolderName, currentFolder);
+    folder;
   };
 
   public shared ({ caller }) func renameFolder(
@@ -623,20 +723,20 @@ actor {
     newName : Text,
   ) : async () {
     if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: only authenticated users can rename folders");
+      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent renommer des dossiers");
     };
 
     // Split the old path to find the folder to rename
     let parts = oldPath.split(#char('/')).toArray();
     if (parts.size() == 0) {
-      Runtime.trap("Invalid path. You need to specify folder name");
+      Runtime.trap("Chemin invalide. Vous devez spécifier le nom du dossier");
     };
 
     let topLevelFolderName = parts[0];
     let remainingPath = parts.sliceToArray(1, parts.size());
 
     switch (technicalFolder.get(topLevelFolderName)) {
-      case (null) { Runtime.trap("Top-level folder not found") };
+      case (null) { Runtime.trap("Dossier de niveau supérieur introuvable") };
       case (?rootFolder) {
         if (remainingPath.size() == 0) {
           // Renaming a top-level folder
@@ -645,9 +745,9 @@ actor {
           technicalFolder.add(newName, renamedFolder);
         } else {
           // Renaming a subfolder
-          let updatedRootFolder = switch (renameSubfolderInPath(rootFolder, remainingPath, newName)) {
-            case (true) { rootFolder };
-            case (false) { Runtime.trap("Failed to rename folder in the specified path") };
+          let (renamed, updatedRootFolder) = renameSubfolderInPath(rootFolder, remainingPath, newName);
+          if (not renamed) {
+            Runtime.trap("Échec du renommage du dossier dans le chemin spécifié");
           };
           technicalFolder.add(topLevelFolderName, updatedRootFolder);
         };
@@ -656,20 +756,20 @@ actor {
   };
 
   // Helper function to recursively rename subfolder in path hierarchy
-  func renameSubfolderInPath(folder : Folder, pathParts : [Text], newName : Text) : Bool {
+  func renameSubfolderInPath(folder : Folder, pathParts : [Text], newName : Text) : (Bool, Folder) {
     if (pathParts.size() == 0) {
-      false;
+      (false, folder);
     } else if (pathParts.size() == 1) {
       // We're at the folder to be renamed
       let folderToRename = pathParts[0];
       switch (folder.subfolders.get(folderToRename)) {
-        case (null) { false };
+        case (null) { (false, folder) };
         case (?subfolder) {
           // Update the folder name
           let renamedFolder = { subfolder with name = newName };
           folder.subfolders.remove(folderToRename);
           folder.subfolders.add(newName, renamedFolder);
-          true;
+          (true, folder);
         };
       };
     } else {
@@ -677,15 +777,16 @@ actor {
       let remainingParts = pathParts.sliceToArray(1, pathParts.size() : Nat);
 
       switch (folder.subfolders.get(currentFolderName)) {
-        case (null) { false };
+        case (null) { (false, folder) };
         case (?subfolder) {
-          let renamed = renameSubfolderInPath(subfolder, remainingParts, newName);
+          let (renamed, updatedSubfolder) = renameSubfolderInPath(subfolder, remainingParts, newName);
           if (renamed) {
-            folder.subfolders.add(currentFolderName, subfolder);
+            folder.subfolders.add(currentFolderName, updatedSubfolder);
           };
-          renamed;
+          (renamed, folder);
         };
       };
     };
   };
 };
+

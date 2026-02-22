@@ -1,11 +1,11 @@
 {
-  "name": "Gestion des Interventions",
-  "short_name": "Interventions",
-  "description": "Application de gestion des interventions clients",
+  "name": "Vial Traite Service",
+  "short_name": "VTS",
+  "description": "Application de gestion des clients et interventions pour Vial Traite Service",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#1a1a1a",
+  "theme_color": "#0066CC",
   "orientation": "portrait",
   "icons": [
     {
@@ -20,5 +20,6 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "version": "14.0.0"
 }

@@ -12,8 +12,17 @@ export function useGetClientInterventions(clientId: string) {
   return useQuery<Intervention[]>({
     queryKey: ['interventions', clientId],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.getClientInterventions(clientId);
+      if (!actor) {
+        return [];
+      }
+      
+      try {
+        const interventions = await actor.getClientInterventions(clientId);
+        return interventions;
+      } catch (error) {
+        console.error('Error fetching interventions:', error);
+        throw error;
+      }
     },
     enabled: !!actor && !isFetching && !!clientId,
     retry: 3,
@@ -49,7 +58,10 @@ export function useAddIntervention() {
         return;
       }
 
-      if (!actor) throw new Error('Acteur non disponible');
+      if (!actor) {
+        throw new Error('Acteur non disponible');
+      }
+      
       await actor.addIntervention(
         params.clientId,
         params.comments,
@@ -65,6 +77,7 @@ export function useAddIntervention() {
       toast.success('Intervention ajoutée avec succès');
     },
     onError: (error: any) => {
+      console.error('Error adding intervention:', error);
       const message = error.message || 'Échec de l\'ajout de l\'intervention';
       if (message.includes('Non autorisé')) {
         toast.error('Accès refusé - Veuillez vous reconnecter');
@@ -108,7 +121,10 @@ export function useUpdateIntervention() {
         return;
       }
 
-      if (!actor) throw new Error('Acteur non disponible');
+      if (!actor) {
+        throw new Error('Acteur non disponible');
+      }
+      
       await actor.updateIntervention(
         params.interventionId,
         params.clientId,
@@ -125,6 +141,7 @@ export function useUpdateIntervention() {
       toast.success('Intervention mise à jour avec succès');
     },
     onError: (error: any) => {
+      console.error('Error updating intervention:', error);
       const message = error.message || 'Échec de la mise à jour de l\'intervention';
       if (message.includes('Non autorisé')) {
         toast.error('Accès refusé - Vous ne pouvez modifier que vos propres interventions');
@@ -153,7 +170,10 @@ export function useDeleteIntervention() {
         return;
       }
 
-      if (!actor) throw new Error('Acteur non disponible');
+      if (!actor) {
+        throw new Error('Acteur non disponible');
+      }
+      
       await actor.deleteIntervention(params.interventionId, params.clientId);
     },
     onSuccess: (_, variables) => {
@@ -162,6 +182,7 @@ export function useDeleteIntervention() {
       toast.success('Intervention supprimée avec succès');
     },
     onError: (error: any) => {
+      console.error('Error deleting intervention:', error);
       const message = error.message || 'Échec de la suppression de l\'intervention';
       if (message.includes('Non autorisé')) {
         toast.error('Accès refusé - Vous ne pouvez supprimer que vos propres interventions');
@@ -180,8 +201,17 @@ export function useGetInterventionsByDate(day: bigint, month: bigint, year: bigi
   return useQuery<Intervention[]>({
     queryKey: ['interventions', 'date', day.toString(), month.toString(), year.toString()],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.getInterventionsByDate(day, month, year);
+      if (!actor) {
+        return [];
+      }
+      
+      try {
+        const interventions = await actor.getInterventionsByDate(day, month, year);
+        return interventions;
+      } catch (error) {
+        console.error('Error fetching interventions by date:', error);
+        throw error;
+      }
     },
     enabled: !!actor && !isFetching,
     retry: 3,

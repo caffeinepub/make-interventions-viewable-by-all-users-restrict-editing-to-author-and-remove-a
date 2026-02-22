@@ -14,29 +14,6 @@ export class ExternalBlob {
     static fromBytes(blob: Uint8Array<ArrayBuffer>): ExternalBlob;
     withUploadProgress(onProgress: (percentage: number) => void): ExternalBlob;
 }
-export interface Address {
-    zip: string;
-    street: string;
-    city: string;
-    state: string;
-}
-export type Time = bigint;
-export interface Client {
-    blacklistMedia: Array<ExternalBlob>;
-    blacklistComments: string;
-    info: ContactInfo;
-    updatedAt: Time;
-    isBlacklisted: boolean;
-}
-export interface ContactInfo {
-    name: string;
-    email: string;
-    address: Address;
-    phone: string;
-}
-export interface UserProfile {
-    name: string;
-}
 export interface Intervention {
     id: string;
     media: Array<ExternalBlob>;
@@ -53,6 +30,35 @@ export interface Intervention {
     comments: string;
     interventionTimestamp: Time;
 }
+export interface Client {
+    blacklistMedia: Array<ExternalBlob>;
+    blacklistComments: string;
+    info: ContactInfo;
+    updatedAt: Time;
+    isBlacklisted: boolean;
+}
+export interface Address {
+    zip: string;
+    street: string;
+    city: string;
+    state: string;
+}
+export type Time = bigint;
+export interface MediaItem {
+    id: string;
+    owner: Principal;
+    file: ExternalBlob;
+    createdAt: Time;
+}
+export interface ContactInfo {
+    name: string;
+    email: string;
+    address: Address;
+    phone: string;
+}
+export interface UserProfile {
+    name: string;
+}
 export enum UserRole {
     admin = "admin",
     user = "user",
@@ -64,6 +70,7 @@ export interface backendInterface {
     createFolder(path: string): Promise<void>;
     createOrUpdateClient(id: string, name: string, address: Address, phone: string, email: string): Promise<void>;
     deleteIntervention(interventionId: string, clientId: string): Promise<void>;
+    deleteMediaItem(mediaId: string): Promise<void>;
     deleteTechnicalFileWithPath(path: string): Promise<void>;
     downloadTechnicalFileWithPath(path: string): Promise<ExternalBlob | null>;
     getCallerUserProfile(): Promise<UserProfile | null>;
@@ -72,8 +79,10 @@ export interface backendInterface {
     getClientInterventions(clientId: string): Promise<Array<Intervention>>;
     getClients(): Promise<Array<Client>>;
     getInterventionsByDate(day: bigint, month: bigint, year: bigint): Promise<Array<Intervention>>;
+    getMediaItem(mediaId: string): Promise<MediaItem | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    listAllMediaItems(): Promise<Array<MediaItem>>;
     listTechnicalFiles(): Promise<Array<[string, ExternalBlob]>>;
     markAsBlacklisted(clientId: string, comments: string, media: Array<ExternalBlob>): Promise<void>;
     moveTechnicalFile(oldPath: string, newPath: string): Promise<void>;
@@ -82,5 +91,6 @@ export interface backendInterface {
     searchClients(searchString: string): Promise<Array<Client>>;
     unmarkAsBlacklisted(clientId: string): Promise<void>;
     updateIntervention(interventionId: string, clientId: string, comments: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint): Promise<void>;
+    uploadMediaItem(file: ExternalBlob): Promise<string>;
     uploadTechnicalFileWithFolderPath(path: string, blob: ExternalBlob): Promise<void>;
 }

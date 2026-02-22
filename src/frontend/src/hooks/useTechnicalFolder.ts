@@ -9,8 +9,17 @@ export function useListTechnicalFiles() {
   return useQuery<Array<[string, ExternalBlob]>>({
     queryKey: ['technicalFiles'],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.listTechnicalFiles();
+      if (!actor) {
+        return [];
+      }
+      
+      try {
+        const files = await actor.listTechnicalFiles();
+        return files;
+      } catch (error) {
+        console.error('Error fetching technical files:', error);
+        throw error;
+      }
     },
     enabled: !!actor && !isFetching,
     retry: 3,
@@ -25,7 +34,10 @@ export function useUploadTechnicalFile() {
 
   return useMutation({
     mutationFn: async (params: { path: string; blob: ExternalBlob }) => {
-      if (!actor) throw new Error('Acteur non disponible');
+      if (!actor) {
+        throw new Error('Acteur non disponible');
+      }
+      
       await actor.uploadTechnicalFileWithFolderPath(params.path, params.blob);
     },
     onSuccess: () => {
@@ -33,6 +45,7 @@ export function useUploadTechnicalFile() {
       toast.success('Fichier téléchargé avec succès');
     },
     onError: (error: any) => {
+      console.error('Error uploading file:', error);
       const message = error.message || 'Échec du téléchargement du fichier';
       if (message.includes('Non autorisé')) {
         toast.error('Accès refusé - Veuillez vous reconnecter');
@@ -51,7 +64,10 @@ export function useDeleteTechnicalFile() {
 
   return useMutation({
     mutationFn: async (path: string) => {
-      if (!actor) throw new Error('Acteur non disponible');
+      if (!actor) {
+        throw new Error('Acteur non disponible');
+      }
+      
       await actor.deleteTechnicalFileWithPath(path);
     },
     onSuccess: () => {
@@ -59,6 +75,7 @@ export function useDeleteTechnicalFile() {
       toast.success('Fichier supprimé avec succès');
     },
     onError: (error: any) => {
+      console.error('Error deleting file:', error);
       const message = error.message || 'Échec de la suppression du fichier';
       if (message.includes('Non autorisé')) {
         toast.error('Accès refusé - Veuillez vous reconnecter');
@@ -77,7 +94,10 @@ export function useMoveFile() {
 
   return useMutation({
     mutationFn: async (params: { oldPath: string; newPath: string }) => {
-      if (!actor) throw new Error('Acteur non disponible');
+      if (!actor) {
+        throw new Error('Acteur non disponible');
+      }
+      
       await actor.moveTechnicalFile(params.oldPath, params.newPath);
     },
     onSuccess: () => {
@@ -85,11 +105,12 @@ export function useMoveFile() {
       toast.success('Fichier déplacé avec succès');
     },
     onError: (error: any) => {
+      console.error('Error moving file:', error);
       const message = error.message || 'Échec du déplacement du fichier';
       if (message.includes('Non autorisé')) {
         toast.error('Accès refusé - Veuillez vous reconnecter');
-      } else if (message.includes('n\'existe pas')) {
-        toast.error('Fichier introuvable');
+      } else if (message.includes('introuvable')) {
+        toast.error('Fichier introuvable - Veuillez rafraîchir la page');
       } else {
         toast.error(`Erreur: ${message}`);
       }
@@ -103,7 +124,10 @@ export function useCreateFolder() {
 
   return useMutation({
     mutationFn: async (path: string) => {
-      if (!actor) throw new Error('Acteur non disponible');
+      if (!actor) {
+        throw new Error('Acteur non disponible');
+      }
+      
       await actor.createFolder(path);
     },
     onSuccess: () => {
@@ -111,6 +135,7 @@ export function useCreateFolder() {
       toast.success('Dossier créé avec succès');
     },
     onError: (error: any) => {
+      console.error('Error creating folder:', error);
       const message = error.message || 'Échec de la création du dossier';
       if (message.includes('Non autorisé')) {
         toast.error('Accès refusé - Veuillez vous reconnecter');
@@ -129,7 +154,10 @@ export function useRenameFolder() {
 
   return useMutation({
     mutationFn: async (params: { oldPath: string; newName: string }) => {
-      if (!actor) throw new Error('Acteur non disponible');
+      if (!actor) {
+        throw new Error('Acteur non disponible');
+      }
+      
       await actor.renameFolder(params.oldPath, params.newName);
     },
     onSuccess: () => {
@@ -137,11 +165,12 @@ export function useRenameFolder() {
       toast.success('Dossier renommé avec succès');
     },
     onError: (error: any) => {
+      console.error('Error renaming folder:', error);
       const message = error.message || 'Échec du renommage du dossier';
       if (message.includes('Non autorisé')) {
         toast.error('Accès refusé - Veuillez vous reconnecter');
       } else if (message.includes('introuvable')) {
-        toast.error('Dossier introuvable');
+        toast.error('Dossier introuvable - Veuillez rafraîchir la page');
       } else {
         toast.error(`Erreur: ${message}`);
       }

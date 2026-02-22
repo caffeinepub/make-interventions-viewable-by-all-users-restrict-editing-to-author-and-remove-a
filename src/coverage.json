@@ -1,138 +1,32 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-21T01:19:30.274Z",
+  "generatedAt": "2026-02-22T00:12:05.068Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 8,
-    "implemented": 8,
+    "total": 1,
+    "implemented": 1,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Fix the non-responsive 'Dossier Client' button/navigation that prevents users from accessing the client folder section when clicked",
+        "summary": "Deploy Draft Version 14 to production environment",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/ClientsPage.tsx",
-          "frontend/src/App.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/pages/ClientsPage.tsx"
-        ]
-      },
-      {
-        "id": "REQ-2",
-        "summary": "Restore full access to interventions from within the client folder section",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/pages/ClientDossierPage.tsx",
-          "frontend/src/components/interventions/InterventionList.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/pages/ClientDossierPage.tsx",
-          "frontend/src/components/interventions/InterventionList.tsx"
-        ]
-      },
-      {
-        "id": "REQ-3",
-        "summary": "Recover and restore the lost technical folder data, ensuring all previously stored files and folders are accessible",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/pages/TechnicalFolderPage.tsx",
+          "frontend/public/manifest.webmanifest",
+          "frontend/src/App.tsx",
+          "frontend/src/components/media/MediaPreview.tsx",
+          "frontend/src/hooks/useClients.ts",
           "frontend/src/hooks/useTechnicalFolder.ts"
         ],
         "matchedFiles": [
-          "frontend/src/pages/TechnicalFolderPage.tsx",
+          "frontend/public/manifest.webmanifest",
+          "frontend/src/App.tsx",
+          "frontend/src/components/media/MediaPreview.tsx",
+          "frontend/src/hooks/useClients.ts",
           "frontend/src/hooks/useTechnicalFolder.ts"
-        ]
-      },
-      {
-        "id": "REQ-4",
-        "summary": "Add comprehensive error handling with clear, user-friendly error messages in French throughout the application, especially for data loading and navigation failures",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useClients.ts",
-          "frontend/src/hooks/useInterventions.ts",
-          "frontend/src/hooks/useTechnicalFolder.ts",
-          "frontend/src/components/common/ErrorBoundary.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useClients.ts",
-          "frontend/src/hooks/useInterventions.ts",
-          "frontend/src/hooks/useTechnicalFolder.ts",
-          "frontend/src/components/common/ErrorBoundary.tsx"
-        ]
-      },
-      {
-        "id": "REQ-5",
-        "summary": "Add visible loading indicators (spinners) throughout the application to show when data is being fetched or operations are in progress",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/pages/ClientsPage.tsx",
-          "frontend/src/pages/ClientDossierPage.tsx",
-          "frontend/src/pages/TechnicalFolderPage.tsx",
-          "frontend/src/components/interventions/InterventionList.tsx",
-          "frontend/src/pages/DashboardPage.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/pages/ClientsPage.tsx",
-          "frontend/src/pages/ClientDossierPage.tsx",
-          "frontend/src/pages/TechnicalFolderPage.tsx",
-          "frontend/src/components/interventions/InterventionList.tsx",
-          "frontend/src/pages/DashboardPage.tsx"
-        ]
-      },
-      {
-        "id": "REQ-6",
-        "summary": "Implement automatic retry logic for failed data loading operations with exponential backoff",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useClients.ts",
-          "frontend/src/hooks/useInterventions.ts",
-          "frontend/src/hooks/useTechnicalFolder.ts",
-          "frontend/src/pages/ClientsPage.tsx",
-          "frontend/src/pages/TechnicalFolderPage.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useClients.ts",
-          "frontend/src/hooks/useInterventions.ts",
-          "frontend/src/hooks/useTechnicalFolder.ts",
-          "frontend/src/pages/ClientsPage.tsx",
-          "frontend/src/pages/TechnicalFolderPage.tsx"
-        ]
-      },
-      {
-        "id": "REQ-7",
-        "summary": "Add data export functionality allowing users to download their data as PDF or JSON files for backup purposes",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/export/ExportDataDialog.tsx",
-          "frontend/src/hooks/useDataExport.ts",
-          "frontend/src/components/layout/MobileLayout.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/export/ExportDataDialog.tsx",
-          "frontend/src/hooks/useDataExport.ts"
-        ]
-      },
-      {
-        "id": "REQ-8",
-        "summary": "Strengthen data persistence and synchronization between frontend and backend to prevent future data loss",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useClients.ts",
-          "frontend/src/hooks/useInterventions.ts",
-          "frontend/src/hooks/useTechnicalFolder.ts",
-          "frontend/src/offline/syncEngine.ts",
-          "frontend/src/hooks/useSync.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useClients.ts",
-          "frontend/src/hooks/useInterventions.ts",
-          "frontend/src/hooks/useTechnicalFolder.ts",
-          "frontend/src/offline/syncEngine.ts"
         ]
       }
     ]
@@ -142,18 +36,12 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/common/ErrorBoundary.tsx",
-    "frontend/src/components/export/ExportDataDialog.tsx",
-    "frontend/src/components/interventions/InterventionList.tsx",
+    "frontend/public/manifest.webmanifest",
+    "frontend/src/App.tsx",
+    "frontend/src/components/media/MediaPreview.tsx",
     "frontend/src/hooks/useClients.ts",
-    "frontend/src/hooks/useDataExport.ts",
     "frontend/src/hooks/useInterventions.ts",
     "frontend/src/hooks/useTechnicalFolder.ts",
-    "frontend/src/offline/syncEngine.ts",
-    "frontend/src/pages/ClientDossierPage.tsx",
-    "frontend/src/pages/ClientsPage.tsx",
-    "frontend/src/pages/DashboardPage.tsx",
-    "frontend/src/pages/TechnicalFolderPage.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

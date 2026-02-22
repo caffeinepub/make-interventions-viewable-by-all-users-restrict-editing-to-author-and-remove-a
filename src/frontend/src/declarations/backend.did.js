@@ -58,6 +58,12 @@ export const Intervention = IDL.Record({
   'comments' : IDL.Text,
   'interventionTimestamp' : Time,
 });
+export const MediaItem = IDL.Record({
+  'id' : IDL.Text,
+  'owner' : IDL.Principal,
+  'file' : ExternalBlob,
+  'createdAt' : Time,
+});
 
 export const idlService = IDL.Service({
   '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -100,6 +106,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'deleteIntervention' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'deleteMediaItem' : IDL.Func([IDL.Text], [], []),
   'deleteTechnicalFileWithPath' : IDL.Func([IDL.Text], [], []),
   'downloadTechnicalFileWithPath' : IDL.Func(
       [IDL.Text],
@@ -120,12 +127,14 @@ export const idlService = IDL.Service({
       [IDL.Vec(Intervention)],
       ['query'],
     ),
+  'getMediaItem' : IDL.Func([IDL.Text], [IDL.Opt(MediaItem)], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'listAllMediaItems' : IDL.Func([], [IDL.Vec(MediaItem)], ['query']),
   'listTechnicalFiles' : IDL.Func(
       [],
       [IDL.Vec(IDL.Tuple(IDL.Text, ExternalBlob))],
@@ -154,6 +163,7 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'uploadMediaItem' : IDL.Func([ExternalBlob], [IDL.Text], []),
   'uploadTechnicalFileWithFolderPath' : IDL.Func(
       [IDL.Text, ExternalBlob],
       [],
@@ -218,6 +228,12 @@ export const idlFactory = ({ IDL }) => {
     'comments' : IDL.Text,
     'interventionTimestamp' : Time,
   });
+  const MediaItem = IDL.Record({
+    'id' : IDL.Text,
+    'owner' : IDL.Principal,
+    'file' : ExternalBlob,
+    'createdAt' : Time,
+  });
   
   return IDL.Service({
     '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -260,6 +276,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'deleteIntervention' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'deleteMediaItem' : IDL.Func([IDL.Text], [], []),
     'deleteTechnicalFileWithPath' : IDL.Func([IDL.Text], [], []),
     'downloadTechnicalFileWithPath' : IDL.Func(
         [IDL.Text],
@@ -280,12 +297,14 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(Intervention)],
         ['query'],
       ),
+    'getMediaItem' : IDL.Func([IDL.Text], [IDL.Opt(MediaItem)], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'listAllMediaItems' : IDL.Func([], [IDL.Vec(MediaItem)], ['query']),
     'listTechnicalFiles' : IDL.Func(
         [],
         [IDL.Vec(IDL.Tuple(IDL.Text, ExternalBlob))],
@@ -314,6 +333,7 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'uploadMediaItem' : IDL.Func([ExternalBlob], [IDL.Text], []),
     'uploadTechnicalFileWithFolderPath' : IDL.Func(
         [IDL.Text, ExternalBlob],
         [],

@@ -1,131 +1,22 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Vial Traite Service - Service management application with client folders, interventions tracking, and technical documentation. Fixing critical access issues and data loss problems.",
-  "architectural_notes": [
-    "Application uses Internet Identity for authentication",
-    "Data stored on Internet Computer backend (should be permanent)",
-    "Critical bug: Client folder section not responding to clicks",
-    "Data synchronization issues causing technical folder data loss"
-  ],
-  "known_issues": [
-    "Dossier Client button unresponsive - blocks access to interventions",
-    "Technical folder data lost/not loading properly",
-    "Potential data loading synchronization issues with backend",
-    "No error messages displayed when problems occur"
-  ],
-  "isFixRequest": true,
+  "summary": "New project",
+  "architectural_notes": [],
+  "known_issues": [],
+  "isFixRequest": false,
   "existing_features": [
     {
-      "id": "feature-fix-the-non-responsive-dossier-client-button-navigation-that-prevents-users-from-accessing-the-client-folder-section-when-clicked",
-      "title": "Fix the non-responsive 'Dossier Client' button/navigation that prevents users from accessing the client folder section when clicked",
+      "id": "feature-deploy-draft-version-14-to-production-environment",
+      "title": "Deploy Draft Version 14 to production environment",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
-    },
-    {
-      "id": "feature-restore-full-access-to-interventions-from-within-the-client-folder-section",
-      "title": "Restore full access to interventions from within the client folder section",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-recover-and-restore-the-lost-technical-folder-data-ensuring-all-previously-stored-files-and-folders-are-accessible",
-      "title": "Recover and restore the lost technical folder data, ensuring all previously stored files and folders are accessible",
-      "reqIds": [
-        "REQ-3"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-comprehensive-error-handling-with-clear-user-friendly-error-messages-in-french-throughout-the-application-especially-for-data-loading-and-navigation-failures",
-      "title": "Add comprehensive error handling with clear, user-friendly error messages in French throughout the application, especially for data loading and navigation failures",
-      "reqIds": [
-        "REQ-4"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-visible-loading-indicators-spinners-throughout-the-application-to-show-when-data-is-being-fetched-or-operations-are-in-progress",
-      "title": "Add visible loading indicators (spinners) throughout the application to show when data is being fetched or operations are in progress",
-      "reqIds": [
-        "REQ-5"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-implement-automatic-retry-logic-for-failed-data-loading-operations-with-exponential-backoff",
-      "title": "Implement automatic retry logic for failed data loading operations with exponential backoff",
-      "reqIds": [
-        "REQ-6"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-data-export-functionality-allowing-users-to-download-their-data-as-pdf-or-json-files-for-backup-purposes",
-      "title": "Add data export functionality allowing users to download their data as PDF or JSON files for backup purposes",
-      "reqIds": [
-        "REQ-7"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-strengthen-data-persistence-and-synchronization-between-frontend-and-backend-to-prevent-future-data-loss",
-      "title": "Strengthen data persistence and synchronization between frontend and backend to prevent future data loss",
-      "reqIds": [
-        "REQ-8"
-      ],
-      "version": 1
     }
   ],
-  "new_feature_requests": [
-    {
-      "id": "AR-1",
-      "summary": "Fix non-responsive 'Dossier Client' button - restore access to client folder section",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-2",
-      "summary": "Restore access to interventions from client folder section",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-3",
-      "summary": "Recover and secure lost technical folder data",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-4",
-      "summary": "Add clear error messages and better error handling throughout the app",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-5",
-      "summary": "Add loading indicators (spinners) to show data loading status",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-6",
-      "summary": "Implement automatic retry/reload on data loading failures",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-7",
-      "summary": "Add data export functionality (PDF/JSON) for backup purposes",
-      "reqIds": [],
-      "status": "pending"
-    }
-  ],
-  "projectName": "Vial Traite Service",
+  "new_feature_requests": [],
+  "projectName": "Publish Draft Version 14 to production",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

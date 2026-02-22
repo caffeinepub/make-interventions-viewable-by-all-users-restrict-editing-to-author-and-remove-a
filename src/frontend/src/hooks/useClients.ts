@@ -11,8 +11,17 @@ export function useGetClients() {
   return useQuery<Client[]>({
     queryKey: ['clients'],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.getClients();
+      if (!actor) {
+        return [];
+      }
+      
+      try {
+        const clients = await actor.getClients();
+        return clients;
+      } catch (error) {
+        console.error('Error fetching clients:', error);
+        throw error;
+      }
     },
     enabled: !!actor && !isFetching,
     retry: 3,
@@ -26,8 +35,17 @@ export function useGetClient(clientId: string) {
   return useQuery<Client>({
     queryKey: ['client', clientId],
     queryFn: async () => {
-      if (!actor) throw new Error('Acteur non disponible');
-      return actor.getClient(clientId);
+      if (!actor) {
+        throw new Error('Acteur non disponible');
+      }
+      
+      try {
+        const client = await actor.getClient(clientId);
+        return client;
+      } catch (error) {
+        console.error('Error fetching client:', error);
+        throw error;
+      }
     },
     enabled: !!actor && !isFetching && !!clientId,
     retry: 3,
@@ -57,7 +75,10 @@ export function useCreateOrUpdateClient() {
         return;
       }
 
-      if (!actor) throw new Error('Acteur non disponible');
+      if (!actor) {
+        throw new Error('Acteur non disponible');
+      }
+      
       await actor.createOrUpdateClient(
         params.id,
         params.name,
@@ -72,6 +93,7 @@ export function useCreateOrUpdateClient() {
       toast.success('Client enregistré avec succès');
     },
     onError: (error: any) => {
+      console.error('Error creating/updating client:', error);
       const message = error.message || 'Échec de l\'enregistrement du client';
       if (message.includes('Non autorisé')) {
         toast.error('Accès refusé - Veuillez vous reconnecter');

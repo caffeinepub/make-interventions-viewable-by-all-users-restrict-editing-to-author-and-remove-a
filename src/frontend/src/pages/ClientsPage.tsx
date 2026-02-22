@@ -4,7 +4,7 @@ import { useGetClients } from '../hooks/useClients';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, FolderOpen, Loader2, RefreshCw, Download } from 'lucide-react';
+import { Plus, Search, FolderOpen, Loader2, RefreshCw, Download, AlertCircle } from 'lucide-react';
 import CreateClientDialog from '../components/clients/CreateClientDialog';
 import MobileLayout from '../components/layout/MobileLayout';
 import AppBadge from '../components/common/AppBadge';
@@ -12,19 +12,25 @@ import ExportDataDialog from '../components/export/ExportDataDialog';
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function ClientsPage() {
-  const { data: clients = [], isLoading, isError, error } = useGetClients();
+  const { data: clients = [], isLoading, isError, error, refetch } = useGetClients();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  console.log('[ClientsPage] Rendering, clients:', clients.length, 'isLoading:', isLoading, 'isError:', isError);
+
   const filteredClients = clients.filter((client) =>
     client.info.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  console.log('[ClientsPage] Filtered clients:', filteredClients.length);
+
   const handleRetry = () => {
+    console.log('[ClientsPage] Manual retry triggered');
     queryClient.invalidateQueries({ queryKey: ['clients'] });
+    refetch();
   };
 
   return (
@@ -83,18 +89,21 @@ export default function ClientsPage() {
             <CardContent className="pt-6">
               <div className="flex flex-col items-center gap-4 text-center">
                 <div className="p-3 rounded-full bg-destructive/10">
-                  <RefreshCw className="h-6 w-6 text-destructive" />
+                  <AlertCircle className="h-6 w-6 text-destructive" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg mb-2">
                     Impossible de charger les clients
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-sm text-muted-foreground mb-2">
                     {error instanceof Error 
                       ? error.message.includes('Non autorisé')
                         ? 'Accès refusé - Veuillez vous reconnecter'
-                        : 'Erreur de connexion - Vérifiez votre connexion Internet'
+                        : error.message
                       : 'Une erreur est survenue lors du chargement des données'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Vérifiez la console du navigateur (F12) pour plus de détails
                   </p>
                   <Button onClick={handleRetry} variant="outline">
                     <RefreshCw className="h-4 w-4 mr-2" />
@@ -104,41 +113,59 @@ export default function ClientsPage() {
               </div>
             </CardContent>
           </Card>
+        ) : clients.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">
+                  Aucun client enregistré
+                </p>
+                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Créer votre premier client
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : filteredClients.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            {searchQuery ? 'Aucun client trouvé' : 'Aucun client'}
-          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground py-8">
+                Aucun client ne correspond à votre recherche
+              </p>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="grid gap-3">
+          <div className="space-y-3">
             {filteredClients.map((client) => (
               <Card
                 key={client.info.name}
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() =>
-                  navigate({
-                    to: '/clients/$clientId',
-                    params: { clientId: client.info.name },
-                  })
-                }
+                onClick={() => {
+                  console.log('[ClientsPage] Navigating to client:', client.info.name);
+                  navigate({ 
+                    to: '/clients/$clientId', 
+                    params: { clientId: client.info.name } 
+                  });
+                }}
               >
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base leading-tight">
-                      {client.info.name}
-                    </CardTitle>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">{client.info.name}</CardTitle>
                     {client.isBlacklisted && (
-                      <AppBadge variant="destructive" className="shrink-0 text-xs">
-                        Liste noire
-                      </AppBadge>
+                      <AppBadge variant="destructive">Liste noire</AppBadge>
                     )}
                   </div>
                 </CardHeader>
-                <CardContent className="text-xs text-muted-foreground space-y-0.5">
-                  <p className="truncate">{client.info.address.street}</p>
-                  <p className="truncate">
-                    {client.info.address.city}, {client.info.address.state}{' '}
-                    {client.info.address.zip}
-                  </p>
+                <CardContent>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p>{client.info.address.street}</p>
+                    <p>
+                      {client.info.address.city}, {client.info.address.state}{' '}
+                      {client.info.address.zip}
+                    </p>
+                    <p>{client.info.phone}</p>
+                  </div>
                 </CardContent>
               </Card>
             ))}

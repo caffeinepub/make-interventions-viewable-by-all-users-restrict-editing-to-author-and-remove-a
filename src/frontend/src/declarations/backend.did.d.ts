@@ -42,6 +42,12 @@ export interface Intervention {
   'comments' : string,
   'interventionTimestamp' : Time,
 }
+export interface MediaItem {
+  'id' : string,
+  'owner' : Principal,
+  'file' : ExternalBlob,
+  'createdAt' : Time,
+}
 export type Time = bigint;
 export interface UserProfile { 'name' : string }
 export type UserRole = { 'admin' : null } |
@@ -86,6 +92,7 @@ export interface _SERVICE {
     undefined
   >,
   'deleteIntervention' : ActorMethod<[string, string], undefined>,
+  'deleteMediaItem' : ActorMethod<[string], undefined>,
   'deleteTechnicalFileWithPath' : ActorMethod<[string], undefined>,
   'downloadTechnicalFileWithPath' : ActorMethod<[string], [] | [ExternalBlob]>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
@@ -97,8 +104,10 @@ export interface _SERVICE {
     [bigint, bigint, bigint],
     Array<Intervention>
   >,
+  'getMediaItem' : ActorMethod<[string], [] | [MediaItem]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'listAllMediaItems' : ActorMethod<[], Array<MediaItem>>,
   'listTechnicalFiles' : ActorMethod<[], Array<[string, ExternalBlob]>>,
   'markAsBlacklisted' : ActorMethod<
     [string, string, Array<ExternalBlob>],
@@ -113,6 +122,7 @@ export interface _SERVICE {
     [string, string, string, Array<ExternalBlob>, bigint, bigint, bigint],
     undefined
   >,
+  'uploadMediaItem' : ActorMethod<[ExternalBlob], string>,
   'uploadTechnicalFileWithFolderPath' : ActorMethod<
     [string, ExternalBlob],
     undefined

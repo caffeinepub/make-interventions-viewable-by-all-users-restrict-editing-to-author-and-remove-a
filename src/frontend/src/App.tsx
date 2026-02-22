@@ -15,8 +15,6 @@ import { useInternetIdentity } from './hooks/useInternetIdentity';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { Loader2 } from 'lucide-react';
 
-console.log('App.tsx: Module loaded');
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -27,7 +25,6 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  console.log('App.tsx: AppContent rendering');
   const { identity } = useInternetIdentity();
   const { data: userProfile, isLoading: profileLoading, isFetched } = useGetCallerUserProfile();
 
@@ -56,7 +53,6 @@ function LoadingFallback() {
 
 const rootRoute = createRootRoute({
   component: () => {
-    console.log('App.tsx: Root route rendering');
     return (
       <ErrorBoundary>
         <InternetIdentityProvider>
@@ -118,7 +114,6 @@ declare module '@tanstack/react-router' {
 }
 
 export default function App() {
-  console.log('App.tsx: App component rendering');
   return (
     <StrictMode>
       <ErrorBoundary>

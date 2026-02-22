@@ -1,164 +1,35 @@
 {
   "kind": "build_request",
-  "title": "Fix Client Folder Access and Data Loss Issues",
-  "projectName": "Vial Traite Service",
+  "title": "Publish Draft Version 14 to production",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Fix the non-responsive 'Dossier Client' button/navigation that prevents users from accessing the client folder section when clicked",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-19",
-          "msg-21"
-        ],
-        "quotes": [
-          "Quand je clique sur dossier client rien ne se passe",
-          "C quand j clique sur dossier client rien ne se passe"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Clicking 'Dossier Client' successfully navigates to or opens the client folder view",
-        "Navigation response is immediate and provides visual feedback",
-        "All client folder data loads correctly after navigation"
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "text": "Restore full access to interventions from within the client folder section",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-21"
-        ],
-        "quotes": [
-          "je nest pas acces au intervention"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Users can view the full list of interventions from the client folder",
-        "Intervention details, dates, and comments display correctly",
-        "Add, edit, and delete intervention actions are accessible and functional"
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "Recover and restore the lost technical folder data, ensuring all previously stored files and folders are accessible",
+      "text": "Deploy Draft Version 14 to production environment",
       "target": "both",
       "source": {
         "messageIds": [
-          "msg-15"
+          "msg-last"
         ],
         "quotes": [
-          "jai perdu les données du dossier technique"
+          "Publie"
         ]
       },
       "acceptanceCriteria": [
-        "All technical folder files and folders load from backend storage",
-        "No data is permanently lost; implement recovery mechanisms if data exists in backend",
-        "Technical folder displays complete file hierarchy with all metadata"
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "text": "Add comprehensive error handling with clear, user-friendly error messages in French throughout the application, especially for data loading and navigation failures",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-17",
-          "msg-19"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Display informative error messages when data loading fails (e.g., 'Impossible de charger les données - Vérifiez votre connexion')",
-        "Show specific error context for different failure types (network, permissions, data not found)",
-        "Error messages appear in toast notifications or alert dialogs",
-        "All error messages are in French"
-      ]
-    },
-    {
-      "id": "REQ-5",
-      "text": "Add visible loading indicators (spinners) throughout the application to show when data is being fetched or operations are in progress",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-19"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Loading spinners appear when fetching clients, interventions, or technical folder data",
-        "Spinners are positioned appropriately (centered for full page loads, inline for component loads)",
-        "Loading states prevent user interaction during critical operations",
-        "Spinners automatically disappear when data loads or errors occur"
-      ]
-    },
-    {
-      "id": "REQ-6",
-      "text": "Implement automatic retry logic for failed data loading operations with exponential backoff",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-19"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Failed queries automatically retry up to 3 times with increasing delays",
-        "User sees retry attempts indicated in loading states",
-        "After maximum retries, display clear error message with manual retry button",
-        "Retry logic applies to all critical data fetches (clients, interventions, technical folder)"
-      ]
-    },
-    {
-      "id": "REQ-7",
-      "text": "Add data export functionality allowing users to download their data as PDF or JSON files for backup purposes",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-17",
-          "msg-19"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Export button accessible from main navigation or settings area",
-        "PDF export includes formatted client list, interventions, and technical folder inventory",
-        "JSON export provides complete raw data dump of all user data",
-        "Export filename includes timestamp (e.g., 'vial-traite-backup-2024-01-15.pdf')",
-        "Export operation shows progress indicator for large datasets"
-      ]
-    },
-    {
-      "id": "REQ-8",
-      "text": "Strengthen data persistence and synchronization between frontend and backend to prevent future data loss",
-      "target": "both",
-      "source": {
-        "messageIds": [
-          "msg-15",
-          "msg-17"
-        ]
-      },
-      "acceptanceCriteria": [
-        "All critical operations use transactions or atomic updates on backend",
-        "Frontend cache invalidation ensures fresh data after mutations",
-        "Offline operations queue properly and sync when connection restored",
-        "Add data validation checks before displaying to catch corruption early"
+        "Draft Version 14 is successfully published to production",
+        "All client data, photos, and interventions remain intact after publication",
+        "The production deployment is accessible to users"
       ]
     }
   ],
   "constraints": [
-    "Maintain existing Internet Identity authentication flow",
-    "Preserve all existing data structures in backend (Client, Intervention, TechnicalFile)",
-    "Keep French language interface throughout the application",
-    "Do not modify immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui/*",
-    "Maintain offline-first architecture with operation queueing",
-    "Use existing React Query infrastructure for data fetching and caching"
+    "Preserve all existing client data, interventions, photos, and technical folder files during deployment",
+    "Do not modify any application code or features during publication"
   ],
   "nonGoals": [
-    "Redesigning the overall UI layout or navigation structure",
-    "Adding new features beyond fixing the identified issues",
-    "Changing the authentication mechanism",
-    "Migrating to different state management libraries",
-    "Adding real-time synchronization or WebSocket connections"
+    "Adding new features",
+    "Modifying existing functionality",
+    "Changing the user interface"
   ],
   "imageRequirements": {
     "required": [],
