@@ -1,12 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Fix client folder navigation to properly display client details, interventions, and photos.
+**Goal:** Restore the application to its previous state (Version 15).
 
 **Planned changes:**
-- Fix routing from clients list to client dossier page to ensure proper navigation
-- Verify client ID parameter is correctly passed and received in ClientDossierPage
-- Ensure all client information sections render properly (coordinates, interventions, photos, blacklist panel)
-- Resolve any console errors preventing the dossier page from displaying
+- Revert all frontend code to Version 15
+- Revert all backend code to Version 15
+- Restore application functionality to Version 15 behavior
 
-**User-visible outcome:** Users can click on a client folder and successfully view the complete client dossier including contact details, intervention history with photos, and blacklist status.
+**User-visible outcome:** The application will function exactly as it did in Version 15, before the most recent changes were applied.

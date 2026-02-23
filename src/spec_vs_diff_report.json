@@ -1,15 +1,33 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-22T23:36:27.632Z",
-  "summary": "All three requirements (REQ-1, REQ-2, REQ-3) appear to be fully implemented. The diff shows proper routing configuration, client ID parameter extraction, and comprehensive display of client information including coordinates, interventions, and the BlacklistPanel. No missing requirements or hallucinated features detected.",
-  "missing_requirements": [],
+  "generatedAt": "2026-02-22T23:51:00.520Z",
+  "summary": "The diff shows only a metadata file (project_state.json) was modified to track the revert request, but no actual code reversion has been implemented. The BuildRequest requires restoring all frontend and backend code to Version 15 state, which is completely absent from the diff.",
+  "missing_requirements": [
+    {
+      "id": "REQ-1",
+      "requirement": "Restore the application code to the state of Version 15 (the version immediately before Version 16)",
+      "reason": "No frontend code changes present in diff to restore Version 15 state",
+      "evidence": []
+    },
+    {
+      "id": "REQ-1",
+      "requirement": "Restore the application code to the state of Version 15 (the version immediately before Version 16)",
+      "reason": "No backend code changes present in diff to restore Version 15 state",
+      "evidence": []
+    },
+    {
+      "id": "REQ-1",
+      "requirement": "Application functionality matches Version 15 behavior",
+      "reason": "No code changes implemented; only metadata file updated to track the request",
+      "evidence": [
+        "project_state.json"
+      ]
+    }
+  ],
   "hallucinated_features": [],
-  "confidence": 0.92,
+  "confidence": 0.95,
   "changed_files": [
-    "frontend-file-summaries.txt",
-    "frontend/src/pages/ClientDossierPage.tsx",
-    "frontend/src/pages/ClientsPage.tsx",
     "project_state.json"
   ]
 }
