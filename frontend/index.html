@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a1a1a" />
+    <meta name="description" content="Gestion des dossiers clients et interventions" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="/assets/generated/pwa-icon.dim_512x512.png" />
+    <link rel="apple-touch-icon" href="/assets/generated/pwa-icon.dim_512x512.png" />
+    <link rel="apple-touch-startup-image" href="/assets/generated/pwa-splash.dim_1242x2688.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Dossiers Clients</title>
+    <script>
+      console.log('HTML loaded successfully');
+    </script>
+  </head>
+  <body>
+    <noscript>
+      <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; text-align: center; font-family: system-ui, -apple-system, sans-serif;">
+        <div>
+          <h1 style="font-size: 24px; margin-bottom: 16px;">JavaScript requis</h1>
+          <p style="color: #666;">Cette application nécessite JavaScript pour fonctionner. Veuillez activer JavaScript dans votre navigateur.</p>
+        </div>
+      </div>
+    </noscript>
+    <div id="root" style="min-height: 100vh;"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

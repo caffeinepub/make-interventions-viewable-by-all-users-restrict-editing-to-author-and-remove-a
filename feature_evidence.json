@@ -1,0 +1,47 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-fix-the-client-dossier-page-clientdossierpage-so-that-it-is-accessible-when-navigating-from-the-clients-list-ensure-the-route-parameter-client-id-is-correctly-read-and-passed-to-the-page-and-that-the-page-successfully-loads-and-displays-the-client-s-full-dossier-including-contact-info-blacklist-status-and-intervention-list",
+      "featureTitle": "Fix the client dossier page (ClientDossierPage) so that it is accessible when navigating from the clients list. Ensure the route parameter (client ID) is correctly read and passed to the page, and that the page successfully loads and displays the client's full dossier including contact info, blacklist status, and intervention list.",
+      "files": [
+        "frontend/src/pages/ClientDossierPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "camera@1.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-fix-the-client-edit-functionality-on-the-clientdossierpage-so-that-the-edit-dialog-opens-is-pre-populated-with-the-client-s-existing-data-and-successfully-saves-changes-via-the-useupdateclient-hook",
+      "featureTitle": "Fix the client edit functionality on the ClientDossierPage so that the edit dialog opens, is pre-populated with the client's existing data, and successfully saves changes via the useUpdateClient hook.",
+      "files": [
+        "frontend/src/pages/ClientDossierPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "camera@1.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

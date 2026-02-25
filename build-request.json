@@ -1,0 +1,77 @@
+{
+  "kind": "build_request",
+  "title": "Fix inaccessible client dossier page",
+  "projectName": "Vial Traite Service",
+  "priority": "high",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "text": "Fix the client dossier page (ClientDossierPage) so that it is accessible when navigating from the clients list. Ensure the route parameter (client ID) is correctly read and passed to the page, and that the page successfully loads and displays the client's full dossier including contact info, blacklist status, and intervention list.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-9"
+        ],
+        "quotes": [
+          "Dossier client non accessible modifie"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Clicking on a client in the clients list navigates to the correct client dossier page without errors.",
+        "The client dossier page displays the client's name, contact information, blacklist status, and intervention list.",
+        "No blank screen, loading spinner stuck, or error state is shown when navigating to a valid client dossier.",
+        "The route parameter for the client ID is correctly parsed and used to fetch client data."
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Fix the client edit functionality on the ClientDossierPage so that the edit dialog opens, is pre-populated with the client's existing data, and successfully saves changes via the useUpdateClient hook.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-9"
+        ],
+        "quotes": [
+          "Dossier client non accessible modifie"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The edit button/icon on the client dossier page opens the EditClientDialog.",
+        "The EditClientDialog is pre-populated with the current client's name, address, phone, and email.",
+        "Submitting the edit form updates the client data and reflects changes on the dossier page.",
+        "A success toast notification is displayed after a successful update."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Ensure the TanStack Router route definition for the client dossier page correctly registers the dynamic client ID parameter and that the AuthenticatedOnly guard does not block navigation to client dossier sub-routes.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-9"
+        ],
+        "quotes": [
+          "Dossier client non accessible modifie"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The route for the client dossier (e.g., /clients/:clientId) is correctly defined in the router configuration.",
+        "Authenticated users can navigate to any client dossier without being redirected.",
+        "The client ID from the route parameter is correctly accessible within ClientDossierPage."
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not modify files under frontend/src/hooks/useActor.ts, frontend/src/hooks/useInternetIdentity.ts, frontend/src/main.tsx, or frontend/src/components/ui.",
+    "Preserve existing backend data model and API methods."
+  ],
+  "nonGoals": [
+    "Adding new client fields or changing the client data model.",
+    "Redesigning the client dossier UI layout.",
+    "Changes to the backend canister logic."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 3,
+  "summary": "Application with dashboard, calendar, client folders, and disconnect icon. User reported client folders are inaccessible and requested a fix.",
+  "architectural_notes": [],
+  "known_issues": [
+    "Client folders (dossiers clients) are not accessible - needs fix"
+  ],
+  "isFixRequest": true,
+  "existing_features": [
+    {
+      "id": "feature-fix-the-client-dossier-page-clientdossierpage-so-that-it-is-accessible-when-navigating-from-the-clients-list-ensure-the-route-parameter-client-id-is-correctly-read-and-passed-to-the-page-and-that-the-page-successfully-loads-and-displays-the-client-s-full-dossier-including-contact-info-blacklist-status-and-intervention-list",
+      "title": "Fix the client dossier page (ClientDossierPage) so that it is accessible when navigating from the clients list. Ensure the route parameter (client ID) is correctly read and passed to the page, and that the page successfully loads and displays the client's full dossier including contact info, blacklist status, and intervention list.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-client-edit-functionality-on-the-clientdossierpage-so-that-the-edit-dialog-opens-is-pre-populated-with-the-client-s-existing-data-and-successfully-saves-changes-via-the-useupdateclient-hook",
+      "title": "Fix the client edit functionality on the ClientDossierPage so that the edit dialog opens, is pre-populated with the client's existing data, and successfully saves changes via the useUpdateClient hook.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-3",
+      "summary": "Ensure the TanStack Router route definition for the client dossier page correctly registers the dynamic client ID parameter and that the AuthenticatedOnly guard does not block navigation to client dossier sub-routes.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "status": "pending"
+    }
+  ],
+  "projectName": "Vial Traite Service",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

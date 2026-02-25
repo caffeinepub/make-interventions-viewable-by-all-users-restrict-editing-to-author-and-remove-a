@@ -1,0 +1,24 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-25T23:12:25.024Z",
+  "summary": "The diff implements fixes for the client dossier page accessibility, edit functionality, and route parameter handling. REQ-1 and REQ-2 appear largely addressed in ClientDossierPage.tsx. REQ-3's router-level fix (App.tsx route definition) is described in the file summary but the actual diff content for App.tsx is not shown, making it partially unverifiable. Overall coverage looks good based on available evidence.",
+  "missing_requirements": [
+    {
+      "id": "REQ-3",
+      "requirement": "Ensure the TanStack Router route definition for the client dossier page correctly registers the dynamic client ID parameter and that the AuthenticatedOnly guard does not block navigation to client dossier sub-routes.",
+      "reason": "The diff does not include the actual content changes for App.tsx or the router configuration file. While the file summary mentions App.tsx was modified to fix premature redirects, the route definition for /clients/:clientId and the AuthenticatedOnly guard fix cannot be directly verified from the diff content provided.",
+      "evidence": [
+        "frontend/src/App.tsx",
+        "frontend-file-summaries.txt"
+      ]
+    }
+  ],
+  "hallucinated_features": [],
+  "confidence": 0.72,
+  "changed_files": [
+    "frontend-file-summaries.txt",
+    "frontend/src/pages/ClientDossierPage.tsx",
+    "project_state.json"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "Vial Traite Service",
+  "short_name": "VTS",
+  "description": "Application de gestion des clients et interventions pour Vial Traite Service",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0066CC",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/generated/pwa-icon.dim_512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/generated/pwa-icon-maskable.dim_512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "version": "14.0.0"
+}

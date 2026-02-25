@@ -1,0 +1,77 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Fix inaccessible client dossier page",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "summary": "Fix the client dossier page navigation and route parameter handling so users can access client dossiers from the clients list",
+      "acceptanceCriteria": [
+        "Clicking on a client in the clients list navigates to the correct client dossier page without errors.",
+        "The client dossier page displays the client's name, contact information, blacklist status, and intervention list.",
+        "No blank screen, loading spinner stuck, or error state is shown when navigating to a valid client dossier.",
+        "The route parameter for the client ID is correctly parsed and used to fetch client data."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/ClientDossierPage.tsx",
+          "operation": "modify",
+          "description": "Fix route parameter access by properly integrating with TanStack Router's useParams hook to read the clientId parameter. Replace any manual parameter extraction with the router's parameter API. Ensure the client ID is correctly passed to the useGetClient hook and handle loading/error states appropriately. Add defensive checks for missing or invalid client IDs."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Verify and fix the route definition for the client dossier page to ensure the dynamic :clientId parameter is correctly registered in the router configuration. Ensure the route path matches the pattern used in ClientsPage navigation (e.g., /clients/:clientId). Verify that the AuthenticatedOnly guard is not blocking access to client dossier sub-routes."
+        },
+        {
+          "path": "frontend/src/pages/ClientsPage.tsx",
+          "operation": "modify",
+          "description": "Verify that the navigation link or button for each client correctly passes the client ID as a route parameter when navigating to the ClientDossierPage. Ensure the navigation uses the router's Link component or navigate function with the correct path format (e.g., /clients/$clientId)."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Fix the client edit functionality on the ClientDossierPage so the edit dialog opens and saves changes correctly",
+      "acceptanceCriteria": [
+        "The edit button/icon on the client dossier page opens the EditClientDialog.",
+        "The EditClientDialog is pre-populated with the current client's name, address, phone, and email.",
+        "Submitting the edit form updates the client data and reflects changes on the dossier page.",
+        "A success toast notification is displayed after a successful update."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/ClientDossierPage.tsx",
+          "operation": "modify",
+          "description": "Add or fix the edit button/icon that opens the EditClientDialog. Ensure the dialog receives the current client data as props and that the client ID is correctly passed. Wire the dialog's open/close state using React state management. Verify the useUpdateClient hook is called with the correct parameters when the form is submitted."
+        },
+        {
+          "path": "frontend/src/components/clients/EditClientDialog.tsx",
+          "operation": "modify",
+          "description": "Verify the dialog correctly receives and displays the client prop data in the form fields. Ensure the form submission handler correctly extracts the client ID and calls the useUpdateClient mutation with all required fields (name, address, phone, email). Confirm that success/error handling triggers appropriate toast notifications and closes the dialog on success."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Ensure the TanStack Router route definition for the client dossier page correctly registers the dynamic client ID parameter and the AuthenticatedOnly guard does not block navigation",
+      "acceptanceCriteria": [
+        "The route for the client dossier (e.g., /clients/:clientId) is correctly defined in the router configuration.",
+        "Authenticated users can navigate to any client dossier without being redirected.",
+        "The client ID from the route parameter is correctly accessible within ClientDossierPage."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Review and fix the route tree configuration to ensure the client dossier route is correctly defined with a dynamic :clientId parameter. Verify the route is nested under the authenticated route tree and wrapped with the AuthenticatedOnly guard at the appropriate level. Ensure the route path matches the navigation pattern used throughout the app (e.g., /clients/:clientId or /clients/$clientId depending on TanStack Router syntax)."
+        },
+        {
+          "path": "frontend/src/components/guards/AuthenticatedOnly.tsx",
+          "operation": "modify",
+          "description": "Review the guard logic to ensure it does not incorrectly redirect authenticated users when accessing client dossier sub-routes. Verify the guard checks authentication state correctly and only redirects when the user is definitively unauthenticated (not during loading states). Ensure the redirect logic does not interfere with dynamic route parameters."
+        }
+      ]
+    }
+  ]
+}
