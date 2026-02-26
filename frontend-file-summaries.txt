@@ -1,5 +1,5 @@
 {
-  "frontend/src/App.tsx": "Main application entry point with TanStack Router setup; the AuthenticatedLayout now properly waits for isInitializing to complete before redirecting unauthenticated users, preventing premature redirects during identity loading.",
+  "frontend/src/App.tsx": "Main application component with TanStack Router, QueryClientProvider, ThemeProvider, and ErrorBoundary; adds an `AppInitializationGuard` that blocks router rendering until `InternetIdentityProvider` finishes initializing, preventing blank screens before authentication.",
   "frontend/src/pages/LoginPage.tsx": "Login page with Internet Identity authentication that waits for isInitializing before redirecting authenticated users, with loading state and French UI text.",
   "frontend/src/pages/ClientsPage.tsx": "Client list page with search functionality, proper navigation using TanStack Router's navigate function to client dossier page, error handling with retry button, and improved loading states with correct default imports.",
   "frontend/src/pages/ClientDossierPage.tsx": "Client detail page that uses `useParams({ strict: false })` to correctly read the `clientId` route parameter regardless of the pathless layout route nesting, displaying contact info, blacklist status, interventions list, and edit dialog with proper loading/error states.",
@@ -11,7 +11,7 @@
   "frontend/src/hooks/useSync.ts": "Hook managing offline sync state, pending operations count, and manual/automatic synchronization triggers using correct offline/outbox functions.",
   "frontend/src/hooks/useAdminUnlock.ts": "Hook managing session-based admin unlock state using sessionStorage.",
   "frontend/src/components/auth/ProfileSetupDialog.tsx": "Modal dialog prompting new users to enter their name on first login, all text translated to French with proper prop types.",
-  "frontend/src/components/guards/AuthenticatedOnly.tsx": "Route guard component that redirects unauthenticated users to login page with visible loading states and console logging for debugging authentication flow.",
+  "frontend/src/components/guards/AuthenticatedOnly.tsx": "Route guard component that redirects unauthenticated users to the login page, with explicit loading states for both `isInitializing` and `loginStatus === 'initializing'` to prevent premature redirects.",
   "frontend/src/components/admin/AdminUnlockDialog.tsx": "Dialog for entering admin access code to unlock admin-only features.",
   "frontend/src/components/layout/MobileLayout.tsx": "Mobile-first layout with sticky header containing the logo, user name, and a visible LogOut icon button with tooltip wrapped in TooltipProvider, plus bottom navigation and connectivity status bar.",
   "frontend/src/components/sync/ConnectivityStatusBar.tsx": "Persistent status bar showing online/offline state and manual sync button when pending operations exist, all text translated to French.",
@@ -43,12 +43,13 @@
   "frontend/src/components/media/FilePicker.tsx": "Reusable file picker component supporting PDFs, images, and videos, button text translated to French.",
   "frontend/src/pages/DashboardPage.tsx": "Dashboard page with shadcn Calendar for date selection and interventions list for the selected date, with loading/error states and clickable intervention cards opening InterventionDetailsDialog.",
   "frontend/src/components/technical-folder/CreateFolderDialog.tsx": "Dialog component for creating new folders with validation and backend integration using createFolder mutation, all text in French.",
-  "frontend/src/components/common/ErrorBoundary.tsx": "React error boundary with retry button alongside reload button, improved French error messages, and better visual design with destructive border.",
+  "frontend/src/components/common/ErrorBoundary.tsx": "React error boundary with French error messages, auth-specific error detection, collapsible technical details with stack trace, copy-to-clipboard, and a `fallback` prop for custom fallback UI.",
   "frontend/src/components/technical-folder/MoveFolderDialog.tsx": "Dialog for moving files to a different folder, with breadcrumb navigation, folder tree built from useTechnicalFolder hook, and integrated move mutation. Props use filePath and currentFolderPath.",
   "frontend/src/components/technical-folder/DocumentViewer.tsx": "Full-featured document viewer component with zoom, pan, rotation, fullscreen, and pinch-to-zoom support for images, PDFs, videos, and other file formats with download fallback for unsupported types, fixed to handle React.Touch types correctly.",
   "frontend/src/components/technical-folder/FileTypeIcon.tsx": "Utility component that displays appropriate Lucide icons for different file types based on file extension (images, PDFs, videos, Word, Excel, generic files).",
   "frontend/src/components/technical-folder/RenameFolderDialog.tsx": "Dialog component for renaming folders with validation (no slashes, non-empty), calls backend renameFolder method, all text in French.",
   "frontend/src/components/export/ExportDataDialog.tsx": "New dialog component for exporting application data in JSON or PDF format with progress indicator and French labels.",
   "frontend/src/hooks/useDataExport.ts": "Custom hook for exporting all application data (clients, interventions, technical files) with progress tracking and file generation in JSON or text format, now with proper TypeScript type annotation for the interventions array.",
-  "frontend/src/hooks/useActor.ts": "React Query hook for actor initialization with comprehensive console logging tracking authentication state, actor creation, access control initialization, and error handling for debugging backend connection issues."
+  "frontend/src/hooks/useActor.ts": "React Query hook for actor initialization that creates an authenticated or anonymous actor based on identity state; removed the non-existent `_initializeAccessControlWithSecret` call that was causing the startup crash.",
+  "frontend/src/main.tsx": "Application entry point that renders the app with `InternetIdentityProvider` only — the `QueryClientProvider` now lives solely in `App.tsx` to avoid duplicate provider conflicts."
 }

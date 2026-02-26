@@ -1,74 +1,60 @@
 {
   "kind": "build_request",
-  "title": "Fix inaccessible client dossier page",
+  "title": "Fix blank page / white screen error on app startup before authentication",
   "projectName": "Vial Traite Service",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Fix the client dossier page (ClientDossierPage) so that it is accessible when navigating from the clients list. Ensure the route parameter (client ID) is correctly read and passed to the page, and that the page successfully loads and displays the client's full dossier including contact info, blacklist status, and intervention list.",
+      "text": "Fix the blank white screen that occurs on app startup before the authentication flow begins. The app should render a visible loading state or the login page immediately on launch without crashing.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-9"
+          "msg-1",
+          "msg-2"
         ],
         "quotes": [
-          "Dossier client non accessible modifie"
+          "Toujours meme erreur des ouvertures de lappli avant autentification",
+          "Page blanche erreur avant authentification"
         ]
       },
       "acceptanceCriteria": [
-        "Clicking on a client in the clients list navigates to the correct client dossier page without errors.",
-        "The client dossier page displays the client's name, contact information, blacklist status, and intervention list.",
-        "No blank screen, loading spinner stuck, or error state is shown when navigating to a valid client dossier.",
-        "The route parameter for the client ID is correctly parsed and used to fetch client data."
+        "Opening the app never results in a blank white screen at any point before authentication.",
+        "A loading spinner or the login page is displayed immediately on app launch.",
+        "No unhandled JavaScript errors are thrown during the initialization phase before the authentication check completes.",
+        "The ErrorBoundary in App.tsx catches any remaining initialization errors and displays a readable fallback UI instead of a blank screen.",
+        "The app correctly reaches the LoginPage or an authenticated route after initialization completes without requiring a manual reload."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Fix the client edit functionality on the ClientDossierPage so that the edit dialog opens, is pre-populated with the client's existing data, and successfully saves changes via the useUpdateClient hook.",
+      "text": "Audit and fix the initialization sequence in App.tsx and the AuthenticatedOnly guard to ensure the Internet Identity authentication state is fully initialized before any route rendering or data fetching is attempted, preventing crashes from accessing undefined identity state.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-9"
+          "msg-1",
+          "msg-2"
         ],
         "quotes": [
-          "Dossier client non accessible modifie"
+          "Page blanche erreur avant authentification"
         ]
       },
       "acceptanceCriteria": [
-        "The edit button/icon on the client dossier page opens the EditClientDialog.",
-        "The EditClientDialog is pre-populated with the current client's name, address, phone, and email.",
-        "Submitting the edit form updates the client data and reflects changes on the dossier page.",
-        "A success toast notification is displayed after a successful update."
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "Ensure the TanStack Router route definition for the client dossier page correctly registers the dynamic client ID parameter and that the AuthenticatedOnly guard does not block navigation to client dossier sub-routes.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-9"
-        ],
-        "quotes": [
-          "Dossier client non accessible modifie"
-        ]
-      },
-      "acceptanceCriteria": [
-        "The route for the client dossier (e.g., /clients/:clientId) is correctly defined in the router configuration.",
-        "Authenticated users can navigate to any client dossier without being redirected.",
-        "The client ID from the route parameter is correctly accessible within ClientDossierPage."
+        "The AuthenticatedOnly guard shows a loading spinner while authentication state is still initializing.",
+        "No component attempts to use the actor or identity before the AuthClient has finished its initialization.",
+        "The useActor hook does not throw or return an invalid actor during the initialization phase.",
+        "The QueryClientProvider and router are initialized in an order that prevents queries from firing before the identity is ready."
       ]
     }
   ],
   "constraints": [
-    "Do not modify files under frontend/src/hooks/useActor.ts, frontend/src/hooks/useInternetIdentity.ts, frontend/src/main.tsx, or frontend/src/components/ui.",
-    "Preserve existing backend data model and API methods."
+    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui.",
+    "All fixes must be contained in the frontend only; do not modify the backend."
   ],
   "nonGoals": [
-    "Adding new client fields or changing the client data model.",
-    "Redesigning the client dossier UI layout.",
-    "Changes to the backend canister logic."
+    "Adding new features or pages.",
+    "Changing the visual design or theme.",
+    "Modifying backend logic or data models."
   ],
   "imageRequirements": {
     "required": [],

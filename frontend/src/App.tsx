@@ -1,6 +1,13 @@
 import React, { Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createRouter, RouterProvider, createRootRoute, createRoute, Outlet, redirect } from '@tanstack/react-router';
+import {
+  createRouter,
+  RouterProvider,
+  createRootRoute,
+  createRoute,
+  Outlet,
+  redirect,
+} from '@tanstack/react-router';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from 'next-themes';
 import LoginPage from './pages/LoginPage';
@@ -20,25 +27,29 @@ registerServiceWorker();
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
+      retry: 1,
       staleTime: 1000 * 60 * 5,
     },
   },
 });
 
+function LoadingScreen({ message = 'Chargement...' }: { message?: string }) {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">{message}</p>
+      </div>
+    </div>
+  );
+}
+
 function AuthenticatedLayout() {
-  const { identity, isInitializing } = useInternetIdentity();
+  const { identity, isInitializing, loginStatus } = useInternetIdentity();
 
   // While initializing, show a loading spinner — do NOT redirect yet
-  if (isInitializing) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Chargement...</p>
-        </div>
-      </div>
-    );
+  if (isInitializing || loginStatus === 'initializing') {
+    return <LoadingScreen message="Vérification de l'authentification..." />;
   }
 
   // Only redirect after initialization is complete and no identity found
@@ -104,7 +115,26 @@ const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-const router = createRouter({ routeTree });
+const router = createRouter({
+  routeTree,
+  defaultPendingComponent: () => <LoadingScreen message="Chargement de la page..." />,
+  defaultErrorComponent: ({ error }) => (
+    <div className="flex items-center justify-center min-h-screen bg-background p-4">
+      <div className="w-full max-w-md bg-card border border-destructive rounded-xl p-6 text-center">
+        <p className="text-destructive font-semibold mb-2">Une erreur s'est produite</p>
+        <p className="text-sm text-muted-foreground mb-4">
+          {error instanceof Error ? error.message : 'Erreur inconnue'}
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm"
+        >
+          Recharger
+        </button>
+      </div>
+    </div>
+  ),
+});
 
 declare module '@tanstack/react-router' {
   interface Register {
@@ -112,18 +142,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
+function AppInitializationGuard({ children }: { children: React.ReactNode }) {
+  const { isInitializing, loginStatus } = useInternetIdentity();
+
+  if (isInitializing || loginStatus === 'initializing') {
+    return <LoadingScreen message="Initialisation..." />;
+  }
+
+  return <>{children}</>;
+}
+
 function AppContent() {
   return (
     <ErrorBoundary>
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center min-h-screen">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          </div>
-        }
-      >
-        <RouterProvider router={router} />
-      </Suspense>
+      <AppInitializationGuard>
+        <Suspense fallback={<LoadingScreen message="Chargement..." />}>
+          <RouterProvider router={router} />
+        </Suspense>
+      </AppInitializationGuard>
     </ErrorBoundary>
   );
 }

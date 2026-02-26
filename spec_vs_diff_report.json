@@ -1,24 +1,35 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-25T23:12:25.024Z",
-  "summary": "The diff implements fixes for the client dossier page accessibility, edit functionality, and route parameter handling. REQ-1 and REQ-2 appear largely addressed in ClientDossierPage.tsx. REQ-3's router-level fix (App.tsx route definition) is described in the file summary but the actual diff content for App.tsx is not shown, making it partially unverifiable. Overall coverage looks good based on available evidence.",
+  "generatedAt": "2026-02-26T23:25:19.662Z",
+  "summary": "The diff implements fixes for both REQ-1 and REQ-2. App.tsx gains a LoadingScreen component, ErrorBoundary integration, and an AuthenticatedLayout that checks isInitializing before redirecting. AuthenticatedOnly.tsx is updated with explicit loading states for both isInitializing and loginStatus === 'initializing'. The ErrorBoundary.tsx is enhanced with a readable fallback UI including auth-specific error messaging, retry/reload buttons, and copy-to-clipboard for error details. All changes are confined to the frontend with no backend modifications.",
   "missing_requirements": [
     {
-      "id": "REQ-3",
-      "requirement": "Ensure the TanStack Router route definition for the client dossier page correctly registers the dynamic client ID parameter and that the AuthenticatedOnly guard does not block navigation to client dossier sub-routes.",
-      "reason": "The diff does not include the actual content changes for App.tsx or the router configuration file. While the file summary mentions App.tsx was modified to fix premature redirects, the route definition for /clients/:clientId and the AuthenticatedOnly guard fix cannot be directly verified from the diff content provided.",
+      "id": "REQ-2",
+      "requirement": "The QueryClientProvider and router are initialized in an order that prevents queries from firing before the identity is ready.",
+      "reason": "The diff shows the router and QueryClient are initialized at module level outside components, and App.tsx is truncated so the full render order of QueryClientProvider vs. the initialization guard cannot be fully verified. The file summary mentions an AppInitializationGuard that blocks router rendering until InternetIdentityProvider finishes initializing, but this component is not visible in the truncated diff content, making it impossible to confirm the QueryClientProvider/router ordering AC is fully met.",
       "evidence": [
         "frontend/src/App.tsx",
         "frontend-file-summaries.txt"
       ]
     }
   ],
-  "hallucinated_features": [],
+  "hallucinated_features": [
+    {
+      "description": "AuthenticatedOnly guard component with useNavigate-based redirect logic maintained alongside the new AuthenticatedLayout route guard",
+      "reason": "The build request architecture uses TanStack Router with route-level AuthenticatedLayout using throw redirect, but the AuthenticatedOnly.tsx component was also updated with its own navigation logic. This creates a potentially redundant parallel guard not clearly requested, and its usage in the new routing setup is not confirmed by the diff.",
+      "evidence": [
+        "frontend/src/components/guards/AuthenticatedOnly.tsx",
+        "frontend/src/App.tsx"
+      ]
+    }
+  ],
   "confidence": 0.72,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/pages/ClientDossierPage.tsx",
+    "frontend/src/App.tsx",
+    "frontend/src/components/common/ErrorBoundary.tsx",
+    "frontend/src/components/guards/AuthenticatedOnly.tsx",
     "project_state.json"
   ]
 }

@@ -2,10 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-fix-the-client-dossier-page-clientdossierpage-so-that-it-is-accessible-when-navigating-from-the-clients-list-ensure-the-route-parameter-client-id-is-correctly-read-and-passed-to-the-page-and-that-the-page-successfully-loads-and-displays-the-client-s-full-dossier-including-contact-info-blacklist-status-and-intervention-list",
-      "featureTitle": "Fix the client dossier page (ClientDossierPage) so that it is accessible when navigating from the clients list. Ensure the route parameter (client ID) is correctly read and passed to the page, and that the page successfully loads and displays the client's full dossier including contact info, blacklist status, and intervention list.",
+      "featureId": "feature-fix-the-blank-white-screen-that-occurs-on-app-startup-before-the-authentication-flow-begins-the-app-should-render-a-visible-loading-state-or-the-login-page-immediately-on-launch-without-crashing",
+      "featureTitle": "Fix the blank white screen that occurs on app startup before the authentication flow begins. The app should render a visible loading state or the login page immediately on launch without crashing.",
       "files": [
-        "frontend/src/pages/ClientDossierPage.tsx"
+        "frontend/src/App.tsx",
+        "frontend/src/components/guards/AuthenticatedOnly.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -23,10 +24,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-fix-the-client-edit-functionality-on-the-clientdossierpage-so-that-the-edit-dialog-opens-is-pre-populated-with-the-client-s-existing-data-and-successfully-saves-changes-via-the-useupdateclient-hook",
-      "featureTitle": "Fix the client edit functionality on the ClientDossierPage so that the edit dialog opens, is pre-populated with the client's existing data, and successfully saves changes via the useUpdateClient hook.",
+      "featureId": "feature-audit-and-fix-the-initialization-sequence-in-app-tsx-and-the-authenticatedonly-guard-to-ensure-the-internet-identity-authentication-state-is-fully-initialized-before-any-route-rendering-or-data-fetching-is-attempted-preventing-crashes-from-accessing-undefined-identity-state",
+      "featureTitle": "Audit and fix the initialization sequence in App.tsx and the AuthenticatedOnly guard to ensure the Internet Identity authentication state is fully initialized before any route rendering or data fetching is attempted, preventing crashes from accessing undefined identity state.",
       "files": [
-        "frontend/src/pages/ClientDossierPage.tsx"
+        "frontend/src/App.tsx",
+        "frontend/src/components/common/ErrorBoundary.tsx",
+        "frontend/src/components/guards/AuthenticatedOnly.tsx"
       ],
       "components": [
         "authorization@4.0.0",
