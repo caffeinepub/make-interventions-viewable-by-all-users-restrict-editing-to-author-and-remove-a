@@ -1,120 +1,142 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
 import { useUpdateClient } from '../../hooks/useClients';
 import { Client } from '../../backend';
+import { Edit, Loader2 } from 'lucide-react';
 
 interface EditClientDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   client: Client;
   clientId: string;
 }
 
-export default function EditClientDialog({ open, onOpenChange, client, clientId }: EditClientDialogProps) {
-  const updateClient = useUpdateClient();
-  const [form, setForm] = useState({
-    name: '',
-    street: '',
-    city: '',
-    state: '',
-    zip: '',
-    phone: '',
-    email: '',
-  });
+export default function EditClientDialog({ client, clientId }: EditClientDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(client.info.name);
+  const [street, setStreet] = useState(client.info.address.street);
+  const [city, setCity] = useState(client.info.address.city);
+  const [state, setState] = useState(client.info.address.state);
+  const [zip, setZip] = useState(client.info.address.zip);
+  const [phone, setPhone] = useState(client.info.phone);
+  const [email, setEmail] = useState(client.info.email);
 
-  useEffect(() => {
-    if (client) {
-      setForm({
-        name: client.info.name,
-        street: client.info.address.street,
-        city: client.info.address.city,
-        state: client.info.address.state,
-        zip: client.info.address.zip,
-        phone: client.info.phone,
-        email: client.info.email,
-      });
-    }
-  }, [client]);
+  const { mutate: updateClient, isPending } = useUpdateClient();
 
-  const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm(prev => ({ ...prev, [field]: e.target.value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.street.trim() || !form.city.trim()) return;
+    if (!name.trim()) return;
 
-    await updateClient.mutateAsync({
-      id: clientId,
-      name: form.name.trim(),
-      address: {
-        street: form.street.trim(),
-        city: form.city.trim(),
-        state: form.state.trim(),
-        zip: form.zip.trim(),
+    updateClient(
+      {
+        id: clientId,
+        name: name.trim(),
+        address: { street, city, state, zip },
+        phone,
+        email,
       },
-      phone: form.phone.trim(),
-      email: form.email.trim(),
-    });
-
-    onOpenChange(false);
+      {
+        onSuccess: () => setOpen(false),
+      }
+    );
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <Edit className="w-5 h-5" />
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Modifier le client</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="edit-name">Nom *</Label>
-            <Input id="edit-name" value={form.name} onChange={handleChange('name')} placeholder="Nom du client" required />
+            <Input
+              id="edit-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              disabled={isPending}
+            />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-street">Rue *</Label>
-            <Input id="edit-street" value={form.street} onChange={handleChange('street')} placeholder="Adresse" required />
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="edit-street">Rue</Label>
+            <Input
+              id="edit-street"
+              value={street}
+              onChange={(e) => setStreet(e.target.value)}
+              disabled={isPending}
+            />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-city">Ville *</Label>
-              <Input id="edit-city" value={form.city} onChange={handleChange('city')} placeholder="Ville" required />
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-city">Ville</Label>
+              <Input
+                id="edit-city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                disabled={isPending}
+              />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="edit-zip">Code postal</Label>
-              <Input id="edit-zip" value={form.zip} onChange={handleChange('zip')} placeholder="Code postal" />
+              <Input
+                id="edit-zip"
+                value={zip}
+                onChange={(e) => setZip(e.target.value)}
+                disabled={isPending}
+              />
             </div>
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="edit-state">Région</Label>
-            <Input id="edit-state" value={form.state} onChange={handleChange('state')} placeholder="Région / Département" />
+            <Input
+              id="edit-state"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              disabled={isPending}
+            />
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="edit-phone">Téléphone</Label>
-            <Input id="edit-phone" value={form.phone} onChange={handleChange('phone')} placeholder="Numéro de téléphone" type="tel" />
+            <Input
+              id="edit-phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              type="tel"
+              disabled={isPending}
+            />
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="edit-email">Email</Label>
-            <Input id="edit-email" value={form.email} onChange={handleChange('email')} placeholder="Adresse email" type="email" />
+            <Input
+              id="edit-email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              disabled={isPending}
+            />
           </div>
-          <DialogFooter className="mt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
               Annuler
             </Button>
-            <Button type="submit" disabled={updateClient.isPending || !form.name.trim() || !form.street.trim() || !form.city.trim()}>
-              {updateClient.isPending ? (
+            <Button type="submit" disabled={isPending || !name.trim()}>
+              {isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Mise à jour...
                 </>
               ) : (

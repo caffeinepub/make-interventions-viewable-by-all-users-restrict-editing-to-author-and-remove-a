@@ -3,7 +3,7 @@ import { useActor } from './useActor';
 import { Intervention, ExternalBlob } from '../backend';
 import { toast } from 'sonner';
 
-export function useClientInterventions(clientId: string) {
+export function useGetClientInterventions(clientId: string) {
   const { actor, isFetching } = useActor();
 
   return useQuery<Intervention[]>({
@@ -16,11 +16,11 @@ export function useClientInterventions(clientId: string) {
   });
 }
 
-export function useInterventionsByDate(day: number, month: number, year: number) {
+export function useGetInterventionsByDate(day: number, month: number, year: number) {
   const { actor, isFetching } = useActor();
 
   return useQuery<Intervention[]>({
-    queryKey: ['interventions-by-date', day, month, year],
+    queryKey: ['interventions', 'date', day, month, year],
     queryFn: async () => {
       if (!actor) return [];
       return actor.getInterventionsByDate(BigInt(day), BigInt(month), BigInt(year));
@@ -29,87 +29,113 @@ export function useInterventionsByDate(day: number, month: number, year: number)
   });
 }
 
-export function useAddIntervention(clientId: string) {
+export function useAddIntervention() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: {
+    mutationFn: async ({
+      clientId,
+      comments,
+      media,
+      day,
+      month,
+      year,
+    }: {
+      clientId: string;
       comments: string;
       media: ExternalBlob[];
       day: number;
       month: number;
       year: number;
     }) => {
-      if (!actor) throw new Error('Actor not available');
+      if (!actor) throw new Error('Actor non disponible');
       await actor.addIntervention(
         clientId,
-        data.comments,
-        data.media,
-        BigInt(data.day),
-        BigInt(data.month),
-        BigInt(data.year)
+        comments,
+        media,
+        BigInt(day),
+        BigInt(month),
+        BigInt(year)
       );
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['interventions', clientId] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['interventions', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['interventions', 'date'] });
       toast.success('Intervention ajoutée avec succès');
     },
-    onError: (error: any) => {
-      toast.error(`Erreur lors de l'ajout de l'intervention : ${error?.message ?? 'Erreur inconnue'}`);
+    onError: (error: Error) => {
+      toast.error(`Erreur lors de l'ajout de l'intervention: ${error.message}`);
     },
   });
 }
 
-export function useUpdateIntervention(clientId: string) {
+export function useUpdateIntervention() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: {
+    mutationFn: async ({
+      interventionId,
+      clientId,
+      comments,
+      media,
+      day,
+      month,
+      year,
+    }: {
       interventionId: string;
+      clientId: string;
       comments: string;
       media: ExternalBlob[];
       day: number;
       month: number;
       year: number;
     }) => {
-      if (!actor) throw new Error('Actor not available');
+      if (!actor) throw new Error('Actor non disponible');
       await actor.updateIntervention(
-        data.interventionId,
+        interventionId,
         clientId,
-        data.comments,
-        data.media,
-        BigInt(data.day),
-        BigInt(data.month),
-        BigInt(data.year)
+        comments,
+        media,
+        BigInt(day),
+        BigInt(month),
+        BigInt(year)
       );
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['interventions', clientId] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['interventions', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['interventions', 'date'] });
       toast.success('Intervention mise à jour avec succès');
     },
-    onError: (error: any) => {
-      toast.error(`Erreur lors de la mise à jour de l'intervention : ${error?.message ?? 'Erreur inconnue'}`);
+    onError: (error: Error) => {
+      toast.error(`Erreur lors de la mise à jour de l'intervention: ${error.message}`);
     },
   });
 }
 
-export function useDeleteIntervention(clientId: string) {
+export function useDeleteIntervention() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (interventionId: string) => {
-      if (!actor) throw new Error('Actor not available');
+    mutationFn: async ({
+      interventionId,
+      clientId,
+    }: {
+      interventionId: string;
+      clientId: string;
+    }) => {
+      if (!actor) throw new Error('Actor non disponible');
       await actor.deleteIntervention(interventionId, clientId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['interventions', clientId] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['interventions', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['interventions', 'date'] });
       toast.success('Intervention supprimée avec succès');
     },
-    onError: (error: any) => {
-      toast.error(`Erreur lors de la suppression de l'intervention : ${error?.message ?? 'Erreur inconnue'}`);
+    onError: (error: Error) => {
+      toast.error(`Erreur lors de la suppression de l'intervention: ${error.message}`);
     },
   });
 }

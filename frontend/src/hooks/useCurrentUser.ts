@@ -9,7 +9,7 @@ export function useGetCallerUserProfile() {
   const query = useQuery<UserProfile | null>({
     queryKey: ['currentUserProfile'],
     queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
+      if (!actor) throw new Error('Actor non disponible');
       return actor.getCallerUserProfile();
     },
     enabled: !!actor && !actorFetching,
@@ -29,15 +29,15 @@ export function useSaveCallerUserProfile() {
 
   return useMutation({
     mutationFn: async (profile: UserProfile) => {
-      if (!actor) throw new Error('Actor not available');
+      if (!actor) throw new Error('Actor non disponible');
       await actor.saveCallerUserProfile(profile);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
       toast.success('Profil enregistré avec succès');
     },
-    onError: (error: any) => {
-      toast.error(`Erreur lors de l'enregistrement du profil : ${error?.message ?? 'Erreur inconnue'}`);
+    onError: (error: Error) => {
+      toast.error(`Erreur lors de l'enregistrement du profil: ${error.message}`);
     },
   });
 }

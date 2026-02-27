@@ -1,53 +1,45 @@
 {
   "kind": "build_request",
-  "title": "Fix crash on app startup before authentication screen",
+  "title": "Restore user data after draft expiration",
   "projectName": "Vial Traite Service",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Fix the unhandled error that causes the app to crash and display 'Une erreur s'est produite / Erreur inconnue' before the authentication/login screen is even shown. The error is triggered during the app initialization phase (before Internet Identity loads), caught by the ErrorBoundary component, and renders the error card instead of the login page. Identify and fix the root cause in the initialization sequence (App.tsx, main.tsx, useInternetIdentity, or related bootstrap code) so the app reliably reaches the login screen on first load.",
-      "target": "frontend",
+      "text": "Rebuild the full application (backend and frontend) with all existing data models and features intact: clients, interventions, user profiles, media/blob storage, technical folder, blacklist management, role-based access control, offline sync, and PWA support — restoring the app to its last known working state after the draft expired.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-latest"
         ],
         "quotes": [
-          "Voila lerreur avant meme de midentifier"
+          "Remet met donné dans min appli"
         ]
       },
       "acceptanceCriteria": [
-        "Opening the app at the root URL no longer shows the error card 'Une erreur s'est produite'",
-        "The login/authentication screen (LoginPage) is displayed correctly on fresh load without any prior interaction",
-        "No unhandled exceptions are thrown during the initialization phase before authentication",
-        "The ErrorBoundary does not trigger on normal app startup",
-        "The fix works on mobile Chrome (Android) as shown in the screenshots"
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "text": "Add defensive error handling in the app bootstrap and initialization code so that if an unexpected error does occur during startup, it is caught gracefully and the user is shown the login page or a recoverable state rather than a generic crash screen. Ensure all async initialization errors (e.g. from AuthClient, IndexedDB, service worker registration) are handled with try/catch blocks and do not propagate to the React error boundary.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Any error during bootstrap (AuthClient init, IndexedDB setup, service worker registration) is caught and logged without crashing the UI",
-        "The app falls back gracefully to the login screen even if a non-critical initialization step fails",
-        "The ErrorBoundary is not triggered by initialization-phase errors"
+        "The app deploys and opens without crashing before the login screen.",
+        "Internet Identity authentication works and redirects to the home route after login.",
+        "The Clients page lists all clients with search, blacklist badges, and navigation to individual dossiers.",
+        "Client dossiers display contact info, blacklist status, and intervention history.",
+        "Interventions can be added, edited, deleted, and viewed with media attachments.",
+        "The Technical Folder page allows file upload, folder creation, renaming, moving, and viewing files.",
+        "The Dashboard page shows a calendar and interventions for the selected date.",
+        "Offline sync (outbox, sync engine, connectivity status bar) functions correctly.",
+        "PWA manifest and service worker are present and the app is installable.",
+        "Role-based access control is enforced on the backend.",
+        "Data export (JSON/PDF) dialog is accessible and functional."
       ]
     }
   ],
   "constraints": [
-    "Do not modify frontend/src/hooks/useInternetIdentity.ts or frontend/src/main.tsx directly — propose safe alternatives or wrappers",
-    "Do not change the backend schema or Motoko code"
+    "All Motoko logic must remain in a single actor in backend/main.mo.",
+    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui.",
+    "Preserve the existing brand color theme (Vial Traite Service) defined in frontend/src/index.css."
   ],
   "nonGoals": [
-    "Changing the visual design or theme of the app",
-    "Adding new features or pages",
-    "Modifying authentication logic beyond fixing the crash"
+    "Adding new features beyond restoring the existing application state.",
+    "Changing the authentication provider (Internet Identity must remain).",
+    "Migrating to a different frontend framework or backend language."
   ],
   "imageRequirements": {
     "required": [],

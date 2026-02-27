@@ -1,38 +1,45 @@
-import React, { useState, useMemo } from 'react';
-import { FolderOpen, FolderPlus, Upload, ChevronRight, Home, AlertTriangle, RefreshCw } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useListTechnicalFiles } from '../hooks/useTechnicalFolder';
+import { ExternalBlob } from '../backend';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useTechnicalFolder } from '../hooks/useTechnicalFolder';
+import { FolderOpen, ChevronRight, Home, AlertTriangle, RefreshCw } from 'lucide-react';
 import TechnicalFileRow from '../components/technical-folder/TechnicalFileRow';
 import TechnicalFolderUploadCard from '../components/technical-folder/TechnicalFolderUploadCard';
 import CreateFolderDialog from '../components/technical-folder/CreateFolderDialog';
 import RenameFolderDialog from '../components/technical-folder/RenameFolderDialog';
-import { ExternalBlob } from '../backend';
 
 interface FolderNode {
   name: string;
   path: string;
   files: { name: string; path: string; blob: ExternalBlob }[];
-  subfolders: FolderNode[];
+  subfolders: Map<string, FolderNode>;
 }
 
-function buildFolderTree(files: [string, ExternalBlob][]): FolderNode {
-  const root: FolderNode = { name: '', path: '', files: [], subfolders: [] };
+function buildFolderTree(files: [string, ExternalBlob][]): Map<string, FolderNode> {
+  const root = new Map<string, FolderNode>();
 
   for (const [path, blob] of files) {
-    const parts = path.split('/').filter(Boolean);
-    if (parts.length === 0) continue;
+    const parts = path.split('/');
+    if (parts.length < 2) continue;
 
-    let current = root;
-    for (let i = 0; i < parts.length - 1; i++) {
+    const topFolder = parts[0];
+    if (!root.has(topFolder)) {
+      root.set(topFolder, { name: topFolder, path: topFolder, files: [], subfolders: new Map() });
+    }
+
+    let current = root.get(topFolder)!;
+    for (let i = 1; i < parts.length - 1; i++) {
       const folderName = parts[i];
-      let folder = current.subfolders.find(f => f.name === folderName);
-      if (!folder) {
+      if (!current.subfolders.has(folderName)) {
         const folderPath = parts.slice(0, i + 1).join('/');
-        folder = { name: folderName, path: folderPath, files: [], subfolders: [] };
-        current.subfolders.push(folder);
+        current.subfolders.set(folderName, {
+          name: folderName,
+          path: folderPath,
+          files: [],
+          subfolders: new Map(),
+        });
       }
-      current = folder;
+      current = current.subfolders.get(folderName)!;
     }
 
     const fileName = parts[parts.length - 1];
@@ -42,160 +49,170 @@ function buildFolderTree(files: [string, ExternalBlob][]): FolderNode {
   return root;
 }
 
-function getFolderAtPath(root: FolderNode, pathParts: string[]): FolderNode | null {
-  if (pathParts.length === 0) return root;
-  let current = root;
-  for (const part of pathParts) {
-    const found = current.subfolders.find(f => f.name === part);
-    if (!found) return null;
-    current = found;
-  }
-  return current;
-}
-
 export default function TechnicalFolderPage() {
+  const { data: files, isLoading, error, refetch } = useListTechnicalFiles();
   const [currentPath, setCurrentPath] = useState<string[]>([]);
-  const [showUpload, setShowUpload] = useState(false);
-  const [showCreateFolder, setShowCreateFolder] = useState(false);
-  const [renamingFolder, setRenamingFolder] = useState<{ path: string; name: string } | null>(null);
 
-  const { data: files, isLoading, isError, refetch } = useTechnicalFolder();
-
-  const tree = useMemo(() => {
-    if (!files) return null;
+  const folderTree = useMemo(() => {
+    if (!files) return new Map<string, FolderNode>();
     return buildFolderTree(files);
   }, [files]);
 
-  const currentFolder = useMemo(() => {
-    if (!tree) return null;
-    return getFolderAtPath(tree, currentPath);
-  }, [tree, currentPath]);
+  const getCurrentFolder = (): FolderNode | null => {
+    if (currentPath.length === 0) return null;
+    let node = folderTree.get(currentPath[0]);
+    if (!node) return null;
+    for (let i = 1; i < currentPath.length; i++) {
+      node = node.subfolders.get(currentPath[i]);
+      if (!node) return null;
+    }
+    return node;
+  };
 
+  const currentFolder = getCurrentFolder();
   const currentFolderPath = currentPath.join('/');
 
-  const navigateTo = (parts: string[]) => setCurrentPath(parts);
+  const navigateTo = (path: string[]) => setCurrentPath(path);
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-6">
+        <AlertTriangle className="w-12 h-12 text-destructive" />
+        <div className="text-center">
+          <h2 className="text-lg font-semibold">Erreur de chargement</h2>
+          <p className="text-muted-foreground text-sm mt-1">{(error as Error).message}</p>
+        </div>
+        <Button onClick={() => refetch()} variant="outline" className="gap-2">
+          <RefreshCw className="w-4 h-4" />
+          Réessayer
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-foreground">Dossier Technique</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={() => setShowCreateFolder(true)}>
-            <FolderPlus className="h-4 w-4" />
-          </Button>
-          <Button size="icon" onClick={() => setShowUpload(true)}>
-            <Upload className="h-4 w-4" />
-          </Button>
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="sticky top-0 bg-background z-10 border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <FolderOpen className="w-5 h-5 text-primary" />
+            <h1 className="text-lg font-bold text-foreground">Dossier Technique</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <CreateFolderDialog currentPath={currentFolderPath} />
+            <TechnicalFolderUploadCard currentPath={currentFolderPath} />
+          </div>
         </div>
-      </div>
 
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1 flex-wrap text-sm">
-        <button
-          onClick={() => navigateTo([])}
-          className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Home className="h-3.5 w-3.5" />
-          <span>Racine</span>
-        </button>
-        {currentPath.map((part, idx) => (
-          <React.Fragment key={idx}>
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-            <button
-              onClick={() => navigateTo(currentPath.slice(0, idx + 1))}
-              className={`hover:text-foreground transition-colors ${idx === currentPath.length - 1 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
-            >
-              {part}
-            </button>
-          </React.Fragment>
-        ))}
-      </div>
-
-      {isLoading && (
-        <div className="flex flex-col gap-2">
-          {[1, 2, 3].map(i => (
-            <Skeleton key={i} className="h-14 w-full rounded-xl" />
-          ))}
-        </div>
-      )}
-
-      {isError && (
-        <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <AlertTriangle className="h-8 w-8 text-destructive" />
-          <p className="text-sm text-muted-foreground">Erreur lors du chargement des fichiers</p>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Réessayer
-          </Button>
-        </div>
-      )}
-
-      {!isLoading && !isError && currentFolder && (
-        <div className="flex flex-col gap-2">
-          {/* Subfolders */}
-          {currentFolder.subfolders.map(folder => (
-            <div
-              key={folder.name}
-              className="flex items-center justify-between bg-card border border-border rounded-xl p-3"
-            >
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-1 text-sm overflow-x-auto">
+          <button
+            onClick={() => navigateTo([])}
+            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+          >
+            <Home className="w-3.5 h-3.5" />
+            <span>Racine</span>
+          </button>
+          {currentPath.map((segment, index) => (
+            <div key={index} className="flex items-center gap-1 shrink-0">
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
               <button
-                onClick={() => navigateTo([...currentPath, folder.name])}
-                className="flex items-center gap-2 flex-1 text-left hover:text-primary transition-colors"
+                onClick={() => navigateTo(currentPath.slice(0, index + 1))}
+                className={`hover:text-foreground transition-colors ${
+                  index === currentPath.length - 1
+                    ? 'text-foreground font-medium'
+                    : 'text-muted-foreground'
+                }`}
               >
-                <FolderOpen className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm">{folder.name}</span>
+                {segment}
               </button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground"
-                onClick={() => setRenamingFolder({ path: folder.path, name: folder.name })}
-              >
-                Renommer
-              </Button>
             </div>
           ))}
-
-          {/* Files */}
-          {currentFolder.files.map(file => (
-            <TechnicalFileRow
-              key={file.path}
-              fileName={file.name}
-              filePath={file.path}
-              blob={file.blob}
-              currentFolderPath={currentFolderPath}
-            />
-          ))}
-
-          {currentFolder.subfolders.length === 0 && currentFolder.files.length === 0 && (
-            <div className="text-center py-8">
-              <FolderOpen className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Dossier vide</p>
-            </div>
-          )}
         </div>
-      )}
+      </div>
 
-      <TechnicalFolderUploadCard
-        open={showUpload}
-        onOpenChange={setShowUpload}
-        currentPath={currentFolderPath}
-      />
+      {/* Content */}
+      <div className="flex-1 overflow-auto px-4 py-3">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : currentPath.length === 0 ? (
+          // Root level - show top-level folders
+          <div className="flex flex-col gap-1">
+            {folderTree.size === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <FolderOpen className="w-12 h-12 text-muted-foreground" />
+                <p className="text-muted-foreground text-center">
+                  Aucun dossier. Créez un dossier pour commencer.
+                </p>
+              </div>
+            ) : (
+              Array.from(folderTree.entries()).map(([name]) => (
+                <div
+                  key={name}
+                  className="flex items-center justify-between px-3 py-3 rounded-xl hover:bg-muted/50 transition-colors"
+                >
+                  <button
+                    onClick={() => navigateTo([name])}
+                    className="flex items-center gap-3 flex-1 text-left"
+                  >
+                    <FolderOpen className="w-5 h-5 text-primary shrink-0" />
+                    <span className="font-medium text-foreground">{name}</span>
+                  </button>
+                  <RenameFolderDialog folderPath={name} currentName={name} />
+                </div>
+              ))
+            )}
+          </div>
+        ) : currentFolder ? (
+          <div className="flex flex-col gap-1">
+            {/* Subfolders */}
+            {Array.from(currentFolder.subfolders.entries()).map(([name, subfolder]) => (
+              <div
+                key={name}
+                className="flex items-center justify-between px-3 py-3 rounded-xl hover:bg-muted/50 transition-colors"
+              >
+                <button
+                  onClick={() => navigateTo([...currentPath, name])}
+                  className="flex items-center gap-3 flex-1 text-left"
+                >
+                  <FolderOpen className="w-5 h-5 text-primary shrink-0" />
+                  <span className="font-medium text-foreground">{name}</span>
+                </button>
+                <RenameFolderDialog folderPath={subfolder.path} currentName={name} />
+              </div>
+            ))}
 
-      <CreateFolderDialog
-        open={showCreateFolder}
-        onOpenChange={setShowCreateFolder}
-        currentPath={currentFolderPath}
-      />
+            {/* Files */}
+            {currentFolder.files.map((file) => (
+              <TechnicalFileRow
+                key={file.path}
+                fileName={file.name}
+                filePath={file.path}
+                currentFolderPath={currentFolderPath}
+                blob={file.blob}
+              />
+            ))}
 
-      {renamingFolder && (
-        <RenameFolderDialog
-          open={!!renamingFolder}
-          onOpenChange={(open) => !open && setRenamingFolder(null)}
-          folderPath={renamingFolder.path}
-          currentName={renamingFolder.name}
-        />
-      )}
+            {currentFolder.subfolders.size === 0 && currentFolder.files.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <FolderOpen className="w-12 h-12 text-muted-foreground" />
+                <p className="text-muted-foreground text-center">Dossier vide</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <AlertTriangle className="w-8 h-8 text-muted-foreground" />
+            <p className="text-muted-foreground">Dossier introuvable</p>
+            <Button variant="outline" size="sm" onClick={() => navigateTo([])}>
+              Retour à la racine
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

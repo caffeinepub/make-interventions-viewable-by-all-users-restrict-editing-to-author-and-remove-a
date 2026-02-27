@@ -1,66 +1,58 @@
-import React, { useState } from 'react';
-import { useInternetIdentity } from '../../hooks/useInternetIdentity';
-import { useGetCallerUserProfile, useSaveCallerUserProfile } from '../../hooks/useCurrentUser';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useSaveCallerUserProfile } from '../../hooks/useCurrentUser';
 import { Loader2 } from 'lucide-react';
 
 export default function ProfileSetupDialog() {
-  const { identity } = useInternetIdentity();
-  const { data: userProfile, isLoading, isFetched } = useGetCallerUserProfile();
-  const saveProfile = useSaveCallerUserProfile();
   const [name, setName] = useState('');
+  const { mutate: saveProfile, isPending } = useSaveCallerUserProfile();
 
-  const isAuthenticated = !!identity;
-  const showDialog = isAuthenticated && !isLoading && isFetched && userProfile === null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    await saveProfile.mutateAsync({ name: name.trim() });
+    saveProfile({ name: name.trim() });
   };
 
   return (
-    <Dialog open={showDialog} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md" onInteractOutside={e => e.preventDefault()}>
+    <Dialog open={true}>
+      <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Bienvenue !</DialogTitle>
           <DialogDescription>
             Veuillez entrer votre nom pour configurer votre profil.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="profile-name">Votre nom</Label>
+            <Label htmlFor="name">Votre nom</Label>
             <Input
-              id="profile-name"
-              placeholder="Entrez votre nom..."
+              id="name"
               value={name}
-              onChange={e => setName(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Entrez votre nom"
+              disabled={isPending}
               autoFocus
             />
           </div>
-          <DialogFooter>
-            <Button type="submit" disabled={!name.trim() || saveProfile.isPending} className="w-full">
-              {saveProfile.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enregistrement...
-                </>
-              ) : (
-                'Confirmer'
-              )}
-            </Button>
-          </DialogFooter>
+          <Button type="submit" disabled={isPending || !name.trim()} className="w-full">
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Enregistrement...
+              </>
+            ) : (
+              'Confirmer'
+            )}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>

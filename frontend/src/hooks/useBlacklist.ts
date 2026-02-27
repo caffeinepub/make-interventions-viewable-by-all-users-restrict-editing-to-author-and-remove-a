@@ -3,42 +3,50 @@ import { useActor } from './useActor';
 import { ExternalBlob } from '../backend';
 import { toast } from 'sonner';
 
-export function useMarkAsBlacklisted(clientId: string) {
+export function useMarkAsBlacklisted() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { comments: string; media: ExternalBlob[] }) => {
-      if (!actor) throw new Error('Actor not available');
-      await actor.markAsBlacklisted(clientId, data.comments, data.media);
+    mutationFn: async ({
+      clientId,
+      comments,
+      media,
+    }: {
+      clientId: string;
+      comments: string;
+      media: ExternalBlob[];
+    }) => {
+      if (!actor) throw new Error('Actor non disponible');
+      await actor.markAsBlacklisted(clientId, comments, media);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      queryClient.invalidateQueries({ queryKey: ['client', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['client', variables.clientId] });
       toast.success('Client ajouté à la liste noire');
     },
-    onError: (error: any) => {
-      toast.error(`Erreur : ${error?.message ?? 'Erreur inconnue'}`);
+    onError: (error: Error) => {
+      toast.error(`Erreur: ${error.message}`);
     },
   });
 }
 
-export function useUnmarkAsBlacklisted(clientId: string) {
+export function useUnmarkAsBlacklisted() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
-      if (!actor) throw new Error('Actor not available');
+    mutationFn: async ({ clientId }: { clientId: string }) => {
+      if (!actor) throw new Error('Actor non disponible');
       await actor.unmarkAsBlacklisted(clientId);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      queryClient.invalidateQueries({ queryKey: ['client', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['client', variables.clientId] });
       toast.success('Client retiré de la liste noire');
     },
-    onError: (error: any) => {
-      toast.error(`Erreur : ${error?.message ?? 'Erreur inconnue'}`);
+    onError: (error: Error) => {
+      toast.error(`Erreur: ${error.message}`);
     },
   });
 }

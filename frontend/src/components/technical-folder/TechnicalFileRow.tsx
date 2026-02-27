@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Eye, Move, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, Move, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -30,14 +30,18 @@ export default function TechnicalFileRow({
   blob,
   currentFolderPath,
 }: TechnicalFileRowProps) {
-  const deleteFile = useDeleteTechnicalFile();
+  const { mutate: deleteFile, isPending: isDeleting } = useDeleteTechnicalFile();
   const [showViewer, setShowViewer] = useState(false);
   const [showMove, setShowMove] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const handleDelete = async () => {
-    await deleteFile.mutateAsync(filePath);
-    setShowDeleteConfirm(false);
+  const handleDelete = () => {
+    deleteFile(
+      { path: filePath },
+      {
+        onSuccess: () => setShowDeleteConfirm(false),
+      }
+    );
   };
 
   return (
@@ -67,8 +71,13 @@ export default function TechnicalFileRow({
             size="icon"
             className="h-7 w-7 text-destructive hover:text-destructive"
             onClick={() => setShowDeleteConfirm(true)}
+            disabled={isDeleting}
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            {isDeleting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
           </Button>
         </div>
       </div>
@@ -100,7 +109,11 @@ export default function TechnicalFileRow({
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
             >
+              {isDeleting ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>

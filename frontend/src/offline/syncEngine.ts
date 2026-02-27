@@ -1,87 +1,56 @@
-import { getOfflineOperations, removeOfflineOperation } from './outbox';
-import type { backendInterface } from '../backend';
+import { getAll, remove } from './outbox';
+import { backendInterface } from '../backend';
 
-export async function syncOfflineOperations(actor: backendInterface): Promise<void> {
-  const operations = await getOfflineOperations();
+export async function syncPendingOperations(actor: backendInterface): Promise<void> {
+  const operations = await getAll();
 
-  for (const op of operations) {
+  for (const operation of operations) {
     try {
-      switch (op.type) {
-        case 'createOrUpdateClient':
-          await actor.createOrUpdateClient(
-            op.data.id,
-            op.data.name,
-            op.data.address,
-            op.data.phone,
-            op.data.email
-          );
-          break;
-
-        case 'addIntervention':
+      switch (operation.type) {
+        case 'addIntervention': {
+          const p = operation.payload as {
+            clientId: string;
+            comments: string;
+            media: [];
+            day: number;
+            month: number;
+            year: number;
+          };
           await actor.addIntervention(
-            op.data.clientId,
-            op.data.comments,
-            op.data.media,
-            op.data.day,
-            op.data.month,
-            op.data.year
+            p.clientId,
+            p.comments,
+            p.media,
+            BigInt(p.day),
+            BigInt(p.month),
+            BigInt(p.year)
           );
           break;
-
-        case 'updateIntervention':
-          await actor.updateIntervention(
-            op.data.interventionId,
-            op.data.clientId,
-            op.data.comments,
-            op.data.media,
-            op.data.day,
-            op.data.month,
-            op.data.year
-          );
+        }
+        case 'createOrUpdateClient': {
+          const p = operation.payload as {
+            id: string;
+            name: string;
+            address: { street: string; city: string; state: string; zip: string };
+            phone: string;
+            email: string;
+          };
+          await actor.createOrUpdateClient(p.id, p.name, p.address, p.phone, p.email);
           break;
-
-        case 'deleteIntervention':
-          await actor.deleteIntervention(
-            op.data.interventionId,
-            op.data.clientId
-          );
-          break;
-
-        case 'markAsBlacklisted':
-          await actor.markAsBlacklisted(
-            op.data.clientId,
-            op.data.comments,
-            op.data.media
-          );
-          break;
-
-        case 'unmarkAsBlacklisted':
-          await actor.unmarkAsBlacklisted(op.data.clientId);
-          break;
-
+        }
         default:
-          console.warn('Type d\'opération inconnu:', op.type);
+          break;
       }
 
-      if (op.id !== undefined) {
-        await removeOfflineOperation(op.id);
-        console.log(`Opération ${op.type} synchronisée avec succès`);
+      if (operation.id !== undefined) {
+        await remove(operation.id);
       }
-    } catch (error: any) {
-      console.error(`Échec de la synchronisation de l'opération ${op.type}:`, error);
-
-      // Remove unauthorized operations from queue
-      if (
-        error.message?.includes('Non autorisé') &&
-        (op.type === 'updateIntervention' || op.type === 'deleteIntervention')
-      ) {
-        console.log('Suppression de l\'opération non autorisée de la file d\'attente');
-        if (op.id !== undefined) {
-          await removeOfflineOperation(op.id);
+    } catch (error: unknown) {
+      const err = error as Error;
+      if (err?.message?.includes('Non autorisé') || err?.message?.includes('Unauthorized')) {
+        if (operation.id !== undefined) {
+          await remove(operation.id);
         }
       }
-      
-      // Don't throw - continue with next operation
     }
   }
 }

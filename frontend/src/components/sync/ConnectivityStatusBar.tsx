@@ -1,37 +1,43 @@
-import React from 'react';
-import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { useSync } from '../../hooks/useSync';
-import { Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { WifiOff, RefreshCw, Loader2 } from 'lucide-react';
 
 export default function ConnectivityStatusBar() {
-  const isOnline = useOnlineStatus();
-  const { pendingCount, isSyncing, sync } = useSync();
+  const { isOnline, pendingCount, isSyncing, sync } = useSync();
 
   if (isOnline && pendingCount === 0) return null;
 
   return (
-    <div className={`flex items-center justify-between px-4 py-1.5 text-xs ${isOnline ? 'bg-yellow-500/20 text-yellow-200' : 'bg-destructive/20 text-destructive-foreground'}`}>
-      <div className="flex items-center gap-1.5">
-        {isOnline ? (
-          <Wifi className="h-3 w-3" />
-        ) : (
-          <WifiOff className="h-3 w-3" />
-        )}
+    <div
+      className={`flex items-center justify-between px-4 py-1.5 text-xs ${
+        !isOnline
+          ? 'bg-destructive/10 text-destructive'
+          : 'bg-warning/10 text-warning'
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        {!isOnline && <WifiOff className="w-3.5 h-3.5" />}
         <span>
-          {isOnline
-            ? `${pendingCount} opération(s) en attente de synchronisation`
-            : 'Hors ligne — les modifications seront synchronisées à la reconnexion'}
+          {!isOnline
+            ? 'Hors ligne'
+            : `${pendingCount} opération(s) en attente de synchronisation`}
         </span>
       </div>
       {isOnline && pendingCount > 0 && (
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={sync}
           disabled={isSyncing}
-          className="flex items-center gap-1 hover:opacity-80 transition-opacity disabled:opacity-50"
+          className="h-6 px-2 text-xs"
         >
-          <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
-          <span>Synchroniser</span>
-        </button>
+          {isSyncing ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <RefreshCw className="w-3 h-3" />
+          )}
+          <span className="ml-1">Synchroniser</span>
+        </Button>
       )}
     </div>
   );

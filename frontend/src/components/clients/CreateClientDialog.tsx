@@ -1,105 +1,163 @@
-import React, { useState } from 'react';
+import { useState, ReactNode } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
 import { useCreateClient } from '../../hooks/useClients';
+import { Loader2 } from 'lucide-react';
 
 interface CreateClientDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  trigger?: ReactNode;
 }
 
-export default function CreateClientDialog({ open, onOpenChange }: CreateClientDialogProps) {
-  const createClient = useCreateClient();
-  const [form, setForm] = useState({
-    name: '',
-    street: '',
-    city: '',
-    state: '',
-    zip: '',
-    phone: '',
-    email: '',
-  });
+export default function CreateClientDialog({ trigger }: CreateClientDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [street, setStreet] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zip, setZip] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
 
-  const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm(prev => ({ ...prev, [field]: e.target.value }));
+  const { mutate: createClient, isPending } = useCreateClient();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    const id = `${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+    createClient(
+      {
+        id,
+        name: name.trim(),
+        address: { street, city, state, zip },
+        phone,
+        email,
+      },
+      {
+        onSuccess: () => {
+          setOpen(false);
+          resetForm();
+        },
+      }
+    );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name.trim() || !form.street.trim() || !form.city.trim()) return;
-
-    const id = `${form.name.trim()}-${Date.now()}`;
-    await createClient.mutateAsync({
-      id,
-      name: form.name.trim(),
-      address: {
-        street: form.street.trim(),
-        city: form.city.trim(),
-        state: form.state.trim(),
-        zip: form.zip.trim(),
-      },
-      phone: form.phone.trim(),
-      email: form.email.trim(),
-    });
-
-    setForm({ name: '', street: '', city: '', state: '', zip: '', phone: '', email: '' });
-    onOpenChange(false);
+  const resetForm = () => {
+    setName('');
+    setStreet('');
+    setCity('');
+    setState('');
+    setZip('');
+    setPhone('');
+    setEmail('');
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : (
+        <DialogTrigger asChild>
+          <Button>Nouveau client</Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nouveau client</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="name">Nom *</Label>
-            <Input id="name" value={form.name} onChange={handleChange('name')} placeholder="Nom du client" required />
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nom du client"
+              required
+              disabled={isPending}
+            />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="street">Rue *</Label>
-            <Input id="street" value={form.street} onChange={handleChange('street')} placeholder="Adresse" required />
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="street">Rue</Label>
+            <Input
+              id="street"
+              value={street}
+              onChange={(e) => setStreet(e.target.value)}
+              placeholder="Adresse"
+              disabled={isPending}
+            />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="city">Ville *</Label>
-              <Input id="city" value={form.city} onChange={handleChange('city')} placeholder="Ville" required />
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="city">Ville</Label>
+              <Input
+                id="city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Ville"
+                disabled={isPending}
+              />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="zip">Code postal</Label>
-              <Input id="zip" value={form.zip} onChange={handleChange('zip')} placeholder="Code postal" />
+              <Input
+                id="zip"
+                value={zip}
+                onChange={(e) => setZip(e.target.value)}
+                placeholder="Code postal"
+                disabled={isPending}
+              />
             </div>
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="state">Région</Label>
-            <Input id="state" value={form.state} onChange={handleChange('state')} placeholder="Région / Département" />
+            <Input
+              id="state"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              placeholder="Région / Département"
+              disabled={isPending}
+            />
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="phone">Téléphone</Label>
-            <Input id="phone" value={form.phone} onChange={handleChange('phone')} placeholder="Numéro de téléphone" type="tel" />
+            <Input
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Numéro de téléphone"
+              type="tel"
+              disabled={isPending}
+            />
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" value={form.email} onChange={handleChange('email')} placeholder="Adresse email" type="email" />
+            <Input
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Adresse email"
+              type="email"
+              disabled={isPending}
+            />
           </div>
-          <DialogFooter className="mt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
               Annuler
             </Button>
-            <Button type="submit" disabled={createClient.isPending || !form.name.trim() || !form.street.trim() || !form.city.trim()}>
-              {createClient.isPending ? (
+            <Button type="submit" disabled={isPending || !name.trim()}>
+              {isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Création...
                 </>
               ) : (

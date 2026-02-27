@@ -1,30 +1,30 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, FolderPlus } from 'lucide-react';
 import { useCreateFolder } from '../../hooks/useTechnicalFolder';
 
 interface CreateFolderDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   currentPath: string;
 }
 
-export default function CreateFolderDialog({ open, onOpenChange, currentPath }: CreateFolderDialogProps) {
-  const createFolder = useCreateFolder();
+export default function CreateFolderDialog({ currentPath }: CreateFolderDialogProps) {
+  const [open, setOpen] = useState(false);
   const [folderName, setFolderName] = useState('');
+  const { mutate: createFolder, isPending } = useCreateFolder();
 
   const isValid = folderName.trim().length > 0 && !folderName.includes('/');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
 
@@ -32,13 +32,25 @@ export default function CreateFolderDialog({ open, onOpenChange, currentPath }: 
       ? `${currentPath}/${folderName.trim()}`
       : folderName.trim();
 
-    await createFolder.mutateAsync(path);
-    setFolderName('');
-    onOpenChange(false);
+    createFolder(
+      { path },
+      {
+        onSuccess: () => {
+          setFolderName('');
+          setOpen(false);
+        },
+      }
+    );
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-2">
+          <FolderPlus className="w-4 h-4" />
+          Nouveau dossier
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Nouveau dossier</DialogTitle>
@@ -54,20 +66,21 @@ export default function CreateFolderDialog({ open, onOpenChange, currentPath }: 
             <Input
               id="folder-name"
               value={folderName}
-              onChange={e => setFolderName(e.target.value)}
+              onChange={(e) => setFolderName(e.target.value)}
               placeholder="Nom du dossier"
               autoFocus
+              disabled={isPending}
             />
             {folderName.includes('/') && (
               <p className="text-xs text-destructive">Le nom ne peut pas contenir de "/"</p>
             )}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
               Annuler
             </Button>
-            <Button type="submit" disabled={!isValid || createFolder.isPending}>
-              {createFolder.isPending ? (
+            <Button type="submit" disabled={!isValid || isPending}>
+              {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Création...

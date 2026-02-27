@@ -1,69 +1,268 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix crash on app startup before authentication screen",
+  "title": "Restore Vial Traite Service Frontend After Draft Expiration",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Fix the unhandled error causing app crash before login screen is shown",
+      "summary": "Restore complete frontend application with all existing features: authentication, clients management, interventions, technical folder, blacklist management, offline sync, and PWA support",
       "acceptanceCriteria": [
-        "Opening the app at the root URL no longer shows the error card 'Une erreur s'est produite'",
-        "The login/authentication screen (LoginPage) is displayed correctly on fresh load without any prior interaction",
-        "No unhandled exceptions are thrown during the initialization phase before authentication",
-        "The ErrorBoundary does not trigger on normal app startup",
-        "The fix works on mobile Chrome (Android) as shown in the screenshots"
+        "The app deploys and opens without crashing before the login screen.",
+        "Internet Identity authentication works and redirects to the home route after login.",
+        "The Clients page lists all clients with search, blacklist badges, and navigation to individual dossiers.",
+        "Client dossiers display contact info, blacklist status, and intervention history.",
+        "Interventions can be added, edited, deleted, and viewed with media attachments.",
+        "The Technical Folder page allows file upload, folder creation, renaming, moving, and viewing files.",
+        "The Dashboard page shows a calendar and interventions for the selected date.",
+        "Offline sync (outbox, sync engine, connectivity status bar) functions correctly.",
+        "PWA manifest and service worker are present and the app is installable.",
+        "Data export (JSON/PDF) dialog is accessible and functional."
       ],
       "file_operations": [
-        {
-          "path": "frontend/src/main.tsx",
-          "operation": "modify",
-          "description": "Wrap the root React.render call in a try-catch block to catch and log any synchronous errors during app mount. Ensure service worker registration is non-blocking and failures do not prevent app initialization."
-        },
         {
           "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Remove the AuthenticatedOnly guard from the root RouterProvider component that redirects before Internet Identity finishes initializing. Replace with a conditional render that shows LoginPage directly while InternetIdentityProvider is still loading, avoiding premature redirects that trigger route errors."
-        },
-        {
-          "path": "frontend/src/components/guards/AuthenticatedOnly.tsx",
-          "operation": "modify",
-          "description": "Add defensive checks to prevent rendering errors when authentication state is undefined or still initializing. Ensure the guard does not throw errors if useInternetIdentity returns an incomplete state during the first render cycle."
-        },
-        {
-          "path": "frontend/src/offline/db.ts",
-          "operation": "modify",
-          "description": "Wrap all IndexedDB initialization calls (openDB, store creation) in try-catch blocks to handle cases where IndexedDB is unavailable, blocked, or fails to open. Return a fallback or no-op implementation if IndexedDB setup fails, ensuring app initialization continues gracefully."
-        },
-        {
-          "path": "frontend/src/pwa/registerServiceWorker.ts",
-          "operation": "modify",
-          "description": "Wrap the service worker registration in a try-catch block and log errors without rethrowing. Ensure that service worker failures (e.g., due to insecure contexts or unsupported browsers) do not propagate to the React error boundary."
-        }
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "summary": "Add defensive error handling in app bootstrap and initialization code",
-      "acceptanceCriteria": [
-        "Any error during bootstrap (AuthClient init, IndexedDB setup, service worker registration) is caught and logged without crashing the UI",
-        "The app falls back gracefully to the login screen even if a non-critical initialization step fails",
-        "The ErrorBoundary is not triggered by initialization-phase errors"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/hooks/useActor.ts",
-          "operation": "modify",
-          "description": "Wrap actor creation and AuthClient initialization in a try-catch block. If actor initialization fails, return a null actor and set an error state instead of throwing. Ensure useQuery is disabled when actor is null to prevent query execution before initialization completes."
+          "description": "Verify TanStack Router setup with authenticated/unauthenticated route trees, QueryClientProvider, ThemeProvider, and AuthenticatedLayout. Ensure useEffect-based navigation guards are in place. Use the authorization component to ensure users must be logged in before seeing application data."
         },
         {
           "path": "frontend/src/pages/LoginPage.tsx",
           "operation": "modify",
-          "description": "Add error boundary fallback rendering within LoginPage component to catch and display initialization errors without blocking the login UI. Show a message if Internet Identity fails to initialize, with a retry button that reloads the page."
+          "description": "Verify Internet Identity login flow, redirect logic to home route after authentication, and edge case handling (already-authenticated sessions). Ensure the authorization component's frontend usage instructions are followed for login/logout and principal management."
+        },
+        {
+          "path": "frontend/src/components/auth/ProfileSetupDialog.tsx",
+          "operation": "modify",
+          "description": "Verify modal dialog prompts newly authenticated users to enter their name on first login using getCallerUserProfile and saveCallerUserProfile from the backend interface. Block dismissal until profile is saved. Follow the authorization component's profile setup prevention flash pattern."
+        },
+        {
+          "path": "frontend/src/hooks/useCurrentUser.ts",
+          "operation": "modify",
+          "description": "Verify hooks for fetching caller's user profile (getCallerUserProfile) and saving it (saveCallerUserProfile) via backend actor, with toast notifications. Ensure proper loading states to prevent profile setup modal flash as described in the authorization component usage."
+        },
+        {
+          "path": "frontend/src/pages/ClientsPage.tsx",
+          "operation": "modify",
+          "description": "Verify page lists all clients with search filter (using searchClients backend method), displays blacklist badges, enables navigation to individual client dossiers, and includes CreateClientDialog. Ensure loading and error states are handled."
+        },
+        {
+          "path": "frontend/src/components/clients/CreateClientDialog.tsx",
+          "operation": "modify",
+          "description": "Verify dialog form for creating new clients with fields for name, address (street, city, state, zip), phone, and email. Ensure it uses useCreateClient hook which calls createOrUpdateClient backend method."
+        },
+        {
+          "path": "frontend/src/components/clients/EditClientDialog.tsx",
+          "operation": "modify",
+          "description": "Verify dialog form pre-populated with existing client data for editing name, address, phone, and email via useUpdateClient hook calling createOrUpdateClient backend method."
+        },
+        {
+          "path": "frontend/src/hooks/useClients.ts",
+          "operation": "modify",
+          "description": "Verify React Query hooks for fetching all clients (getClients), fetching single client by ID (getClient), creating client, updating client, and searching clients (searchClients) via backend actor."
+        },
+        {
+          "path": "frontend/src/pages/ClientDossierPage.tsx",
+          "operation": "modify",
+          "description": "Verify page displays full client dossier including contact info (name, address, phone, email), blacklist status with BlacklistPanel, intervention history using InterventionList, and edit dialog. Handle loading/error states."
+        },
+        {
+          "path": "frontend/src/components/blacklist/BlacklistPanel.tsx",
+          "operation": "modify",
+          "description": "Verify panel for managing client blacklist status, allowing users to mark or unmark as blacklisted with optional comments and media attachments. Uses markAsBlacklisted and unmarkAsBlacklisted backend methods. Verify the blob-storage component usage for handling media attachments."
+        },
+        {
+          "path": "frontend/src/hooks/useBlacklist.ts",
+          "operation": "modify",
+          "description": "Verify mutation hooks to mark (markAsBlacklisted) or unmark (unmarkAsBlacklisted) client as blacklisted via backend actor, with toast notifications and query cache invalidation."
+        },
+        {
+          "path": "frontend/src/components/interventions/InterventionList.tsx",
+          "operation": "modify",
+          "description": "Verify component displays list of interventions for a client with add, edit, delete, and view actions. Uses getClientInterventions backend method. Handle loading/error states and confirmation dialogs for deletion."
+        },
+        {
+          "path": "frontend/src/components/interventions/AddInterventionDialog.tsx",
+          "operation": "modify",
+          "description": "Verify dialog for creating new intervention with date fields (day, month, year as bigint), comments textarea, and media picker using MediaPicker component. Uses addIntervention backend method. Verify the blob-storage component usage for media handling and the camera component usage for photo capture."
+        },
+        {
+          "path": "frontend/src/components/interventions/EditInterventionDialog.tsx",
+          "operation": "modify",
+          "description": "Verify dialog for editing existing intervention, pre-populating fields from intervention object and submitting via updateIntervention backend method. Verify the blob-storage component usage for media handling."
+        },
+        {
+          "path": "frontend/src/components/interventions/InterventionDetailsDialog.tsx",
+          "operation": "modify",
+          "description": "Verify read-only dialog displaying intervention details (date, employee principal, comments, media) with optional edit button for authorized users (canEdit flag). Uses MediaPreview component for displaying media."
+        },
+        {
+          "path": "frontend/src/hooks/useInterventions.ts",
+          "operation": "modify",
+          "description": "Verify React Query hooks for fetching client interventions (getClientInterventions), adding (addIntervention), updating (updateIntervention), and deleting (deleteIntervention) interventions via backend actor, with toast notifications and cache invalidation."
+        },
+        {
+          "path": "frontend/src/components/media/MediaPicker.tsx",
+          "operation": "modify",
+          "description": "Verify media management component allowing users to add media via file upload or camera capture (using CameraDialog sub-component) and display thumbnails with remove buttons. Verify the camera component usage instructions are followed: always show camera preview, place capture button on preview, handle camera errors properly, ensure non-zero preview dimensions, make buttons clickable only when camera is ready."
+        },
+        {
+          "path": "frontend/src/components/media/MediaPreview.tsx",
+          "operation": "modify",
+          "description": "Verify component renders grid of image thumbnails from ExternalBlob objects using getDirectURL() method, and opens DocumentViewer dialog on thumbnail click. Verify the blob-storage component usage for ExternalBlob handling."
+        },
+        {
+          "path": "frontend/src/components/media/FilePicker.tsx",
+          "operation": "modify",
+          "description": "Verify button component that opens file input dialog and returns selected files via onSelect callback."
+        },
+        {
+          "path": "frontend/src/pages/TechnicalFolderPage.tsx",
+          "operation": "modify",
+          "description": "Verify page renders navigable file/folder tree built from flat file paths (from listTechnicalFiles backend method), with support for uploading files, creating folders, and renaming folders. Verify the blob-storage component usage for file operations."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/TechnicalFolderUploadCard.tsx",
+          "operation": "modify",
+          "description": "Verify dialog for uploading files to technical folder, supporting both file selection and camera capture with upload progress tracking. Uses uploadTechnicalFileWithFolderPath backend method. Verify the blob-storage component's withUploadProgress method is used for progress tracking and the camera component usage for photo capture."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/CreateFolderDialog.tsx",
+          "operation": "modify",
+          "description": "Verify modal dialog for creating new folder at given path, validating folder name and calling createFolder backend method."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/RenameFolderDialog.tsx",
+          "operation": "modify",
+          "description": "Verify modal dialog for renaming folder, validating new name and calling renameFolder backend method."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/MoveFolderDialog.tsx",
+          "operation": "modify",
+          "description": "Verify modal dialog for moving file to different folder, providing breadcrumb navigation through folder structure and calling moveTechnicalFile backend method."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/TechnicalFileRow.tsx",
+          "operation": "modify",
+          "description": "Verify component renders single file row with view, move, and delete actions, integrating DocumentViewer, MoveFolderDialog, and delete confirmation AlertDialog. Uses deleteTechnicalFileWithPath backend method."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/DocumentViewer.tsx",
+          "operation": "modify",
+          "description": "Verify modal viewer for files (images, PDFs, videos) with zoom, rotation, fullscreen, pinch-to-zoom, and download support based on file extension. Uses downloadTechnicalFileWithPath backend method to retrieve file blobs. Verify the blob-storage component usage for ExternalBlob handling."
+        },
+        {
+          "path": "frontend/src/components/technical-folder/FileTypeIcon.tsx",
+          "operation": "modify",
+          "description": "Verify function returns appropriate Lucide icon component based on file extension, covering images, PDFs, videos, Word, and spreadsheet formats."
+        },
+        {
+          "path": "frontend/src/hooks/useTechnicalFolder.ts",
+          "operation": "modify",
+          "description": "Verify React Query hooks for managing technical folder: list files (listTechnicalFiles), upload (uploadTechnicalFileWithFolderPath), delete (deleteTechnicalFileWithPath), move (moveTechnicalFile), create folder (createFolder), rename folder (renameFolder) via backend actor with toast notifications. Verify the blob-storage component usage for ExternalBlob operations."
+        },
+        {
+          "path": "frontend/src/pages/DashboardPage.tsx",
+          "operation": "modify",
+          "description": "Verify dashboard page displays calendar and list of interventions for selected date using getInterventionsByDate backend method, with loading/error states and details dialog on item click."
+        },
+        {
+          "path": "frontend/src/components/layout/MobileLayout.tsx",
+          "operation": "modify",
+          "description": "Verify mobile app shell with sticky header (logo from frontend/public/assets/generated/vial-traite-logo.dim_400x200.png, user name from profile, logout button), scrollable main content area, and fixed bottom navigation bar with links to Clients, Dashboard, and Technical Folder pages."
+        },
+        {
+          "path": "frontend/src/offline/db.ts",
+          "operation": "modify",
+          "description": "Verify IndexedDB abstraction layer initializes database with 'outbox' and 'cache' stores, exposing helpers to add/get/remove outbox operations and cache arbitrary data with graceful fallback if IndexedDB unavailable."
+        },
+        {
+          "path": "frontend/src/offline/outbox.ts",
+          "operation": "modify",
+          "description": "Verify IndexedDB-backed outbox module for queuing offline operations, providing enqueue, getAll, and remove functions with timestamp index."
+        },
+        {
+          "path": "frontend/src/offline/syncEngine.ts",
+          "operation": "modify",
+          "description": "Verify sync engine reads queued offline operations and replays them against backend actor, removing successfully processed operations and handling unauthorized errors gracefully."
+        },
+        {
+          "path": "frontend/src/hooks/useSync.ts",
+          "operation": "modify",
+          "description": "Verify custom hook tracks online status and pending sync count, automatically triggering sync operation when device comes back online with pending items."
+        },
+        {
+          "path": "frontend/src/hooks/useOnlineStatus.ts",
+          "operation": "modify",
+          "description": "Verify hook tracks and returns browser's online/offline status by listening to window network events."
+        },
+        {
+          "path": "frontend/src/components/sync/ConnectivityStatusBar.tsx",
+          "operation": "modify",
+          "description": "Verify status bar shows offline state or pending sync operations count, with button to manually trigger synchronization when online."
+        },
+        {
+          "path": "frontend/src/components/export/ExportDataDialog.tsx",
+          "operation": "modify",
+          "description": "Verify dialog lets users export application data in JSON or PDF format, showing progress bar during export. Uses useDataExport hook."
+        },
+        {
+          "path": "frontend/src/hooks/useDataExport.ts",
+          "operation": "modify",
+          "description": "Verify hook fetches all clients (getClients), interventions (getClientInterventions for each client), and technical files (listTechnicalFiles) from backend and exports aggregated data as JSON or plain-text file download with progress tracking."
+        },
+        {
+          "path": "frontend/public/manifest.webmanifest",
+          "operation": "modify",
+          "description": "Verify PWA web manifest for 'Vial Traite Service' defines app name, icons (using frontend/public/assets/generated/pwa-icon.dim_512x512.png and pwa-icon-maskable.dim_512x512.png), display mode, theme colors, and current version."
+        },
+        {
+          "path": "frontend/public/sw.js",
+          "operation": "modify",
+          "description": "Verify service worker caches PWA assets on install, serves non-navigation requests from cache with network fallback, always fetches navigation requests from network, and cleans up old caches on activate."
+        },
+        {
+          "path": "frontend/src/pwa/registerServiceWorker.ts",
+          "operation": "modify",
+          "description": "Verify function registers PWA service worker (/sw.js) after short delay on page load with basic error logging."
+        },
+        {
+          "path": "frontend/index.html",
+          "operation": "modify",
+          "description": "Verify HTML entry point includes French locale, viewport/theme meta tags, manifest link (to manifest.webmanifest), icon links (to generated PWA icons), Apple mobile web app settings, and root div for React app mounting."
+        },
+        {
+          "path": "frontend/src/index.css",
+          "operation": "modify",
+          "description": "Verify global CSS file sets up Tailwind directives and defines CSS custom properties for Vial Traite Service brand color theme in light and dark modes, plus safe-area inset utilities. Preserve existing brand color theme as required by constraints."
+        },
+        {
+          "path": "frontend/tailwind.config.js",
+          "operation": "modify",
+          "description": "Verify Tailwind CSS configuration defines dark mode, custom OKLCH-based color tokens, border radius variables, font stack, and enables typography, container-queries, and animate plugins."
         },
         {
           "path": "frontend/src/components/common/ErrorBoundary.tsx",
           "operation": "modify",
-          "description": "Update the ErrorBoundary component to detect if the error occurred during app initialization (before authentication) and render a specialized recovery message in French that directs users to reload or clear cache, rather than a generic error screen."
+          "description": "Verify React class-based error boundary catches runtime errors and displays styled error card with options to retry, reload, or copy error details to clipboard."
+        },
+        {
+          "path": "frontend/src/components/common/AppBadge.tsx",
+          "operation": "modify",
+          "description": "Verify wrapper around Badge UI component adds custom color variants for 'success', 'warning', and 'pending' states."
+        },
+        {
+          "path": "frontend/src/components/guards/AuthenticatedOnly.tsx",
+          "operation": "modify",
+          "description": "Verify route guard component redirects unauthenticated users to login page and shows loading spinner while authentication state is being initialized. Use the authorization component's access control UI guidance."
+        },
+        {
+          "path": "frontend/src/utils/urlParams.ts",
+          "operation": "modify",
+          "description": "Verify utility functions for reading URL query parameters (supporting standard and hash-based routing), persisting them to sessionStorage, and cleaning sensitive params from URL hash."
+        },
+        {
+          "path": "frontend/src/lib/utils.ts",
+          "operation": "modify",
+          "description": "Verify utility module exports cn helper that merges Tailwind class names using clsx and tailwind-merge."
         }
       ]
     }

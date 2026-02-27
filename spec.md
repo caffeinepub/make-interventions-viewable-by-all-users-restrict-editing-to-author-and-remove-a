@@ -1,12 +1,15 @@
 # Specification
 
 ## Summary
-**Goal:** Fix the crash that shows "Une erreur s'est produite / Erreur inconnue" before the login screen loads on app startup.
+**Goal:** Restore the Vial Traite Service application to its last known working state after the draft expired, rebuilding both backend and frontend with all existing features and data models intact.
 
 **Planned changes:**
-- Identify and fix the root cause of the unhandled error thrown during the app initialization phase (before Internet Identity/authentication loads) in App.tsx or related bootstrap code
-- Wrap all async initialization steps (AuthClient init, IndexedDB setup, service worker registration) in try/catch blocks so errors are caught and logged without propagating to the React ErrorBoundary
-- Ensure the app falls back gracefully to the LoginPage when a non-critical initialization step fails, instead of rendering the error card
-- Add a safe wrapper/provider around the initialization sequence without modifying `useInternetIdentity.ts` or `main.tsx` directly
+- Rebuild the Motoko backend (single actor in `backend/main.mo`) with all data models: clients, interventions, user profiles, media/blob storage, technical folder, blacklist management, and role-based access control.
+- Restore the frontend with all pages: Dashboard (calendar + interventions by date), Clients (list with search and blacklist badges), Client Dossiers (contact info, blacklist status, intervention history), Interventions (add/edit/delete/view with media attachments), and Technical Folder (upload, create folders, rename, move, view files).
+- Restore Internet Identity authentication with proper post-login redirect.
+- Restore offline sync functionality: outbox, sync engine, and connectivity status bar.
+- Restore PWA manifest and service worker for installability.
+- Restore data export (JSON/PDF) dialog.
+- Preserve existing brand color theme defined in `frontend/src/index.css`.
 
-**User-visible outcome:** Opening the app on mobile (Android Chrome) or any browser reliably shows the login/authentication screen on first load instead of the "Une erreur s'est produite" crash card.
+**User-visible outcome:** The app deploys, opens without crashing, and all existing features are fully functional — authentication, client management, interventions, technical folder, dashboard calendar, offline sync, PWA install, role-based access, and data export.

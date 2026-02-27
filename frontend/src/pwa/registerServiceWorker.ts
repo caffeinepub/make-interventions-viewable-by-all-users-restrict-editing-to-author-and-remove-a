@@ -1,27 +1,16 @@
-export function registerServiceWorker() {
-  console.log('registerServiceWorker: Checking for service worker support');
-  
+export function registerServiceWorker(): void {
   if ('serviceWorker' in navigator) {
-    // Delay registration to not block initial render
-    setTimeout(() => {
-      console.log('registerServiceWorker: Starting registration');
-      
-      try {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker
-            .register('/sw.js')
-            .then((registration) => {
-              console.log('SW registered successfully:', registration);
-            })
-            .catch((error) => {
-              console.error('SW registration failed:', error);
-            });
-        });
-      } catch (error) {
-        console.error('Error setting up service worker:', error);
-      }
-    }, 1000);
-  } else {
-    console.log('registerServiceWorker: Service workers not supported');
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        navigator.serviceWorker
+          .register('/sw.js')
+          .then((registration) => {
+            console.log('Service Worker enregistré:', registration.scope);
+          })
+          .catch((error) => {
+            console.error('Erreur lors de l\'enregistrement du Service Worker:', error);
+          });
+      }, 1000);
+    });
   }
 }

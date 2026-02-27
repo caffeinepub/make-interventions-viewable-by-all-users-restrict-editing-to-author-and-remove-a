@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
-import { AlertTriangle, ShieldOff, Shield } from 'lucide-react';
+import { useState } from 'react';
+import { Client, ExternalBlob } from '../../backend';
+import { useMarkAsBlacklisted, useUnmarkAsBlacklisted } from '../../hooks/useBlacklist';
+import { useInternetIdentity } from '../../hooks/useInternetIdentity';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import MediaPicker from '../media/MediaPicker';
+import MediaPreview from '../media/MediaPreview';
+import { AlertTriangle, ShieldOff, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,81 +18,78 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useMarkAsBlacklisted, useUnmarkAsBlacklisted } from '../../hooks/useBlacklist';
-import { Client, ExternalBlob } from '../../backend';
-import MediaPicker from '../media/MediaPicker';
-import MediaPreview from '../media/MediaPreview';
 
 interface BlacklistPanelProps {
-  clientId: string;
   client: Client;
+  clientId: string;
 }
 
-export default function BlacklistPanel({ clientId, client }: BlacklistPanelProps) {
-  const markBlacklisted = useMarkAsBlacklisted(clientId);
-  const unmarkBlacklisted = useUnmarkAsBlacklisted(clientId);
-
-  const [showMarkForm, setShowMarkForm] = useState(false);
-  const [showUnmarkConfirm, setShowUnmarkConfirm] = useState(false);
+export default function BlacklistPanel({ client, clientId }: BlacklistPanelProps) {
+  const { identity } = useInternetIdentity();
   const [comments, setComments] = useState('');
   const [media, setMedia] = useState<ExternalBlob[]>([]);
+  const [showForm, setShowForm] = useState(false);
 
-  const handleMark = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await markBlacklisted.mutateAsync({ comments, media });
-    setComments('');
-    setMedia([]);
-    setShowMarkForm(false);
+  const { mutate: markBlacklisted, isPending: isMarking } = useMarkAsBlacklisted();
+  const { mutate: unmarkBlacklisted, isPending: isUnmarking } = useUnmarkAsBlacklisted();
+
+  if (!identity) return null;
+
+  const handleMark = () => {
+    markBlacklisted(
+      { clientId, comments, media },
+      {
+        onSuccess: () => {
+          setShowForm(false);
+          setComments('');
+          setMedia([]);
+        },
+      }
+    );
   };
 
-  const handleUnmark = async () => {
-    await unmarkBlacklisted.mutateAsync();
-    setShowUnmarkConfirm(false);
+  const handleUnmark = () => {
+    unmarkBlacklisted({ clientId });
   };
 
   if (client.isBlacklisted) {
     return (
-      <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-destructive" />
-          <span className="font-semibold text-destructive text-sm">Client sur liste noire</span>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-foreground">Liste noire</h2>
+          <Badge variant="destructive">Blacklisté</Badge>
         </div>
-
         {client.blacklistComments && (
-          <p className="text-sm text-foreground">{client.blacklistComments}</p>
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+            <p className="text-sm text-foreground">{client.blacklistComments}</p>
+          </div>
         )}
-
         {client.blacklistMedia.length > 0 && (
-          <MediaPreview media={client.blacklistMedia} clickable />
+          <MediaPreview media={client.blacklistMedia} />
         )}
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowUnmarkConfirm(true)}
-          className="self-start"
-        >
-          <ShieldOff className="mr-2 h-3.5 w-3.5" />
-          Retirer de la liste noire
-        </Button>
-
-        <AlertDialog open={showUnmarkConfirm} onOpenChange={setShowUnmarkConfirm}>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" className="gap-2 self-start" disabled={isUnmarking}>
+              {isUnmarking ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ShieldOff className="w-4 h-4" />
+              )}
+              Retirer de la liste noire
+            </Button>
+          </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Retirer de la liste noire ?</AlertDialogTitle>
               <AlertDialogDescription>
-                Ce client sera retiré de la liste noire et pourra à nouveau être mis à jour.
+                Cette action retirera ce client de la liste noire. Êtes-vous sûr ?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Annuler</AlertDialogCancel>
-              <AlertDialogAction onClick={handleUnmark} disabled={unmarkBlacklisted.isPending}>
-                {unmarkBlacklisted.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Confirmer
-              </AlertDialogAction>
+              <AlertDialogAction onClick={handleUnmark}>Confirmer</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -96,76 +98,64 @@ export default function BlacklistPanel({ clientId, client }: BlacklistPanelProps
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Shield className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium text-foreground">Liste noire</span>
-        </div>
-        {!showMarkForm && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowMarkForm(true)}
-          >
-            <AlertTriangle className="mr-2 h-3.5 w-3.5 text-destructive" />
-            Marquer
-          </Button>
-        )}
+        <h2 className="font-semibold text-foreground">Liste noire</h2>
+        <Badge variant="secondary">Non blacklisté</Badge>
       </div>
-
-      {showMarkForm && (
-        <form onSubmit={handleMark} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="blacklist-comments">Raison</Label>
+      {!showForm ? (
+        <Button
+          variant="outline"
+          className="gap-2 self-start border-destructive text-destructive hover:bg-destructive/10"
+          onClick={() => setShowForm(true)}
+        >
+          <AlertTriangle className="w-4 h-4" />
+          Ajouter à la liste noire
+        </Button>
+      ) : (
+        <div className="flex flex-col gap-3 bg-card border border-border rounded-xl p-4">
+          <div className="flex flex-col gap-2">
+            <Label>Commentaires</Label>
             <Textarea
-              id="blacklist-comments"
-              placeholder="Raison de la mise sur liste noire..."
               value={comments}
-              onChange={e => setComments(e.target.value)}
+              onChange={(e) => setComments(e.target.value)}
+              placeholder="Raison du blacklistage..."
               rows={3}
+              disabled={isMarking}
             />
           </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label>Preuves (optionnel)</Label>
-            <MediaPicker
-              media={media}
-              onAdd={(blob) => setMedia(prev => [...prev, blob])}
-              onRemove={(index) => setMedia(prev => prev.filter((_, i) => i !== index))}
-            />
+          <div className="flex flex-col gap-2">
+            <Label>Pièces jointes</Label>
+            <MediaPicker media={media} onChange={setMedia} disabled={isMarking} />
           </div>
-
           <div className="flex gap-2">
             <Button
-              type="button"
               variant="outline"
-              size="sm"
               onClick={() => {
-                setShowMarkForm(false);
+                setShowForm(false);
                 setComments('');
                 setMedia([]);
               }}
+              disabled={isMarking}
             >
               Annuler
             </Button>
             <Button
-              type="submit"
               variant="destructive"
-              size="sm"
-              disabled={markBlacklisted.isPending}
+              onClick={handleMark}
+              disabled={isMarking}
             >
-              {markBlacklisted.isPending ? (
+              {isMarking ? (
                 <>
-                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                  Traitement...
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Enregistrement...
                 </>
               ) : (
-                'Confirmer'
+                'Confirmer le blacklistage'
               )}
             </Button>
           </div>
-        </form>
+        </div>
       )}
     </div>
   );

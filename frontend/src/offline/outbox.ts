@@ -1,72 +1,26 @@
-interface OfflineOperation {
+import { addToOutbox, getOutboxItems, removeFromOutbox } from './db';
+
+export interface OutboxOperation {
   id?: number;
   type: string;
-  data: any;
-  timestamp: number;
+  payload: Record<string, unknown>;
+  timestamp?: number;
 }
 
-const DB_NAME = 'offline-operations';
-const DB_VERSION = 1;
-const STORE_NAME = 'operations';
-
-function openDatabase(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, {
-          keyPath: 'id',
-          autoIncrement: true,
-        });
-        store.createIndex('by-timestamp', 'timestamp', { unique: false });
-      }
-    };
-  });
+export async function enqueue(operation: Omit<OutboxOperation, 'id' | 'timestamp'>): Promise<void> {
+  await addToOutbox(operation as Record<string, unknown>);
 }
 
-export async function enqueueOfflineOperation(operation: Omit<OfflineOperation, 'id'>): Promise<void> {
-  const db = await openDatabase();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.add(operation);
-
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-
-    transaction.oncomplete = () => db.close();
-  });
+export async function getAll(): Promise<OutboxOperation[]> {
+  const items = await getOutboxItems();
+  return items.map((item) => ({
+    id: item.id,
+    type: (item.type as string) || '',
+    payload: (item.payload as Record<string, unknown>) || {},
+    timestamp: item.timestamp as number | undefined,
+  }));
 }
 
-export async function getOfflineOperations(): Promise<OfflineOperation[]> {
-  const db = await openDatabase();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.getAll();
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-
-    transaction.oncomplete = () => db.close();
-  });
-}
-
-export async function removeOfflineOperation(id: number): Promise<void> {
-  const db = await openDatabase();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.delete(id);
-
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-
-    transaction.oncomplete = () => db.close();
-  });
+export async function remove(id: number): Promise<void> {
+  await removeFromOutbox(id);
 }

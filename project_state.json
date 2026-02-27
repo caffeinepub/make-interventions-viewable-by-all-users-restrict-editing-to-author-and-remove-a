@@ -3,30 +3,19 @@
   "projectStateVersion": 3,
   "summary": "New project",
   "architectural_notes": [],
-  "known_issues": [
-    "Error occurs before authentication/login screen is reached"
-  ],
-  "isFixRequest": true,
+  "known_issues": [],
+  "isFixRequest": false,
   "existing_features": [
     {
-      "id": "feature-fix-the-unhandled-error-that-causes-the-app-to-crash-and-display-une-erreur-s-est-produite-erreur-inconnue-before-the-authentication-login-screen-is-even-shown-the-error-is-triggered-during-the-app-initialization-phase-before-internet-identity-loads-caught-by-the-errorboundary-component-and-renders-the-error-card-instead-of-the-login-page-identify-and-fix-the-root-cause-in-the-initialization-sequence-app-tsx-main-tsx-useinternetidentity-or-related-bootstrap-code-so-the-app-reliably-reaches-the-login-screen-on-first-load",
-      "title": "Fix the unhandled error that causes the app to crash and display 'Une erreur s'est produite / Erreur inconnue' before the authentication/login screen is even shown. The error is triggered during the app initialization phase (before Internet Identity loads), caught by the ErrorBoundary component, and renders the error card instead of the login page. Identify and fix the root cause in the initialization sequence (App.tsx, main.tsx, useInternetIdentity, or related bootstrap code) so the app reliably reaches the login screen on first load.",
+      "id": "feature-rebuild-the-full-application-backend-and-frontend-with-all-existing-data-models-and-features-intact-clients-interventions-user-profiles-media-blob-storage-technical-folder-blacklist-management-role-based-access-control-offline-sync-and-pwa-support-restoring-the-app-to-its-last-known-working-state-after-the-draft-expired",
+      "title": "Rebuild the full application (backend and frontend) with all existing data models and features intact: clients, interventions, user profiles, media/blob storage, technical folder, blacklist management, role-based access control, offline sync, and PWA support — restoring the app to its last known working state after the draft expired.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     }
   ],
-  "new_feature_requests": [
-    {
-      "id": "AR-2",
-      "summary": "Add defensive error handling in the app bootstrap and initialization code so that if an unexpected error does occur during startup, it is caught gracefully and the user is shown the login page or a recoverable state rather than a generic crash screen. Ensure all async initialization errors (e.g. from AuthClient, IndexedDB, service worker registration) are handled with try/catch blocks and do not propagate to the React error boundary.",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "status": "pending"
-    }
-  ],
+  "new_feature_requests": [],
   "projectName": "Vial Traite Service",
   "clarification_mode": "instant",
   "clarification_rounds": 0

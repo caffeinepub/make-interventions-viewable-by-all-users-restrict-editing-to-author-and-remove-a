@@ -3,11 +3,11 @@ import { useActor } from './useActor';
 import { ExternalBlob } from '../backend';
 import { toast } from 'sonner';
 
-export function useTechnicalFolder() {
+export function useListTechnicalFiles() {
   const { actor, isFetching } = useActor();
 
   return useQuery<[string, ExternalBlob][]>({
-    queryKey: ['technical-folder'],
+    queryKey: ['technicalFiles'],
     queryFn: async () => {
       if (!actor) return [];
       return actor.listTechnicalFiles();
@@ -21,16 +21,22 @@ export function useUploadTechnicalFile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { path: string; blob: ExternalBlob }) => {
-      if (!actor) throw new Error('Actor not available');
-      await actor.uploadTechnicalFileWithFolderPath(data.path, data.blob);
+    mutationFn: async ({
+      path,
+      blob,
+    }: {
+      path: string;
+      blob: ExternalBlob;
+    }) => {
+      if (!actor) throw new Error('Actor non disponible');
+      await actor.uploadTechnicalFileWithFolderPath(path, blob);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['technical-folder'] });
+      queryClient.invalidateQueries({ queryKey: ['technicalFiles'] });
       toast.success('Fichier téléchargé avec succès');
     },
-    onError: (error: any) => {
-      toast.error(`Erreur lors du téléchargement : ${error?.message ?? 'Erreur inconnue'}`);
+    onError: (error: Error) => {
+      toast.error(`Erreur lors du téléchargement: ${error.message}`);
     },
   });
 }
@@ -40,16 +46,16 @@ export function useDeleteTechnicalFile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (path: string) => {
-      if (!actor) throw new Error('Actor not available');
+    mutationFn: async ({ path }: { path: string }) => {
+      if (!actor) throw new Error('Actor non disponible');
       await actor.deleteTechnicalFileWithPath(path);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['technical-folder'] });
+      queryClient.invalidateQueries({ queryKey: ['technicalFiles'] });
       toast.success('Fichier supprimé avec succès');
     },
-    onError: (error: any) => {
-      toast.error(`Erreur lors de la suppression : ${error?.message ?? 'Erreur inconnue'}`);
+    onError: (error: Error) => {
+      toast.error(`Erreur lors de la suppression: ${error.message}`);
     },
   });
 }
@@ -59,16 +65,22 @@ export function useMoveTechnicalFile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { oldPath: string; newPath: string }) => {
-      if (!actor) throw new Error('Actor not available');
-      await actor.moveTechnicalFile(data.oldPath, data.newPath);
+    mutationFn: async ({
+      oldPath,
+      newPath,
+    }: {
+      oldPath: string;
+      newPath: string;
+    }) => {
+      if (!actor) throw new Error('Actor non disponible');
+      await actor.moveTechnicalFile(oldPath, newPath);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['technical-folder'] });
+      queryClient.invalidateQueries({ queryKey: ['technicalFiles'] });
       toast.success('Fichier déplacé avec succès');
     },
-    onError: (error: any) => {
-      toast.error(`Erreur lors du déplacement : ${error?.message ?? 'Erreur inconnue'}`);
+    onError: (error: Error) => {
+      toast.error(`Erreur lors du déplacement: ${error.message}`);
     },
   });
 }
@@ -78,16 +90,16 @@ export function useCreateFolder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (path: string) => {
-      if (!actor) throw new Error('Actor not available');
+    mutationFn: async ({ path }: { path: string }) => {
+      if (!actor) throw new Error('Actor non disponible');
       await actor.createFolder(path);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['technical-folder'] });
+      queryClient.invalidateQueries({ queryKey: ['technicalFiles'] });
       toast.success('Dossier créé avec succès');
     },
-    onError: (error: any) => {
-      toast.error(`Erreur lors de la création du dossier : ${error?.message ?? 'Erreur inconnue'}`);
+    onError: (error: Error) => {
+      toast.error(`Erreur lors de la création du dossier: ${error.message}`);
     },
   });
 }
@@ -97,16 +109,22 @@ export function useRenameFolder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { oldPath: string; newName: string }) => {
-      if (!actor) throw new Error('Actor not available');
-      await actor.renameFolder(data.oldPath, data.newName);
+    mutationFn: async ({
+      oldPath,
+      newName,
+    }: {
+      oldPath: string;
+      newName: string;
+    }) => {
+      if (!actor) throw new Error('Actor non disponible');
+      await actor.renameFolder(oldPath, newName);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['technical-folder'] });
+      queryClient.invalidateQueries({ queryKey: ['technicalFiles'] });
       toast.success('Dossier renommé avec succès');
     },
-    onError: (error: any) => {
-      toast.error(`Erreur lors du renommage : ${error?.message ?? 'Erreur inconnue'}`);
+    onError: (error: Error) => {
+      toast.error(`Erreur lors du renommage: ${error.message}`);
     },
   });
 }

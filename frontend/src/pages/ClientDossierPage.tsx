@@ -1,31 +1,69 @@
-import React, { useState } from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Edit, AlertTriangle, RefreshCw } from 'lucide-react';
+import { useGetClients } from '../hooks/useClients';
+import { Client } from '../backend';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { useClientById } from '../hooks/useClients';
-import InterventionList from '../components/interventions/InterventionList';
+import { ArrowLeft, AlertTriangle, RefreshCw, Phone, Mail, MapPin } from 'lucide-react';
 import BlacklistPanel from '../components/blacklist/BlacklistPanel';
+import InterventionList from '../components/interventions/InterventionList';
 import EditClientDialog from '../components/clients/EditClientDialog';
+import { Separator } from '@/components/ui/separator';
 
 export default function ClientDossierPage() {
-  // Use strict: false to avoid route path mismatch issues with pathless layout routes
-  const { clientId } = useParams({ strict: false }) as { clientId: string };
+  const params = useParams({ strict: false });
   const navigate = useNavigate();
-  const [showEdit, setShowEdit] = useState(false);
+  const clientParam = (params as Record<string, string>).clientId || '';
 
-  const decodedId = clientId ? decodeURIComponent(clientId) : '';
-  const { data: client, isLoading, isError, refetch } = useClientById(decodedId);
+  const { data: clients, isLoading, error, refetch } = useGetClients();
 
-  if (!clientId) {
+  // Decode client from param - find by index encoded in the param
+  const decodedParam = decodeURIComponent(clientParam);
+  const lastDash = decodedParam.lastIndexOf('-');
+  const indexStr = lastDash >= 0 ? decodedParam.substring(lastDash + 1) : '';
+  const index = parseInt(indexStr, 10);
+
+  const client: Client | undefined =
+    clients && !isNaN(index) && index < clients.length
+      ? clients[index]
+      : clients?.find((c) => c.info.name === decodedParam);
+
+  const clientId = client
+    ? `${client.info.name.toLowerCase().replace(/\s+/g, '-')}-${index}`
+    : clientParam;
+
+  if (isLoading) {
     return (
-      <div className="flex flex-col items-center gap-3 py-8 text-center p-4">
-        <AlertTriangle className="h-8 w-8 text-destructive" />
-        <p className="text-sm text-muted-foreground">Identifiant client manquant</p>
-        <Button variant="outline" size="sm" onClick={() => navigate({ to: '/' })}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-6">
+        <AlertTriangle className="w-12 h-12 text-destructive" />
+        <div className="text-center">
+          <h2 className="text-lg font-semibold">Erreur de chargement</h2>
+          <p className="text-muted-foreground text-sm mt-1">{(error as Error).message}</p>
+        </div>
+        <Button onClick={() => refetch()} variant="outline" className="gap-2">
+          <RefreshCw className="w-4 h-4" />
+          Réessayer
+        </Button>
+      </div>
+    );
+  }
+
+  if (!client) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-6">
+        <AlertTriangle className="w-12 h-12 text-muted-foreground" />
+        <div className="text-center">
+          <h2 className="text-lg font-semibold">Client introuvable</h2>
+          <p className="text-muted-foreground text-sm mt-1">Ce client n'existe pas ou a été supprimé.</p>
+        </div>
+        <Button onClick={() => navigate({ to: '/clients' })} variant="outline">
           Retour aux clients
         </Button>
       </div>
@@ -33,83 +71,69 @@ export default function ClientDossierPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => navigate({ to: '/' })}>
-          <ArrowLeft className="h-4 w-4" />
+    <div className="flex flex-col">
+      {/* Header */}
+      <div className="sticky top-0 bg-background z-10 border-b border-border px-4 py-3 flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate({ to: '/clients' })}>
+          <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-semibold flex-1 truncate">
-          {isLoading ? 'Chargement...' : client?.info.name ?? 'Client'}
-        </h1>
-        {client && (
-          <Button variant="outline" size="icon" onClick={() => setShowEdit(true)}>
-            <Edit className="h-4 w-4" />
-          </Button>
-        )}
+        <div className="flex-1 min-w-0">
+          <h1 className="font-semibold text-foreground truncate">{client.info.name}</h1>
+        </div>
+        <EditClientDialog client={client} clientId={clientId} />
       </div>
 
-      {isLoading && (
-        <div className="flex flex-col gap-3">
-          <Skeleton className="h-32 w-full rounded-xl" />
-          <Skeleton className="h-48 w-full rounded-xl" />
-        </div>
-      )}
+      <div className="px-4 py-4 flex flex-col gap-6">
+        {/* Blacklist badge */}
+        {client.isBlacklisted && (
+          <Badge variant="destructive" className="self-start">
+            ⚠ Liste noire
+          </Badge>
+        )}
 
-      {isError && (
-        <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <AlertTriangle className="h-8 w-8 text-destructive" />
-          <p className="text-sm text-muted-foreground">Erreur lors du chargement du client</p>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Réessayer
-          </Button>
-        </div>
-      )}
-
-      {!isLoading && !isError && client && (
-        <>
-          <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-foreground">{client.info.name}</h2>
-              {client.isBlacklisted && (
-                <Badge variant="destructive">Liste noire</Badge>
-              )}
-            </div>
-            <Separator />
-            <div className="grid grid-cols-1 gap-1 text-sm">
-              <div>
-                <span className="text-muted-foreground">Adresse : </span>
-                <span>{client.info.address.street}, {client.info.address.city}</span>
-                {client.info.address.state && <span>, {client.info.address.state}</span>}
-                {client.info.address.zip && <span> {client.info.address.zip}</span>}
+        {/* Contact info */}
+        <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">
+          <h2 className="font-semibold text-foreground">Informations de contact</h2>
+          <div className="flex flex-col gap-2">
+            {client.info.address.street && (
+              <div className="flex items-start gap-2 text-sm">
+                <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                <span className="text-foreground">
+                  {client.info.address.street}, {client.info.address.city}
+                  {client.info.address.zip && ` ${client.info.address.zip}`}
+                  {client.info.address.state && `, ${client.info.address.state}`}
+                </span>
               </div>
-              {client.info.phone && (
-                <div>
-                  <span className="text-muted-foreground">Téléphone : </span>
-                  <span>{client.info.phone}</span>
-                </div>
-              )}
-              {client.info.email && (
-                <div>
-                  <span className="text-muted-foreground">Email : </span>
-                  <span>{client.info.email}</span>
-                </div>
-              )}
-            </div>
+            )}
+            {client.info.phone && (
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+                <a href={`tel:${client.info.phone}`} className="text-primary">
+                  {client.info.phone}
+                </a>
+              </div>
+            )}
+            {client.info.email && (
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                <a href={`mailto:${client.info.email}`} className="text-primary">
+                  {client.info.email}
+                </a>
+              </div>
+            )}
           </div>
+        </div>
 
-          <BlacklistPanel clientId={decodedId} client={client} />
+        <Separator />
 
-          <InterventionList clientId={decodedId} />
+        {/* Blacklist panel */}
+        <BlacklistPanel client={client} clientId={clientId} />
 
-          <EditClientDialog
-            open={showEdit}
-            onOpenChange={setShowEdit}
-            client={client}
-            clientId={decodedId}
-          />
-        </>
-      )}
+        <Separator />
+
+        {/* Interventions */}
+        <InterventionList clientId={clientId} />
+      </div>
     </div>
   );
 }

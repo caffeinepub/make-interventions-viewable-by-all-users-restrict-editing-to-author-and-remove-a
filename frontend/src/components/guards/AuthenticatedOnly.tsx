@@ -1,41 +1,35 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useInternetIdentity } from '../../hooks/useInternetIdentity';
-import { Loader2 } from 'lucide-react';
 
-export default function AuthenticatedOnly({ children }: { children: React.ReactNode }) {
+interface AuthenticatedOnlyProps {
+  children: React.ReactNode;
+}
+
+export default function AuthenticatedOnly({ children }: AuthenticatedOnlyProps) {
   const { identity, isInitializing, loginStatus } = useInternetIdentity();
   const navigate = useNavigate();
 
-  const isStillInitializing = isInitializing || loginStatus === 'initializing';
+  const isLoading = isInitializing || loginStatus === 'logging-in';
 
   useEffect(() => {
-    if (!isStillInitializing && !identity) {
+    if (!isLoading && !identity) {
       navigate({ to: '/login' });
     }
-  }, [identity, isStillInitializing, navigate]);
+  }, [identity, isLoading, navigate]);
 
-  if (isStillInitializing) {
+  if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-muted-foreground">Vérification de l'authentification...</p>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground text-sm">Vérification de l'authentification...</p>
         </div>
       </div>
     );
   }
 
-  if (!identity) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Redirection...</p>
-        </div>
-      </div>
-    );
-  }
+  if (!identity) return null;
 
   return <>{children}</>;
 }

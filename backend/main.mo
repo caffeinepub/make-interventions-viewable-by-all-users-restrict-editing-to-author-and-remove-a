@@ -1,15 +1,15 @@
 import List "mo:core/List";
 import Map "mo:core/Map";
 import Text "mo:core/Text";
+import Iter "mo:core/Iter";
 import Array "mo:core/Array";
 import Time "mo:core/Time";
 import Order "mo:core/Order";
-import Iter "mo:core/Iter";
 import Principal "mo:core/Principal";
-import Runtime "mo:core/Runtime";
 import Auth "authorization/access-control";
 import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
+import Runtime "mo:core/Runtime";
 import MixinAuthorization "authorization/MixinAuthorization";
 
 actor {
@@ -184,13 +184,15 @@ actor {
     matches.toArray();
   };
 
+  // Blacklist management: marking a client as blacklisted requires admin privileges
+  // since it is a sensitive action with legal/business implications
   public shared ({ caller }) func markAsBlacklisted(
     clientId : Text,
     comments : Text,
     media : [Storage.ExternalBlob],
   ) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent marquer les clients comme sur la liste noire");
+    if (not (Auth.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Non autorisé : seuls les administrateurs peuvent mettre des clients sur la liste noire");
     };
     switch (clients.get(clientId)) {
       case (null) { Runtime.trap("Client non trouvé") };
@@ -207,9 +209,11 @@ actor {
     };
   };
 
+  // Removing a client from the blacklist is an even more sensitive reversal action
+  // and must be restricted to admins only
   public shared ({ caller }) func unmarkAsBlacklisted(clientId : Text) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent désigner les clients comme sur la liste noire");
+    if (not (Auth.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Non autorisé : seuls les administrateurs peuvent retirer des clients de la liste noire");
     };
     switch (clients.get(clientId)) {
       case (null) { Runtime.trap("Client non trouvé") };
@@ -272,7 +276,7 @@ actor {
       case (?list) {
         list.toArray().map(
           func(intervention) {
-            if (intervention.employee == caller) {
+            if (intervention.employee == caller or Auth.isAdmin(accessControlState, caller)) {
               { intervention with canEdit = true; canDelete = true };
             } else {
               { intervention with canEdit = false; canDelete = false };
@@ -303,7 +307,7 @@ actor {
         let updatedArray = interventionArray.map(
           func(intervention) {
             if (intervention.id == interventionId) {
-              if (intervention.employee != caller) {
+              if (intervention.employee != caller and not Auth.isAdmin(accessControlState, caller)) {
                 Runtime.trap("Non autorisé : vous ne pouvez mettre à jour que vos propres interventions");
               };
               found := true;
@@ -345,7 +349,7 @@ actor {
         let filteredArray = interventionArray.filter(
           func(intervention) {
             if (intervention.id == interventionId) {
-              if (intervention.employee != caller) {
+              if (intervention.employee != caller and not Auth.isAdmin(accessControlState, caller)) {
                 Runtime.trap("Non autorisé : vous ne pouvez supprimer que vos propres interventions");
               };
               found := true;
@@ -387,7 +391,7 @@ actor {
     matchingInterventions.toArray();
   };
 
-  // Media Management - FIXED: Added authorization checks
+  // Media Management
   public query ({ caller }) func getMediaItem(mediaId : Text) : async ?MediaItem {
     if (not (Auth.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent accéder aux médias");
@@ -566,8 +570,8 @@ actor {
   };
 
   public shared ({ caller }) func deleteTechnicalFileWithPath(path : Text) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent supprimer des fichiers techniques");
+    if (not (Auth.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Non autorisé : seuls les administrateurs peuvent supprimer des fichiers techniques");
     };
 
     let parts = path.split(#char('/')).toArray();
@@ -630,8 +634,8 @@ actor {
     oldPath : Text,
     newPath : Text,
   ) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent déplacer des fichiers techniques");
+    if (not (Auth.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Non autorisé : seuls les administrateurs peuvent déplacer des fichiers techniques");
     };
 
     // Find the file at the old path
@@ -660,8 +664,8 @@ actor {
   };
 
   public shared ({ caller }) func createFolder(path : Text) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent créer des dossiers");
+    if (not (Auth.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Non autorisé : seuls les administrateurs peuvent créer des dossiers");
     };
 
     // Split the path to get folder hierarchy
@@ -722,8 +726,8 @@ actor {
     oldPath : Text,
     newName : Text,
   ) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent renommer des dossiers");
+    if (not (Auth.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Non autorisé : seuls les administrateurs peuvent renommer des dossiers");
     };
 
     // Split the old path to find the folder to rename

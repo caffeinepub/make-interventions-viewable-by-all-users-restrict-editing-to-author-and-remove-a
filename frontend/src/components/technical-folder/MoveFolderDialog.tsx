@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,8 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { useTechnicalFolder, useMoveTechnicalFile } from '../../hooks/useTechnicalFolder';
+import { useListTechnicalFiles, useMoveTechnicalFile } from '../../hooks/useTechnicalFolder';
 import { ChevronRight, Folder, Loader2 } from 'lucide-react';
 
 interface MoveFolderDialogProps {
@@ -26,8 +25,8 @@ export default function MoveFolderDialog({
   filePath,
   currentFolderPath,
 }: MoveFolderDialogProps) {
-  const { data: files = [] } = useTechnicalFolder();
-  const moveFile = useMoveTechnicalFile();
+  const { data: files = [] } = useListTechnicalFiles();
+  const { mutate: moveFile, isPending } = useMoveTechnicalFile();
   const [selectedPath, setSelectedPath] = useState<string[]>([]);
 
   // Build folder structure from file paths
@@ -53,13 +52,11 @@ export default function MoveFolderDialog({
 
     folderStructure.forEach((folderPath) => {
       if (currentPathString === '') {
-        // Root level - show top-level folders
         const parts = folderPath.split('/');
         if (parts.length === 1) {
           folders.add(parts[0]);
         }
       } else if (folderPath.startsWith(currentPathString + '/')) {
-        // Show immediate subfolders
         const relativePath = folderPath.slice(currentPathString.length + 1);
         const parts = relativePath.split('/');
         if (parts.length === 1) {
@@ -79,14 +76,20 @@ export default function MoveFolderDialog({
     setSelectedPath(selectedPath.slice(0, index));
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     const fileName = filePath.split('/').pop() || '';
     const destinationPath =
       selectedPath.length > 0 ? `${selectedPath.join('/')}/${fileName}` : fileName;
 
-    await moveFile.mutateAsync({ oldPath: filePath, newPath: destinationPath });
-    setSelectedPath([]);
-    onOpenChange(false);
+    moveFile(
+      { oldPath: filePath, newPath: destinationPath },
+      {
+        onSuccess: () => {
+          setSelectedPath([]);
+          onOpenChange(false);
+        },
+      }
+    );
   };
 
   const handleCancel = () => {
@@ -150,25 +153,22 @@ export default function MoveFolderDialog({
                   const isCurrent = folderPath === currentFolderPath;
 
                   return (
-                    <Card
+                    <button
                       key={folderName}
-                      className={`cursor-pointer hover:bg-accent/50 transition-colors ${
-                        isCurrent ? 'opacity-50 cursor-not-allowed' : ''
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                        isCurrent
+                          ? 'opacity-50 cursor-not-allowed bg-muted'
+                          : 'hover:bg-accent/50 cursor-pointer'
                       }`}
                       onClick={() => !isCurrent && handleFolderClick(folderName)}
+                      disabled={isCurrent}
                     >
-                      <CardHeader className="py-2 px-3">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Folder className="h-4 w-4" />
-                          {folderName}
-                          {isCurrent && (
-                            <span className="text-xs text-muted-foreground ml-auto">
-                              (dossier actuel)
-                            </span>
-                          )}
-                        </CardTitle>
-                      </CardHeader>
-                    </Card>
+                      <Folder className="h-4 w-4 shrink-0" />
+                      <span className="flex-1">{folderName}</span>
+                      {isCurrent && (
+                        <span className="text-xs text-muted-foreground">(actuel)</span>
+                      )}
+                    </button>
                   );
                 })
               )}
@@ -186,8 +186,8 @@ export default function MoveFolderDialog({
           <Button variant="outline" onClick={handleCancel}>
             Annuler
           </Button>
-          <Button onClick={handleConfirm} disabled={!canConfirm || moveFile.isPending}>
-            {moveFile.isPending ? (
+          <Button onClick={handleConfirm} disabled={!canConfirm || isPending}>
+            {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Déplacement...
