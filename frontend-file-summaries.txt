@@ -1,5 +1,5 @@
 {
-  "frontend/src/App.tsx": "Main application component with TanStack Router, QueryClientProvider, ThemeProvider, and ErrorBoundary; adds an `AppInitializationGuard` that blocks router rendering until `InternetIdentityProvider` finishes initializing, preventing blank screens before authentication.",
+  "frontend/src/App.tsx": "Main application component with TanStack Router, QueryClientProvider, ThemeProvider, and ErrorBoundary; uses `useNavigate` + `useEffect` instead of `throw redirect` in `AuthenticatedLayout` to prevent router error boundary from triggering on unauthenticated access.",
   "frontend/src/pages/LoginPage.tsx": "Login page with Internet Identity authentication that waits for isInitializing before redirecting authenticated users, with loading state and French UI text.",
   "frontend/src/pages/ClientsPage.tsx": "Client list page with search functionality, proper navigation using TanStack Router's navigate function to client dossier page, error handling with retry button, and improved loading states with correct default imports.",
   "frontend/src/pages/ClientDossierPage.tsx": "Client detail page that uses `useParams({ strict: false })` to correctly read the `clientId` route parameter regardless of the pathless layout route nesting, displaying contact info, blacklist status, interventions list, and edit dialog with proper loading/error states.",
@@ -24,7 +24,7 @@
   "frontend/src/components/media/MediaPicker.tsx": "Media picker component supporting gallery file selection and camera capture via useCamera hook (imported from @/camera/useCamera), with thumbnail previews and remove functionality.",
   "frontend/src/components/media/MediaPreview.tsx": "Grid component displaying ExternalBlob media items with error handling and optional clickable mode that opens DocumentViewer, production-ready with minimal logging.",
   "frontend/src/components/blacklist/BlacklistPanel.tsx": "Blacklist management panel allowing authenticated users to add/update/remove blacklist status with comments and media, all text translated to French with correct AppBadge import.",
-  "frontend/src/offline/db.ts": "IndexedDB wrapper using native browser APIs for storing offline operation queue and cached data without external dependencies.",
+  "frontend/src/offline/db.ts": "IndexedDB wrapper using native browser APIs for storing offline operation queue and cached data; all operations are wrapped in try-catch blocks with graceful fallbacks when IndexedDB is unavailable or fails to initialize.",
   "frontend/src/offline/outbox.ts": "IndexedDB wrapper using native browser APIs for storing offline operation queue with proper TypeScript types and exported functions for enqueue, get, and remove operations.",
   "frontend/src/offline/syncEngine.ts": "Sync engine with improved error logging, better handling of unauthorized operations, and continued processing after individual operation failures.",
   "frontend/src/pwa/registerServiceWorker.ts": "Service worker registration helper with delayed registration, error handling, and console logging to prevent blocking initial app render.",
@@ -50,6 +50,6 @@
   "frontend/src/components/technical-folder/RenameFolderDialog.tsx": "Dialog component for renaming folders with validation (no slashes, non-empty), calls backend renameFolder method, all text in French.",
   "frontend/src/components/export/ExportDataDialog.tsx": "New dialog component for exporting application data in JSON or PDF format with progress indicator and French labels.",
   "frontend/src/hooks/useDataExport.ts": "Custom hook for exporting all application data (clients, interventions, technical files) with progress tracking and file generation in JSON or text format, now with proper TypeScript type annotation for the interventions array.",
-  "frontend/src/hooks/useActor.ts": "React Query hook for actor initialization that creates an authenticated or anonymous actor based on identity state; removed the non-existent `_initializeAccessControlWithSecret` call that was causing the startup crash.",
+  "frontend/src/hooks/useActor.ts": "React Query hook for actor initialization that creates an authenticated or anonymous actor based on identity state; removed the non-existent `_initializeAccessControlWithSecret` call and wrapped actor creation in try-catch to prevent startup crashes.",
   "frontend/src/main.tsx": "Application entry point that renders the app with `InternetIdentityProvider` only — the `QueryClientProvider` now lives solely in `App.tsx` to avoid duplicate provider conflicts."
 }

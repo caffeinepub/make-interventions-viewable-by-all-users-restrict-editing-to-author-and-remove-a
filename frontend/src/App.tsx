@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createRouter,
@@ -6,7 +6,7 @@ import {
   createRootRoute,
   createRoute,
   Outlet,
-  redirect,
+  useNavigate,
 } from '@tanstack/react-router';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from 'next-themes';
@@ -22,7 +22,12 @@ import { useInternetIdentity } from './hooks/useInternetIdentity';
 import { Loader2 } from 'lucide-react';
 import { registerServiceWorker } from './pwa/registerServiceWorker';
 
-registerServiceWorker();
+// Register service worker safely (non-blocking)
+try {
+  registerServiceWorker();
+} catch (e) {
+  console.warn('[App] Service worker registration failed silently:', e);
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,15 +51,26 @@ function LoadingScreen({ message = 'Chargement...' }: { message?: string }) {
 
 function AuthenticatedLayout() {
   const { identity, isInitializing, loginStatus } = useInternetIdentity();
+  const navigate = useNavigate();
+
+  const isStillInitializing = isInitializing || loginStatus === 'initializing';
+
+  useEffect(() => {
+    if (!isStillInitializing && !identity) {
+      navigate({ to: '/login' }).catch(() => {
+        window.location.href = '/login';
+      });
+    }
+  }, [identity, isStillInitializing, navigate]);
 
   // While initializing, show a loading spinner — do NOT redirect yet
-  if (isInitializing || loginStatus === 'initializing') {
+  if (isStillInitializing) {
     return <LoadingScreen message="Vérification de l'authentification..." />;
   }
 
-  // Only redirect after initialization is complete and no identity found
+  // Not yet redirected — show a brief loading state
   if (!identity) {
-    throw redirect({ to: '/login' });
+    return <LoadingScreen message="Redirection..." />;
   }
 
   return (
@@ -123,7 +139,7 @@ const router = createRouter({
       <div className="w-full max-w-md bg-card border border-destructive rounded-xl p-6 text-center">
         <p className="text-destructive font-semibold mb-2">Une erreur s'est produite</p>
         <p className="text-sm text-muted-foreground mb-4">
-          {error instanceof Error ? error.message : 'Erreur inconnue'}
+          {error instanceof Error && error.message ? error.message : 'Erreur inconnue'}
         </p>
         <button
           onClick={() => window.location.reload()}

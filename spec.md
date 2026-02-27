@@ -1,13 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Fix the blank white screen that appears on app startup before authentication completes.
+**Goal:** Fix the crash that shows "Une erreur s'est produite / Erreur inconnue" before the login screen loads on app startup.
 
 **Planned changes:**
-- Add an ErrorBoundary in `App.tsx` to catch initialization errors and display a readable fallback UI instead of a blank screen.
-- Fix the initialization sequence in `App.tsx` so that route rendering only begins after the authentication state is fully initialized.
-- Update the `AuthenticatedOnly` guard to show a loading spinner while authentication state is still initializing, preventing access to undefined identity state.
-- Ensure the `QueryClientProvider` and router are set up in an order that prevents queries from firing before the identity is ready.
-- Display a loading spinner or the login page immediately on app launch instead of a blank screen.
+- Identify and fix the root cause of the unhandled error thrown during the app initialization phase (before Internet Identity/authentication loads) in App.tsx or related bootstrap code
+- Wrap all async initialization steps (AuthClient init, IndexedDB setup, service worker registration) in try/catch blocks so errors are caught and logged without propagating to the React ErrorBoundary
+- Ensure the app falls back gracefully to the LoginPage when a non-critical initialization step fails, instead of rendering the error card
+- Add a safe wrapper/provider around the initialization sequence without modifying `useInternetIdentity.ts` or `main.tsx` directly
 
-**User-visible outcome:** The app no longer shows a blank white screen on startup; users see a loading spinner or the login page immediately and can authenticate without needing to manually reload.
+**User-visible outcome:** Opening the app on mobile (Android Chrome) or any browser reliably shows the login/authentication screen on first load instead of the "Une erreur s'est produite" crash card.

@@ -1,60 +1,53 @@
 {
   "kind": "build_request",
-  "title": "Fix blank page / white screen error on app startup before authentication",
+  "title": "Fix crash on app startup before authentication screen",
   "projectName": "Vial Traite Service",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Fix the blank white screen that occurs on app startup before the authentication flow begins. The app should render a visible loading state or the login page immediately on launch without crashing.",
+      "text": "Fix the unhandled error that causes the app to crash and display 'Une erreur s'est produite / Erreur inconnue' before the authentication/login screen is even shown. The error is triggered during the app initialization phase (before Internet Identity loads), caught by the ErrorBoundary component, and renders the error card instead of the login page. Identify and fix the root cause in the initialization sequence (App.tsx, main.tsx, useInternetIdentity, or related bootstrap code) so the app reliably reaches the login screen on first load.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1",
-          "msg-2"
+          "msg-1"
         ],
         "quotes": [
-          "Toujours meme erreur des ouvertures de lappli avant autentification",
-          "Page blanche erreur avant authentification"
+          "Voila lerreur avant meme de midentifier"
         ]
       },
       "acceptanceCriteria": [
-        "Opening the app never results in a blank white screen at any point before authentication.",
-        "A loading spinner or the login page is displayed immediately on app launch.",
-        "No unhandled JavaScript errors are thrown during the initialization phase before the authentication check completes.",
-        "The ErrorBoundary in App.tsx catches any remaining initialization errors and displays a readable fallback UI instead of a blank screen.",
-        "The app correctly reaches the LoginPage or an authenticated route after initialization completes without requiring a manual reload."
+        "Opening the app at the root URL no longer shows the error card 'Une erreur s'est produite'",
+        "The login/authentication screen (LoginPage) is displayed correctly on fresh load without any prior interaction",
+        "No unhandled exceptions are thrown during the initialization phase before authentication",
+        "The ErrorBoundary does not trigger on normal app startup",
+        "The fix works on mobile Chrome (Android) as shown in the screenshots"
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Audit and fix the initialization sequence in App.tsx and the AuthenticatedOnly guard to ensure the Internet Identity authentication state is fully initialized before any route rendering or data fetching is attempted, preventing crashes from accessing undefined identity state.",
+      "text": "Add defensive error handling in the app bootstrap and initialization code so that if an unexpected error does occur during startup, it is caught gracefully and the user is shown the login page or a recoverable state rather than a generic crash screen. Ensure all async initialization errors (e.g. from AuthClient, IndexedDB, service worker registration) are handled with try/catch blocks and do not propagate to the React error boundary.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1",
-          "msg-2"
-        ],
-        "quotes": [
-          "Page blanche erreur avant authentification"
+          "msg-1"
         ]
       },
       "acceptanceCriteria": [
-        "The AuthenticatedOnly guard shows a loading spinner while authentication state is still initializing.",
-        "No component attempts to use the actor or identity before the AuthClient has finished its initialization.",
-        "The useActor hook does not throw or return an invalid actor during the initialization phase.",
-        "The QueryClientProvider and router are initialized in an order that prevents queries from firing before the identity is ready."
+        "Any error during bootstrap (AuthClient init, IndexedDB setup, service worker registration) is caught and logged without crashing the UI",
+        "The app falls back gracefully to the login screen even if a non-critical initialization step fails",
+        "The ErrorBoundary is not triggered by initialization-phase errors"
       ]
     }
   ],
   "constraints": [
-    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui.",
-    "All fixes must be contained in the frontend only; do not modify the backend."
+    "Do not modify frontend/src/hooks/useInternetIdentity.ts or frontend/src/main.tsx directly — propose safe alternatives or wrappers",
+    "Do not change the backend schema or Motoko code"
   ],
   "nonGoals": [
-    "Adding new features or pages.",
-    "Changing the visual design or theme.",
-    "Modifying backend logic or data models."
+    "Changing the visual design or theme of the app",
+    "Adding new features or pages",
+    "Modifying authentication logic beyond fixing the crash"
   ],
   "imageRequirements": {
     "required": [],

@@ -2,11 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-fix-the-blank-white-screen-that-occurs-on-app-startup-before-the-authentication-flow-begins-the-app-should-render-a-visible-loading-state-or-the-login-page-immediately-on-launch-without-crashing",
-      "featureTitle": "Fix the blank white screen that occurs on app startup before the authentication flow begins. The app should render a visible loading state or the login page immediately on launch without crashing.",
+      "featureId": "feature-fix-the-unhandled-error-that-causes-the-app-to-crash-and-display-une-erreur-s-est-produite-erreur-inconnue-before-the-authentication-login-screen-is-even-shown-the-error-is-triggered-during-the-app-initialization-phase-before-internet-identity-loads-caught-by-the-errorboundary-component-and-renders-the-error-card-instead-of-the-login-page-identify-and-fix-the-root-cause-in-the-initialization-sequence-app-tsx-main-tsx-useinternetidentity-or-related-bootstrap-code-so-the-app-reliably-reaches-the-login-screen-on-first-load",
+      "featureTitle": "Fix the unhandled error that causes the app to crash and display 'Une erreur s'est produite / Erreur inconnue' before the authentication/login screen is even shown. The error is triggered during the app initialization phase (before Internet Identity loads), caught by the ErrorBoundary component, and renders the error card instead of the login page. Identify and fix the root cause in the initialization sequence (App.tsx, main.tsx, useInternetIdentity, or related bootstrap code) so the app reliably reaches the login screen on first load.",
       "files": [
         "frontend/src/App.tsx",
-        "frontend/src/components/guards/AuthenticatedOnly.tsx"
+        "frontend/src/offline/db.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -20,29 +20,6 @@
       ],
       "testIds": [
         "REQ-1"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-audit-and-fix-the-initialization-sequence-in-app-tsx-and-the-authenticatedonly-guard-to-ensure-the-internet-identity-authentication-state-is-fully-initialized-before-any-route-rendering-or-data-fetching-is-attempted-preventing-crashes-from-accessing-undefined-identity-state",
-      "featureTitle": "Audit and fix the initialization sequence in App.tsx and the AuthenticatedOnly guard to ensure the Internet Identity authentication state is fully initialized before any route rendering or data fetching is attempted, preventing crashes from accessing undefined identity state.",
-      "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/components/common/ErrorBoundary.tsx",
-        "frontend/src/components/guards/AuthenticatedOnly.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "blob-storage@4.0.0",
-        "camera@1.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-2"
       ],
       "confidence": "high"
     }

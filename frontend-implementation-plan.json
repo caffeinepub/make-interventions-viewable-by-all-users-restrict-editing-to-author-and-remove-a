@@ -1,55 +1,69 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix blank page / white screen error on app startup before authentication",
+  "title": "Fix crash on app startup before authentication screen",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Fix the blank white screen that occurs on app startup before the authentication flow begins by ensuring a visible loading state or login page is displayed immediately on launch without crashing.",
+      "summary": "Fix the unhandled error causing app crash before login screen is shown",
       "acceptanceCriteria": [
-        "Opening the app never results in a blank white screen at any point before authentication.",
-        "A loading spinner or the login page is displayed immediately on app launch.",
-        "No unhandled JavaScript errors are thrown during the initialization phase before the authentication check completes.",
-        "The ErrorBoundary in App.tsx catches any remaining initialization errors and displays a readable fallback UI instead of a blank screen.",
-        "The app correctly reaches the LoginPage or an authenticated route after initialization completes without requiring a manual reload."
+        "Opening the app at the root URL no longer shows the error card 'Une erreur s'est produite'",
+        "The login/authentication screen (LoginPage) is displayed correctly on fresh load without any prior interaction",
+        "No unhandled exceptions are thrown during the initialization phase before authentication",
+        "The ErrorBoundary does not trigger on normal app startup",
+        "The fix works on mobile Chrome (Android) as shown in the screenshots"
       ],
       "file_operations": [
         {
+          "path": "frontend/src/main.tsx",
+          "operation": "modify",
+          "description": "Wrap the root React.render call in a try-catch block to catch and log any synchronous errors during app mount. Ensure service worker registration is non-blocking and failures do not prevent app initialization."
+        },
+        {
           "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Add an immediate loading state display before any Internet Identity initialization or routing logic runs. Wrap the entire router and query provider setup in a conditional render that shows a centered loading spinner while the InternetIdentityProvider initializes. Ensure the ErrorBoundary wrapper correctly catches and displays initialization errors instead of leaving a blank screen. Add a fallback loading UI that appears synchronously before any async authentication checks."
+          "description": "Remove the AuthenticatedOnly guard from the root RouterProvider component that redirects before Internet Identity finishes initializing. Replace with a conditional render that shows LoginPage directly while InternetIdentityProvider is still loading, avoiding premature redirects that trigger route errors."
         },
         {
           "path": "frontend/src/components/guards/AuthenticatedOnly.tsx",
           "operation": "modify",
-          "description": "Ensure the AuthenticatedOnly guard displays a loading spinner while the Internet Identity state (identity and loginStatus) is still initializing. Add an explicit check for loginStatus === 'initializing' or 'logging-in' before attempting to read the identity or redirect. Prevent any child components from rendering until the authentication state is fully resolved. Ensure the loading spinner is visible and centered during the entire initialization phase."
+          "description": "Add defensive checks to prevent rendering errors when authentication state is undefined or still initializing. Ensure the guard does not throw errors if useInternetIdentity returns an incomplete state during the first render cycle."
+        },
+        {
+          "path": "frontend/src/offline/db.ts",
+          "operation": "modify",
+          "description": "Wrap all IndexedDB initialization calls (openDB, store creation) in try-catch blocks to handle cases where IndexedDB is unavailable, blocked, or fails to open. Return a fallback or no-op implementation if IndexedDB setup fails, ensuring app initialization continues gracefully."
+        },
+        {
+          "path": "frontend/src/pwa/registerServiceWorker.ts",
+          "operation": "modify",
+          "description": "Wrap the service worker registration in a try-catch block and log errors without rethrowing. Ensure that service worker failures (e.g., due to insecure contexts or unsupported browsers) do not propagate to the React error boundary."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Audit and fix the initialization sequence in App.tsx and the AuthenticatedOnly guard to ensure the Internet Identity authentication state is fully initialized before any route rendering or data fetching is attempted, preventing crashes from accessing undefined identity state.",
+      "summary": "Add defensive error handling in app bootstrap and initialization code",
       "acceptanceCriteria": [
-        "The AuthenticatedOnly guard shows a loading spinner while authentication state is still initializing.",
-        "No component attempts to use the actor or identity before the AuthClient has finished its initialization.",
-        "The useActor hook does not throw or return an invalid actor during the initialization phase.",
-        "The QueryClientProvider and router are initialized in an order that prevents queries from firing before the identity is ready."
+        "Any error during bootstrap (AuthClient init, IndexedDB setup, service worker registration) is caught and logged without crashing the UI",
+        "The app falls back gracefully to the login screen even if a non-critical initialization step fails",
+        "The ErrorBoundary is not triggered by initialization-phase errors"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/hooks/useActor.ts",
           "operation": "modify",
-          "description": "Audit the initialization order of QueryClientProvider, InternetIdentityProvider, and the router. Ensure that the InternetIdentityProvider has fully initialized (loginStatus is not 'initializing') before rendering the router or any child components that might trigger queries. Add a synchronous loading state at the top level of App.tsx that prevents rendering any children until the identity provider has completed initialization. Coordinate with the ErrorBoundary to ensure any initialization errors are caught and displayed instead of crashing silently."
+          "description": "Wrap actor creation and AuthClient initialization in a try-catch block. If actor initialization fails, return a null actor and set an error state instead of throwing. Ensure useQuery is disabled when actor is null to prevent query execution before initialization completes."
         },
         {
-          "path": "frontend/src/components/guards/AuthenticatedOnly.tsx",
+          "path": "frontend/src/pages/LoginPage.tsx",
           "operation": "modify",
-          "description": "Add explicit guards to check if loginStatus is 'initializing' or 'logging-in' before attempting to read identity or redirect. Display a loading spinner during these states and prevent rendering of children or navigation until the identity is confirmed ready. Ensure no queries or actor calls can fire from child components while the guard is in a loading state."
+          "description": "Add error boundary fallback rendering within LoginPage component to catch and display initialization errors without blocking the login UI. Show a message if Internet Identity fails to initialize, with a retry button that reloads the page."
         },
         {
           "path": "frontend/src/components/common/ErrorBoundary.tsx",
           "operation": "modify",
-          "description": "Enhance the ErrorBoundary to catch initialization-phase errors specifically. Add logging to identify when errors occur during the authentication initialization sequence. Ensure the fallback UI is always visible and never results in a blank screen. Consider adding a specific message or recovery action for authentication initialization failures."
+          "description": "Update the ErrorBoundary component to detect if the error occurred during app initialization (before authentication) and render a specialized recovery message in French that directs users to reload or clear cache, rather than a generic error screen."
         }
       ]
     }
