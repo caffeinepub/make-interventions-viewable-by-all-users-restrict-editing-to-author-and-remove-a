@@ -16,6 +16,9 @@ export interface Address {
   'city' : string,
   'state' : string,
 }
+export type ApprovalStatus = { 'pending' : null } |
+  { 'approved' : null } |
+  { 'rejected' : null };
 export interface Client {
   'blacklistMedia' : Array<ExternalBlob>,
   'blacklistComments' : string,
@@ -49,6 +52,10 @@ export interface MediaItem {
   'createdAt' : Time,
 }
 export type Time = bigint;
+export interface UserApprovalInfo {
+  'status' : ApprovalStatus,
+  'principal' : Principal,
+}
 export interface UserProfile { 'name' : string }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
@@ -107,7 +114,9 @@ export interface _SERVICE {
   'getMediaItem' : ActorMethod<[string], [] | [MediaItem]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'isCallerApproved' : ActorMethod<[], boolean>,
   'listAllMediaItems' : ActorMethod<[], Array<MediaItem>>,
+  'listApprovals' : ActorMethod<[], Array<UserApprovalInfo>>,
   'listTechnicalFiles' : ActorMethod<[], Array<[string, ExternalBlob]>>,
   'markAsBlacklisted' : ActorMethod<
     [string, string, Array<ExternalBlob>],
@@ -115,14 +124,16 @@ export interface _SERVICE {
   >,
   'moveTechnicalFile' : ActorMethod<[string, string], undefined>,
   'renameFolder' : ActorMethod<[string, string], undefined>,
+  'requestApproval' : ActorMethod<[], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'searchClients' : ActorMethod<[string], Array<Client>>,
+  'setApproval' : ActorMethod<[Principal, ApprovalStatus], undefined>,
   'unmarkAsBlacklisted' : ActorMethod<[string], undefined>,
   'updateIntervention' : ActorMethod<
     [string, string, string, Array<ExternalBlob>, bigint, bigint, bigint],
     undefined
   >,
-  'uploadMediaItem' : ActorMethod<[ExternalBlob], string>,
+  'uploadMediaItem' : ActorMethod<[{ 'file' : ExternalBlob }], string>,
   'uploadTechnicalFileWithFolderPath' : ActorMethod<
     [string, ExternalBlob],
     undefined

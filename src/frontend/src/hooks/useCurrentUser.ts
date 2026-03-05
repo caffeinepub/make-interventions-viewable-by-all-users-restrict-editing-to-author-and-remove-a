@@ -1,16 +1,15 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useActor } from './useActor';
-import type { UserProfile } from '../backend';
-import type { Principal } from '@icp-sdk/core/principal';
-import { toast } from 'sonner';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import type { UserProfile } from "../backend";
+import { useActor } from "./useActor";
 
 export function useGetCallerUserProfile() {
   const { actor, isFetching: actorFetching } = useActor();
 
   const query = useQuery<UserProfile | null>({
-    queryKey: ['currentUserProfile'],
+    queryKey: ["currentUserProfile"],
     queryFn: async () => {
-      if (!actor) throw new Error('Acteur non disponible');
+      if (!actor) throw new Error("Actor non disponible");
       return actor.getCallerUserProfile();
     },
     enabled: !!actor && !actorFetching,
@@ -24,34 +23,23 @@ export function useGetCallerUserProfile() {
   };
 }
 
-export function useGetUserProfile(user: Principal) {
-  const { actor, isFetching } = useActor();
-
-  return useQuery<UserProfile | null>({
-    queryKey: ['userProfile', user.toString()],
-    queryFn: async () => {
-      if (!actor) throw new Error('Acteur non disponible');
-      return actor.getUserProfile(user);
-    },
-    enabled: !!actor && !isFetching && !!user,
-  });
-}
-
 export function useSaveCallerUserProfile() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (profile: UserProfile) => {
-      if (!actor) throw new Error('Acteur non disponible');
+      if (!actor) throw new Error("Actor non disponible");
       await actor.saveCallerUserProfile(profile);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-      toast.success('Profil enregistré avec succès');
+      queryClient.invalidateQueries({ queryKey: ["currentUserProfile"] });
+      toast.success("Profil enregistré avec succès");
     },
-    onError: (error: any) => {
-      toast.error(`Erreur: ${error.message || 'Échec de l\'enregistrement du profil'}`);
+    onError: (error: Error) => {
+      toast.error(
+        `Erreur lors de l'enregistrement du profil: ${error.message}`,
+      );
     },
   });
 }

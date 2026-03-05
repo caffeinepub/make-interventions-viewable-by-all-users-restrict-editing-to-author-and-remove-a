@@ -1,13 +1,20 @@
-import { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCw, Download } from 'lucide-react';
-import type { ExternalBlob } from '../../backend';
+} from "@/components/ui/dialog";
+import {
+  Download,
+  Maximize2,
+  Minimize2,
+  RotateCw,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import type { ExternalBlob } from "../../backend";
 
 interface DocumentViewerProps {
   open: boolean;
@@ -29,12 +36,14 @@ export default function DocumentViewer({
   const [initialDistance, setInitialDistance] = useState(0);
   const [initialZoom, setInitialZoom] = useState(100);
 
-  const fileExtension = fileName.split('.').pop()?.toLowerCase();
+  const fileExtension = fileName.split(".").pop()?.toLowerCase();
   const directUrl = blob.getDirectURL();
 
-  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(fileExtension || '');
-  const isPDF = fileExtension === 'pdf';
-  const isVideo = ['mp4', 'webm', 'ogg', 'mov'].includes(fileExtension || '');
+  const isImage = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(
+    fileExtension || "",
+  );
+  const isPDF = fileExtension === "pdf";
+  const isVideo = ["mp4", "webm", "ogg", "mov"].includes(fileExtension || "");
 
   useEffect(() => {
     if (!open) {
@@ -68,10 +77,14 @@ export default function DocumentViewer({
   const handleDownload = async () => {
     try {
       const bytes = await blob.getBytes();
-      const mimeType = isPDF ? 'application/pdf' : isImage ? 'image/jpeg' : 'application/octet-stream';
+      const mimeType = isPDF
+        ? "application/pdf"
+        : isImage
+          ? "image/jpeg"
+          : "application/octet-stream";
       const blobObj = new Blob([bytes], { type: mimeType });
       const url = URL.createObjectURL(blobObj);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = fileName;
       document.body.appendChild(a);
@@ -79,14 +92,14 @@ export default function DocumentViewer({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Erreur de téléchargement:', error);
+      console.error("Erreur de téléchargement:", error);
     }
   };
 
   const getDistance = (touch1: React.Touch, touch2: React.Touch) => {
     return Math.sqrt(
-      Math.pow(touch2.clientX - touch1.clientX, 2) +
-      Math.pow(touch2.clientY - touch1.clientY, 2)
+      (touch2.clientX - touch1.clientX) ** 2 +
+        (touch2.clientY - touch1.clientY) ** 2,
     );
   };
 
@@ -114,7 +127,7 @@ export default function DocumentViewer({
   const renderContent = () => {
     if (isImage) {
       return (
-        <div 
+        <div
           className="flex items-center justify-center overflow-auto touch-none"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -125,10 +138,10 @@ export default function DocumentViewer({
             alt={fileName}
             style={{
               transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-              transition: isPinching ? 'none' : 'transform 0.2s ease-out',
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
+              transition: isPinching ? "none" : "transform 0.2s ease-out",
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
             }}
             className="select-none"
           />
@@ -158,7 +171,9 @@ export default function DocumentViewer({
             style={{
               transform: `scale(${zoom / 100})`,
             }}
-          />
+          >
+            <track kind="captions" />
+          </video>
         </div>
       );
     }
@@ -180,12 +195,14 @@ export default function DocumentViewer({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className={`${isFullscreen ? 'max-w-full h-screen' : 'max-w-4xl h-[90vh]'} p-0 flex flex-col`}
+      <DialogContent
+        className={`${isFullscreen ? "max-w-full h-screen" : "max-w-4xl h-[90vh]"} p-0 flex flex-col`}
       >
         <DialogHeader className="px-6 py-4 border-b">
           <div className="flex items-center justify-between">
-            <DialogTitle className="truncate flex-1 mr-4">{fileName}</DialogTitle>
+            <DialogTitle className="truncate flex-1 mr-4">
+              {fileName}
+            </DialogTitle>
             <div className="flex items-center gap-1 shrink-0">
               {(isImage || isVideo) && (
                 <>
@@ -235,7 +252,7 @@ export default function DocumentViewer({
                 variant="ghost"
                 size="icon"
                 onClick={handleFullscreen}
-                title={isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
+                title={isFullscreen ? "Quitter plein écran" : "Plein écran"}
               >
                 {isFullscreen ? (
                   <Minimize2 className="h-4 w-4" />

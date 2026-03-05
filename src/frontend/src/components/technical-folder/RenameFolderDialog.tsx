@@ -1,107 +1,98 @@
-import { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { useRenameFolder } from '../../hooks/useTechnicalFolder';
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, Pencil } from "lucide-react";
+import { useState } from "react";
+import { useRenameFolder } from "../../hooks/useTechnicalFolder";
 
 interface RenameFolderDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   folderPath: string;
+  currentName: string;
 }
 
 export default function RenameFolderDialog({
-  open,
-  onOpenChange,
   folderPath,
+  currentName,
 }: RenameFolderDialogProps) {
-  const [newName, setNewName] = useState('');
+  const [open, setOpen] = useState(false);
+  const [newName, setNewName] = useState(currentName);
   const { mutate: renameFolder, isPending } = useRenameFolder();
 
-  const currentFolderName = folderPath.split('/').pop() || folderPath;
-
-  useEffect(() => {
-    if (open) {
-      setNewName(currentFolderName);
-    }
-  }, [open, currentFolderName]);
+  const isValid =
+    newName.trim().length > 0 &&
+    !newName.includes("/") &&
+    newName.trim() !== currentName;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!newName.trim()) {
-      return;
-    }
-
-    if (newName.includes('/')) {
-      return;
-    }
-
-    if (newName === currentFolderName) {
-      onOpenChange(false);
-      return;
-    }
-
+    if (!isValid) return;
     renameFolder(
       { oldPath: folderPath, newName: newName.trim() },
       {
-        onSuccess: () => {
-          onOpenChange(false);
-        },
-      }
+        onSuccess: () => setOpen(false),
+      },
     );
   };
 
+  const handleOpenChange = (o: boolean) => {
+    setOpen(o);
+    if (o) setNewName(currentName);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Renommer le dossier</DialogTitle>
-            <DialogDescription>
-              Entrez le nouveau nom pour le dossier "{currentFolderName}"
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="newName">Nouveau nom *</Label>
-              <Input
-                id="newName"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="nouveau-nom"
-                disabled={isPending}
-                required
-              />
-              {newName.includes('/') && (
-                <p className="text-sm text-destructive">
-                  Le nom ne peut pas contenir de "/"
-                </p>
-              )}
-            </div>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+          <Pencil className="w-3.5 h-3.5" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Renommer le dossier</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="rename-folder">Nouveau nom</Label>
+            <Input
+              id="rename-folder"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Nouveau nom du dossier"
+              autoFocus
+              disabled={isPending}
+            />
+            {newName.includes("/") && (
+              <p className="text-xs text-destructive">
+                Le nom ne peut pas contenir de "/"
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => setOpen(false)}
               disabled={isPending}
             >
               Annuler
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isPending || !newName.trim() || newName.includes('/') || newName === currentFolderName}
-            >
-              {isPending ? 'Renommage...' : 'Renommer'}
+            <Button type="submit" disabled={!isValid || isPending}>
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Renommage...
+                </>
+              ) : (
+                "Renommer"
+              )}
             </Button>
           </DialogFooter>
         </form>

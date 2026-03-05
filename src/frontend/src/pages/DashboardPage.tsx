@@ -1,167 +1,165 @@
-import { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import MobileLayout from '../components/layout/MobileLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
-import { useGetInterventionsByDate } from '../hooks/useInterventions';
-import { useGetUserProfile } from '../hooks/useCurrentUser';
-import type { Intervention } from '../backend';
-import InterventionDetailsDialog from '../components/interventions/InterventionDetailsDialog';
-import { useQueryClient } from '@tanstack/react-query';
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  AlertTriangle,
+  CalendarDays,
+  ChevronRight,
+  Loader2,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
+import { useState } from "react";
+import type { Intervention } from "../backend";
+import InterventionDetailsDialog from "../components/interventions/InterventionDetailsDialog";
+import { useGetInterventionsByDate } from "../hooks/useInterventions";
+import { useIsCallerAdmin } from "../hooks/useUserApproval";
 
-export default function DashboardPage() {
-  const navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedIntervention, setSelectedIntervention] = useState<Intervention | null>(null);
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-  const queryClient = useQueryClient();
-
-  const day = BigInt(selectedDate.getDate());
-  const month = BigInt(selectedDate.getMonth() + 1);
-  const year = BigInt(selectedDate.getFullYear());
-
-  const { data: interventions = [], isLoading, isError, error } = useGetInterventionsByDate(day, month, year);
-
-  const handleCardClick = (intervention: Intervention) => {
-    setSelectedIntervention(intervention);
-    setIsDetailsDialogOpen(true);
-  };
-
-  const handleRetry = () => {
-    queryClient.invalidateQueries({ 
-      queryKey: ['interventions', 'date', day.toString(), month.toString(), year.toString()] 
-    });
-  };
-
-  return (
-    <MobileLayout>
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate({ to: '/clients' })}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-2xl font-bold flex-1">Tableau de bord</h1>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Sélectionner une date</CardTitle>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              className="rounded-md border"
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Interventions du{' '}
-              {selectedDate.getDate().toString().padStart(2, '0')}/
-              {(selectedDate.getMonth() + 1).toString().padStart(2, '0')}/
-              {selectedDate.getFullYear()}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-8 gap-3">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Chargement des interventions...</p>
-              </div>
-            ) : isError ? (
-              <div className="flex flex-col items-center gap-4 text-center py-8">
-                <div className="p-3 rounded-full bg-destructive/10">
-                  <RefreshCw className="h-6 w-6 text-destructive" />
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">
-                    Impossible de charger les interventions
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {error instanceof Error 
-                      ? error.message.includes('Non autorisé')
-                        ? 'Accès refusé - Veuillez vous reconnecter'
-                        : 'Erreur de connexion - Vérifiez votre connexion Internet'
-                      : 'Une erreur est survenue lors du chargement des données'}
-                  </p>
-                  <Button onClick={handleRetry} variant="outline" size="sm">
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Réessayer
-                  </Button>
-                </div>
-              </div>
-            ) : interventions.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Aucune intervention pour cette date
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {interventions.map((intervention) => (
-                  <InterventionCard
-                    key={intervention.id}
-                    intervention={intervention}
-                    onClick={handleCardClick}
-                  />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {selectedIntervention && (
-        <InterventionDetailsDialog
-          open={isDetailsDialogOpen}
-          onOpenChange={setIsDetailsDialogOpen}
-          intervention={selectedIntervention}
-        />
-      )}
-    </MobileLayout>
-  );
+function formatDate(date: {
+  day: bigint;
+  month: bigint;
+  year: bigint;
+}): string {
+  const d = Number(date.day).toString().padStart(2, "0");
+  const m = Number(date.month).toString().padStart(2, "0");
+  const y = Number(date.year);
+  return `${d}/${m}/${y}`;
 }
 
-function InterventionCard({
-  intervention,
-  onClick,
-}: {
-  intervention: Intervention;
-  onClick: (intervention: Intervention) => void;
-}) {
-  const { data: authorProfile } = useGetUserProfile(intervention.employee);
+export default function DashboardPage() {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const navigate = useNavigate();
+  const { data: isAdmin } = useIsCallerAdmin();
+
+  const day = selectedDate.getDate();
+  const month = selectedDate.getMonth() + 1;
+  const year = selectedDate.getFullYear();
+
+  const {
+    data: interventions,
+    isLoading,
+    error,
+    refetch,
+  } = useGetInterventionsByDate(day, month, year);
 
   return (
-    <Card
-      className="cursor-pointer hover:bg-accent/50 transition-colors"
-      onClick={() => onClick(intervention)}
-    >
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">
-          Client: {intervention.clientId}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="text-sm space-y-1">
-        <p className="text-muted-foreground">
-          Par: {authorProfile?.name || 'Chargement...'}
-        </p>
-        {intervention.comments && (
-          <p className="line-clamp-2">{intervention.comments}</p>
-        )}
-        {intervention.media.length > 0 && (
-          <p className="text-xs text-muted-foreground">
-            📎 {intervention.media.length} fichier(s)
+    <div className="flex flex-col gap-6 px-4 py-4">
+      <div className="flex items-center gap-2">
+        <CalendarDays className="w-5 h-5 text-primary" />
+        <h1 className="text-xl font-bold text-foreground">Tableau de bord</h1>
+      </div>
+
+      {/* Calendar */}
+      <div className="flex justify-center">
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={(date) => date && setSelectedDate(date)}
+          className="rounded-xl border border-border bg-card shadow-sm"
+        />
+      </div>
+
+      {/* Interventions for selected date */}
+      <div className="flex flex-col gap-3">
+        <h2 className="font-semibold text-foreground">
+          Interventions du{" "}
+          {selectedDate.toLocaleDateString("fr-FR", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+        </h2>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-3 py-6">
+            <AlertTriangle className="w-8 h-8 text-destructive" />
+            <p className="text-sm text-muted-foreground text-center">
+              {(error as Error).message}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              className="gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Réessayer
+            </Button>
+          </div>
+        ) : !interventions || interventions.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">
+            Aucune intervention pour cette date
           </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {interventions.map((intervention: Intervention) => (
+              <li key={intervention.id}>
+                <InterventionDetailsDialog
+                  intervention={intervention}
+                  trigger={
+                    <button
+                      type="button"
+                      className="w-full bg-card border border-border rounded-xl p-4 text-left hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-foreground">
+                          {formatDate(intervention.date)}
+                        </span>
+                        {intervention.comments && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {intervention.comments}
+                          </p>
+                        )}
+                        {intervention.media.length > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            {intervention.media.length} pièce(s) jointe(s)
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  }
+                />
+              </li>
+            ))}
+          </ul>
         )}
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Administration section — admin only */}
+      {isAdmin && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-primary" />
+            <h2 className="font-semibold text-foreground">Administration</h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/admin/access" })}
+            className="w-full bg-card border border-border rounded-xl p-4 text-left hover:bg-muted/50 transition-colors flex items-center justify-between"
+            data-ocid="dashboard.admin_access_button"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Gestion des accès
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Approuver ou révoquer les accès salariés
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

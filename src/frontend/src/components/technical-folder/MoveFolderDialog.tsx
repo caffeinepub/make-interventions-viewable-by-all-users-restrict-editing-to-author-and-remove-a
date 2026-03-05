@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -6,69 +6,67 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { useListTechnicalFiles } from '../../hooks/useTechnicalFolder';
-import { ChevronRight, Folder } from 'lucide-react';
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ChevronRight, Folder, Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  useListTechnicalFiles,
+  useMoveTechnicalFile,
+} from "../../hooks/useTechnicalFolder";
 
 interface MoveFolderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentFilePath: string;
-  onConfirm: (destinationPath: string) => void;
+  filePath: string;
+  currentFolderPath: string;
 }
 
 export default function MoveFolderDialog({
   open,
   onOpenChange,
-  currentFilePath,
-  onConfirm,
+  filePath,
+  currentFolderPath,
 }: MoveFolderDialogProps) {
   const { data: files = [] } = useListTechnicalFiles();
+  const { mutate: moveFile, isPending } = useMoveTechnicalFile();
   const [selectedPath, setSelectedPath] = useState<string[]>([]);
-
-  // Extract current folder from file path
-  const currentFolder = currentFilePath.split('/').slice(0, -1).join('/');
 
   // Build folder structure from file paths
   const folderStructure = useMemo(() => {
     const folders = new Set<string>();
-    
-    files.forEach(([path]) => {
-      const parts = path.split('/');
-      // Add all folder paths
+
+    for (const [path] of files) {
+      const parts = path.split("/");
+      // Add all folder paths (exclude the file name itself)
       for (let i = 1; i < parts.length; i++) {
-        const folderPath = parts.slice(0, i).join('/');
+        const folderPath = parts.slice(0, i).join("/");
         folders.add(folderPath);
       }
-    });
+    }
 
     return Array.from(folders).sort();
   }, [files]);
 
   // Get folders at current navigation level
   const currentLevelFolders = useMemo(() => {
-    const currentPathString = selectedPath.join('/');
+    const currentPathString = selectedPath.join("/");
     const folders = new Set<string>();
 
-    folderStructure.forEach((folderPath) => {
-      if (currentPathString === '') {
-        // Root level - show top-level folders
-        const parts = folderPath.split('/');
+    for (const folderPath of folderStructure) {
+      if (currentPathString === "") {
+        const parts = folderPath.split("/");
         if (parts.length === 1) {
           folders.add(parts[0]);
         }
-      } else if (folderPath.startsWith(currentPathString + '/')) {
-        // Show immediate subfolders
+      } else if (folderPath.startsWith(`${currentPathString}/`)) {
         const relativePath = folderPath.slice(currentPathString.length + 1);
-        const parts = relativePath.split('/');
+        const parts = relativePath.split("/");
         if (parts.length === 1) {
           folders.add(parts[0]);
         }
       }
-    });
+    }
 
     return Array.from(folders).sort();
   }, [folderStructure, selectedPath]);
@@ -82,14 +80,21 @@ export default function MoveFolderDialog({
   };
 
   const handleConfirm = () => {
-    const fileName = currentFilePath.split('/').pop() || '';
-    const destinationPath = selectedPath.length > 0 
-      ? `${selectedPath.join('/')}/${fileName}`
-      : fileName;
-    
-    onConfirm(destinationPath);
-    setSelectedPath([]);
-    onOpenChange(false);
+    const fileName = filePath.split("/").pop() || "";
+    const destinationPath =
+      selectedPath.length > 0
+        ? `${selectedPath.join("/")}/${fileName}`
+        : fileName;
+
+    moveFile(
+      { oldPath: filePath, newPath: destinationPath },
+      {
+        onSuccess: () => {
+          setSelectedPath([]);
+          onOpenChange(false);
+        },
+      },
+    );
   };
 
   const handleCancel = () => {
@@ -97,8 +102,8 @@ export default function MoveFolderDialog({
     onOpenChange(false);
   };
 
-  const selectedPathString = selectedPath.join('/');
-  const isCurrentFolder = selectedPathString === currentFolder;
+  const selectedPathString = selectedPath.join("/");
+  const isCurrentFolder = selectedPathString === currentFolderPath;
   const canConfirm = !isCurrentFolder && selectedPath.length > 0;
 
   return (
@@ -123,7 +128,7 @@ export default function MoveFolderDialog({
               Racine
             </Button>
             {selectedPath.map((folder, index) => (
-              <div key={index} className="flex items-center gap-1">
+              <div key={folder} className="flex items-center gap-1">
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 <Button
                   variant="ghost"
@@ -146,31 +151,34 @@ export default function MoveFolderDialog({
                 </div>
               ) : (
                 currentLevelFolders.map((folderName) => {
-                  const folderPath = selectedPath.length > 0
-                    ? `${selectedPathString}/${folderName}`
-                    : folderName;
-                  const isCurrent = folderPath === currentFolder;
+                  const folderPath =
+                    selectedPath.length > 0
+                      ? `${selectedPathString}/${folderName}`
+                      : folderName;
+                  const isCurrent = folderPath === currentFolderPath;
 
                   return (
-                    <Card
+                    <button
+                      type="button"
                       key={folderName}
-                      className={`cursor-pointer hover:bg-accent/50 transition-colors ${
-                        isCurrent ? 'opacity-50 cursor-not-allowed' : ''
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                        isCurrent
+                          ? "opacity-50 cursor-not-allowed bg-muted"
+                          : "hover:bg-accent/50 cursor-pointer"
                       }`}
-                      onClick={() => !isCurrent && handleFolderClick(folderName)}
+                      onClick={() =>
+                        !isCurrent && handleFolderClick(folderName)
+                      }
+                      disabled={isCurrent}
                     >
-                      <CardHeader className="py-2 px-3">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Folder className="h-4 w-4" />
-                          {folderName}
-                          {isCurrent && (
-                            <span className="text-xs text-muted-foreground ml-auto">
-                              (dossier actuel)
-                            </span>
-                          )}
-                        </CardTitle>
-                      </CardHeader>
-                    </Card>
+                      <Folder className="h-4 w-4 shrink-0" />
+                      <span className="flex-1">{folderName}</span>
+                      {isCurrent && (
+                        <span className="text-xs text-muted-foreground">
+                          (actuel)
+                        </span>
+                      )}
+                    </button>
                   );
                 })
               )}
@@ -188,8 +196,15 @@ export default function MoveFolderDialog({
           <Button variant="outline" onClick={handleCancel}>
             Annuler
           </Button>
-          <Button onClick={handleConfirm} disabled={!canConfirm}>
-            Déplacer ici
+          <Button onClick={handleConfirm} disabled={!canConfirm || isPending}>
+            {isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Déplacement...
+              </>
+            ) : (
+              "Déplacer ici"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

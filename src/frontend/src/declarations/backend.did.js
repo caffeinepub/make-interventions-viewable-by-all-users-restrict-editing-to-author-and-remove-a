@@ -64,6 +64,15 @@ export const MediaItem = IDL.Record({
   'file' : ExternalBlob,
   'createdAt' : Time,
 });
+export const ApprovalStatus = IDL.Variant({
+  'pending' : IDL.Null,
+  'approved' : IDL.Null,
+  'rejected' : IDL.Null,
+});
+export const UserApprovalInfo = IDL.Record({
+  'status' : ApprovalStatus,
+  'principal' : IDL.Principal,
+});
 
 export const idlService = IDL.Service({
   '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -134,7 +143,9 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
   'listAllMediaItems' : IDL.Func([], [IDL.Vec(MediaItem)], ['query']),
+  'listApprovals' : IDL.Func([], [IDL.Vec(UserApprovalInfo)], ['query']),
   'listTechnicalFiles' : IDL.Func(
       [],
       [IDL.Vec(IDL.Tuple(IDL.Text, ExternalBlob))],
@@ -147,8 +158,10 @@ export const idlService = IDL.Service({
     ),
   'moveTechnicalFile' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'renameFolder' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'requestApproval' : IDL.Func([], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'searchClients' : IDL.Func([IDL.Text], [IDL.Vec(Client)], ['query']),
+  'setApproval' : IDL.Func([IDL.Principal, ApprovalStatus], [], []),
   'unmarkAsBlacklisted' : IDL.Func([IDL.Text], [], []),
   'updateIntervention' : IDL.Func(
       [
@@ -163,7 +176,11 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
-  'uploadMediaItem' : IDL.Func([ExternalBlob], [IDL.Text], []),
+  'uploadMediaItem' : IDL.Func(
+      [IDL.Record({ 'file' : ExternalBlob })],
+      [IDL.Text],
+      [],
+    ),
   'uploadTechnicalFileWithFolderPath' : IDL.Func(
       [IDL.Text, ExternalBlob],
       [],
@@ -233,6 +250,15 @@ export const idlFactory = ({ IDL }) => {
     'owner' : IDL.Principal,
     'file' : ExternalBlob,
     'createdAt' : Time,
+  });
+  const ApprovalStatus = IDL.Variant({
+    'pending' : IDL.Null,
+    'approved' : IDL.Null,
+    'rejected' : IDL.Null,
+  });
+  const UserApprovalInfo = IDL.Record({
+    'status' : ApprovalStatus,
+    'principal' : IDL.Principal,
   });
   
   return IDL.Service({
@@ -304,7 +330,9 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
     'listAllMediaItems' : IDL.Func([], [IDL.Vec(MediaItem)], ['query']),
+    'listApprovals' : IDL.Func([], [IDL.Vec(UserApprovalInfo)], ['query']),
     'listTechnicalFiles' : IDL.Func(
         [],
         [IDL.Vec(IDL.Tuple(IDL.Text, ExternalBlob))],
@@ -317,8 +345,10 @@ export const idlFactory = ({ IDL }) => {
       ),
     'moveTechnicalFile' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'renameFolder' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'requestApproval' : IDL.Func([], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'searchClients' : IDL.Func([IDL.Text], [IDL.Vec(Client)], ['query']),
+    'setApproval' : IDL.Func([IDL.Principal, ApprovalStatus], [], []),
     'unmarkAsBlacklisted' : IDL.Func([IDL.Text], [], []),
     'updateIntervention' : IDL.Func(
         [
@@ -333,7 +363,11 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
-    'uploadMediaItem' : IDL.Func([ExternalBlob], [IDL.Text], []),
+    'uploadMediaItem' : IDL.Func(
+        [IDL.Record({ 'file' : ExternalBlob })],
+        [IDL.Text],
+        [],
+      ),
     'uploadTechnicalFileWithFolderPath' : IDL.Func(
         [IDL.Text, ExternalBlob],
         [],

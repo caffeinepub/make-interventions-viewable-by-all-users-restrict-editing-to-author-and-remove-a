@@ -1,40 +1,62 @@
-import { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { Plus, Search, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import AppBadge from '@/components/common/AppBadge';
-import CreateClientDialog from '@/components/clients/CreateClientDialog';
-import { useGetClients } from '@/hooks/useClients';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  AlertTriangle,
+  ChevronRight,
+  RefreshCw,
+  Search,
+  UserPlus,
+} from "lucide-react";
+import { useState } from "react";
+import type { Client } from "../backend";
+import CreateClientDialog from "../components/clients/CreateClientDialog";
+import { useGetClients, useSearchClients } from "../hooks/useClients";
 
 export default function ClientsPage() {
+  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  const { data: clients = [], isLoading, error, refetch } = useGetClients();
+  const {
+    data: allClients,
+    isLoading: allLoading,
+    error: allError,
+    refetch: refetchAll,
+  } = useGetClients();
 
-  const filteredClients = clients.filter((client) =>
-    client.info.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const { data: searchResults, isLoading: searchLoading } =
+    useSearchClients(searchQuery);
+
+  const isSearching = searchQuery.trim().length > 0;
+  const clients = isSearching ? searchResults : allClients;
+  const isLoading = isSearching ? searchLoading : allLoading;
+  const error = allError;
+
+  const handleClientClick = (client: Client, index: number) => {
+    navigate({
+      to: `/clients/${encodeURIComponent(`${client.info.name}-${index}`)}`,
+    });
+  };
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <div className="text-center space-y-2">
-          <h2 className="text-xl font-semibold text-foreground">
-            Erreur de chargement des clients
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-6">
+        <AlertTriangle className="w-12 h-12 text-destructive" />
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-foreground">
+            Erreur de chargement
           </h2>
-          <p className="text-sm text-muted-foreground max-w-md">
-            {error instanceof Error ? error.message : 'Une erreur est survenue'}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Vérifiez la console pour plus de détails (Référence: ClientsPage)
+          <p className="text-muted-foreground text-sm mt-1">
+            {(error as Error).message}
           </p>
         </div>
-        <Button onClick={() => refetch()} variant="outline">
+        <Button
+          onClick={() => refetchAll()}
+          variant="outline"
+          className="gap-2"
+        >
+          <RefreshCw className="w-4 h-4" />
           Réessayer
         </Button>
       </div>
@@ -42,79 +64,80 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 pb-20">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Clients</h1>
-        <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Nouveau Client
-        </Button>
+    <div className="flex flex-col h-full">
+      {/* Search bar */}
+      <div className="sticky top-0 bg-background z-10 px-4 py-3 border-b border-border">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Rechercher un client..."
+            className="pl-9"
+          />
+        </div>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="text"
-          placeholder="Rechercher un client..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
+      {/* Client list */}
+      <div className="flex-1 overflow-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : !clients || clients.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3 px-6">
+            <p className="text-muted-foreground text-center">
+              {isSearching
+                ? "Aucun client trouvé pour cette recherche"
+                : "Aucun client enregistré"}
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {clients.map((client, index) => (
+              <li key={client.info.name}>
+                <button
+                  type="button"
+                  onClick={() => handleClientClick(client, index)}
+                  className="w-full flex items-center justify-between px-4 py-4 hover:bg-muted/50 transition-colors text-left"
+                >
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground truncate">
+                        {client.info.name}
+                      </span>
+                      {client.isBlacklisted && (
+                        <Badge
+                          variant="destructive"
+                          className="shrink-0 text-xs"
+                        >
+                          Liste noire
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-sm text-muted-foreground truncate">
+                      {client.info.address.city}
+                      {client.info.phone && ` • ${client.info.phone}`}
+                    </span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 ml-2" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* FAB */}
+      <div className="fixed bottom-20 right-4 z-30">
+        <CreateClientDialog
+          trigger={
+            <Button size="icon" className="w-14 h-14 rounded-full shadow-lg">
+              <UserPlus className="w-6 h-6" />
+            </Button>
+          }
         />
       </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center min-h-[40vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      ) : filteredClients.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            {searchQuery
-              ? 'Aucun client trouvé pour cette recherche'
-              : 'Aucun client enregistré'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredClients.map((client) => (
-            <Card
-              key={client.info.name}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => {
-                navigate({
-                  to: '/clients/$clientId',
-                  params: { clientId: client.info.name },
-                });
-              }}
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg">{client.info.name}</CardTitle>
-                  {client.isBlacklisted && (
-                    <AppBadge variant="destructive">Liste noire</AppBadge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>{client.info.address.street}</p>
-                  <p>
-                    {client.info.address.city}, {client.info.address.state}{' '}
-                    {client.info.address.zip}
-                  </p>
-                  {client.info.phone && <p>📞 {client.info.phone}</p>}
-                  {client.info.email && <p>✉️ {client.info.email}</p>}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      <CreateClientDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-      />
     </div>
   );
 }

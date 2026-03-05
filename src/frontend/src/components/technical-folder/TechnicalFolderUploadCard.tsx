@@ -1,149 +1,281 @@
-import { useState } from 'react';
+import { useCamera } from "@/camera/useCamera";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { useUploadTechnicalFile } from '../../hooks/useTechnicalFolder';
-import { ExternalBlob } from '../../backend';
-import { Progress } from '@/components/ui/progress';
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Camera, Loader2, Upload, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { ExternalBlob } from "../../backend";
+import { useUploadTechnicalFile } from "../../hooks/useTechnicalFolder";
 
 interface TechnicalFolderUploadCardProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   currentPath: string;
 }
 
 export default function TechnicalFolderUploadCard({
-  open,
-  onOpenChange,
   currentPath,
 }: TechnicalFolderUploadCardProps) {
-  const [fileName, setFileName] = useState('');
+  const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [cameraMode, setCameraMode] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const { mutate: uploadFile, isPending } = useUploadTechnicalFile();
+
+  const {
+    isActive,
+    isLoading: cameraLoading,
+    error: cameraError,
+    startCamera,
+    stopCamera,
+    capturePhoto,
+    videoRef,
+    canvasRef,
+  } = useCamera({ facingMode: "environment" });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      if (!fileName) {
-        setFileName(file.name);
-      }
+      setFileName(file.name);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCameraCapture = async () => {
+    const file = await capturePhoto();
+    if (file) {
+      setSelectedFile(file);
+      setFileName(`photo-${Date.now()}.jpg`);
+      await stopCamera();
+      setCameraMode(false);
+    }
+  };
+
+  const handleUpload = async () => {
     if (!selectedFile || !fileName.trim()) return;
 
-    try {
-      const arrayBuffer = await selectedFile.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      
-      const blob = ExternalBlob.fromBytes(uint8Array).withUploadProgress((percentage) => {
-        setUploadProgress(percentage);
-      });
+    const targetPath = currentPath
+      ? `${currentPath}/${fileName.trim()}`
+      : `documents/${fileName.trim()}`;
 
-      const fullPath = currentPath ? `${currentPath}/${fileName}` : fileName;
+    const bytes = new Uint8Array(await selectedFile.arrayBuffer());
+    const blob = ExternalBlob.fromBytes(bytes).withUploadProgress((pct) => {
+      setUploadProgress(pct);
+    });
 
-      uploadFile(
-        { path: fullPath, blob },
-        {
-          onSuccess: () => {
-            setFileName('');
-            setSelectedFile(null);
-            setUploadProgress(0);
-            onOpenChange(false);
-          },
-          onError: () => {
-            setUploadProgress(0);
-          },
-        }
-      );
-    } catch (error) {
-      console.error('Erreur lors de la préparation du fichier:', error);
-      setUploadProgress(0);
-    }
+    uploadFile(
+      { path: targetPath, blob },
+      {
+        onSuccess: () => {
+          setOpen(false);
+          resetForm();
+        },
+      },
+    );
   };
 
-  const handleClose = () => {
-    if (!isPending) {
-      setFileName('');
-      setSelectedFile(null);
-      setUploadProgress(0);
-      onOpenChange(false);
-    }
+  const resetForm = () => {
+    setSelectedFile(null);
+    setFileName("");
+    setUploadProgress(0);
+    setCameraMode(false);
+  };
+
+  const handleOpenCamera = async () => {
+    setCameraMode(true);
+    await startCamera();
+  };
+
+  const handleCloseCamera = async () => {
+    await stopCamera();
+    setCameraMode(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) resetForm();
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button size="sm" className="gap-2">
+          <Upload className="w-4 h-4" />
+          Uploader
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Télécharger un fichier</DialogTitle>
-            <DialogDescription>
-              Sélectionnez un fichier à télécharger dans le dossier technique
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="file">Fichier *</Label>
-              <Input
-                id="file"
-                type="file"
-                onChange={handleFileSelect}
-                disabled={isPending}
-                accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="fileName">Nom du fichier *</Label>
-              <Input
-                id="fileName"
-                value={fileName}
-                onChange={(e) => setFileName(e.target.value)}
-                placeholder="document.pdf"
-                disabled={isPending}
-                required
-              />
-            </div>
-            {currentPath && (
-              <p className="text-sm text-muted-foreground">
-                Chemin: {currentPath}/{fileName || '...'}
-              </p>
-            )}
-            {isPending && uploadProgress > 0 && (
-              <div className="space-y-2">
-                <Progress value={uploadProgress} />
-                <p className="text-sm text-center text-muted-foreground">
-                  Téléchargement: {Math.round(uploadProgress)}%
-                </p>
+        <DialogHeader>
+          <DialogTitle>Télécharger un fichier</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          {currentPath && (
+            <p className="text-sm text-muted-foreground">
+              Dossier cible:{" "}
+              <span className="font-medium text-foreground">{currentPath}</span>
+            </p>
+          )}
+
+          {!cameraMode ? (
+            <>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isPending}
+                >
+                  <Upload className="w-4 h-4" />
+                  Choisir un fichier
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleOpenCamera}
+                  disabled={isPending}
+                  className="gap-2"
+                >
+                  <Camera className="w-4 h-4" />
+                  Caméra
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  disabled={isPending}
+                />
               </div>
+
+              {selectedFile && (
+                <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+                  <span className="text-sm text-foreground flex-1 truncate">
+                    {selectedFile.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      setFileName("");
+                    }}
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="file-name">Nom du fichier</Label>
+                <Input
+                  id="file-name"
+                  value={fileName}
+                  onChange={(e) => setFileName(e.target.value)}
+                  placeholder="nom-du-fichier.pdf"
+                  disabled={isPending}
+                />
+              </div>
+
+              {isPending && uploadProgress > 0 && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Téléchargement...
+                    </span>
+                    <span className="font-medium">{uploadProgress}%</span>
+                  </div>
+                  <Progress value={uploadProgress} />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <div className="relative w-full" style={{ minHeight: "240px" }}>
+                <video
+                  ref={videoRef}
+                  className="w-full rounded-lg bg-black"
+                  style={{
+                    minHeight: "240px",
+                    maxHeight: "360px",
+                    objectFit: "cover",
+                  }}
+                  playsInline
+                  muted
+                  autoPlay
+                />
+                <canvas ref={canvasRef} className="hidden" />
+                {cameraLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                  </div>
+                )}
+                {cameraError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-lg">
+                    <p className="text-white text-sm text-center px-4">
+                      {cameraError.message}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleCloseCamera}
+                  className="flex-1"
+                >
+                  Annuler
+                </Button>
+                <Button
+                  onClick={handleCameraCapture}
+                  disabled={!isActive || cameraLoading}
+                  className="flex-1"
+                >
+                  {cameraLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Capturer"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setOpen(false);
+              resetForm();
+            }}
+            disabled={isPending}
+          >
+            Annuler
+          </Button>
+          <Button
+            onClick={handleUpload}
+            disabled={
+              isPending || !selectedFile || !fileName.trim() || cameraMode
+            }
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Téléchargement...
+              </>
+            ) : (
+              "Télécharger"
             )}
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isPending}
-            >
-              Annuler
-            </Button>
-            <Button type="submit" disabled={isPending || !selectedFile || !fileName.trim()}>
-              {isPending ? 'Téléchargement...' : 'Télécharger'}
-            </Button>
-          </DialogFooter>
-        </form>
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

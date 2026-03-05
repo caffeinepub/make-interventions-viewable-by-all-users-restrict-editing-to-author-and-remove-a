@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -6,20 +6,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Download } from 'lucide-react';
-import { useDataExport } from '../../hooks/useDataExport';
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Download, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useDataExport } from "../../hooks/useDataExport";
 
 interface ExportDataDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export default function ExportDataDialog({ open, onOpenChange }: ExportDataDialogProps) {
-  const [format, setFormat] = useState<'json' | 'pdf'>('json');
+export default function ExportDataDialog({
+  open,
+  onOpenChange,
+}: ExportDataDialogProps) {
+  const [format, setFormat] = useState<"json" | "pdf">("json");
   const { exportData, isExporting, progress } = useDataExport();
 
   const handleExport = async () => {
@@ -40,7 +43,10 @@ export default function ExportDataDialog({ open, onOpenChange }: ExportDataDialo
         <div className="space-y-4 py-4">
           <div className="space-y-3">
             <Label>Format d'export</Label>
-            <RadioGroup value={format} onValueChange={(v) => setFormat(v as 'json' | 'pdf')}>
+            <RadioGroup
+              value={format}
+              onValueChange={(v) => setFormat(v as "json" | "pdf")}
+            >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="json" id="json" />
                 <Label htmlFor="json" className="font-normal cursor-pointer">
@@ -73,7 +79,11 @@ export default function ExportDataDialog({ open, onOpenChange }: ExportDataDialo
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isExporting}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isExporting}
+          >
             Annuler
           </Button>
           <Button onClick={handleExport} disabled={isExporting}>

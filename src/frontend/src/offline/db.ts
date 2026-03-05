@@ -1,96 +1,126 @@
-const DB_NAME = 'ClientDossiersDB';
+const DB_NAME = "vial-traite-offline";
 const DB_VERSION = 1;
 
-export interface OfflineOperation {
-  id?: number;
-  type: string;
-  data: any;
-  timestamp: number;
+let db: IDBDatabase | null = null;
+
+async function getDB(): Promise<IDBDatabase | null> {
+  if (db) return db;
+
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+      request.onupgradeneeded = (event) => {
+        const database = (event.target as IDBOpenDBRequest).result;
+        if (!database.objectStoreNames.contains("outbox")) {
+          const outboxStore = database.createObjectStore("outbox", {
+            keyPath: "id",
+            autoIncrement: true,
+          });
+          outboxStore.createIndex("timestamp", "timestamp", { unique: false });
+        }
+        if (!database.objectStoreNames.contains("cache")) {
+          database.createObjectStore("cache", { keyPath: "key" });
+        }
+      };
+
+      request.onsuccess = (event) => {
+        db = (event.target as IDBOpenDBRequest).result;
+        resolve(db);
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  } catch {
+    return null;
+  }
 }
 
-let dbInstance: IDBDatabase | null = null;
+export async function addToOutbox(
+  operation: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const database = await getDB();
+    if (!database) return;
 
-export async function getDB(): Promise<IDBDatabase> {
-  if (dbInstance) return dbInstance;
-
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      dbInstance = request.result;
-      resolve(request.result);
-    };
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      
-      if (!db.objectStoreNames.contains('outbox')) {
-        db.createObjectStore('outbox', { keyPath: 'id', autoIncrement: true });
-      }
-      if (!db.objectStoreNames.contains('cache')) {
-        db.createObjectStore('cache');
-      }
-    };
-  });
+    await new Promise<void>((resolve, reject) => {
+      const tx = database.transaction("outbox", "readwrite");
+      const store = tx.objectStore("outbox");
+      const request = store.add({ ...operation, timestamp: Date.now() });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  } catch {
+    // silent fallback
+  }
 }
 
-export async function addToOutbox(operation: OfflineOperation): Promise<void> {
-  const db = await getDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['outbox'], 'readwrite');
-    const store = transaction.objectStore('outbox');
-    const request = store.add(operation);
+export async function getOutboxItems(): Promise<
+  Array<Record<string, unknown> & { id: number }>
+> {
+  try {
+    const database = await getDB();
+    if (!database) return [];
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
-  });
-}
-
-export async function getAllFromOutbox(): Promise<OfflineOperation[]> {
-  const db = await getDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['outbox'], 'readonly');
-    const store = transaction.objectStore('outbox');
-    const request = store.getAll();
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-  });
+    return await new Promise((resolve, reject) => {
+      const tx = database.transaction("outbox", "readonly");
+      const store = tx.objectStore("outbox");
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  } catch {
+    return [];
+  }
 }
 
 export async function removeFromOutbox(id: number): Promise<void> {
-  const db = await getDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['outbox'], 'readwrite');
-    const store = transaction.objectStore('outbox');
-    const request = store.delete(id);
+  try {
+    const database = await getDB();
+    if (!database) return;
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
-  });
+    await new Promise<void>((resolve, reject) => {
+      const tx = database.transaction("outbox", "readwrite");
+      const store = tx.objectStore("outbox");
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  } catch {
+    // silent fallback
+  }
 }
 
-export async function cacheData(key: string, data: any): Promise<void> {
-  const db = await getDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['cache'], 'readwrite');
-    const store = transaction.objectStore('cache');
-    const request = store.put(data, key);
+export async function setCacheItem(key: string, value: unknown): Promise<void> {
+  try {
+    const database = await getDB();
+    if (!database) return;
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
-  });
+    await new Promise<void>((resolve, reject) => {
+      const tx = database.transaction("cache", "readwrite");
+      const store = tx.objectStore("cache");
+      const request = store.put({ key, value, updatedAt: Date.now() });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  } catch {
+    // silent fallback
+  }
 }
 
-export async function getCachedData(key: string): Promise<any> {
-  const db = await getDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['cache'], 'readonly');
-    const store = transaction.objectStore('cache');
-    const request = store.get(key);
+export async function getCacheItem<T>(key: string): Promise<T | null> {
+  try {
+    const database = await getDB();
+    if (!database) return null;
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-  });
+    return await new Promise((resolve, reject) => {
+      const tx = database.transaction("cache", "readonly");
+      const store = tx.objectStore("cache");
+      const request = store.get(key);
+      request.onsuccess = () => resolve(request.result?.value ?? null);
+      request.onerror = () => reject(request.error);
+    });
+  } catch {
+    return null;
+  }
 }

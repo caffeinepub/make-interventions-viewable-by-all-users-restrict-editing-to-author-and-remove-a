@@ -1,81 +1,81 @@
-import { useState } from 'react';
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { useCreateFolder } from '../../hooks/useTechnicalFolder';
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { FolderPlus, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useCreateFolder } from "../../hooks/useTechnicalFolder";
 
 interface CreateFolderDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   currentPath: string;
 }
 
 export default function CreateFolderDialog({
-  open,
-  onOpenChange,
   currentPath,
 }: CreateFolderDialogProps) {
-  const [folderName, setFolderName] = useState('');
+  const [open, setOpen] = useState(false);
+  const [folderName, setFolderName] = useState("");
   const { mutate: createFolder, isPending } = useCreateFolder();
+
+  const isValid = folderName.trim().length > 0 && !folderName.includes("/");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!folderName.trim()) {
-      return;
-    }
+    if (!isValid) return;
 
-    if (folderName.includes('/')) {
-      return;
-    }
+    const path = currentPath
+      ? `${currentPath}/${folderName.trim()}`
+      : folderName.trim();
 
-    const fullPath = currentPath ? `${currentPath}/${folderName}` : folderName;
-
-    createFolder(fullPath, {
-      onSuccess: () => {
-        setFolderName('');
-        onOpenChange(false);
+    createFolder(
+      { path },
+      {
+        onSuccess: () => {
+          setFolderName("");
+          setOpen(false);
+        },
       },
-    });
+    );
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Créer un dossier</DialogTitle>
-            <DialogDescription>
-              Entrez le nom du nouveau dossier
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="folderName">Nom du dossier *</Label>
-              <Input
-                id="folderName"
-                value={folderName}
-                onChange={(e) => setFolderName(e.target.value)}
-                placeholder="nom-du-dossier"
-                disabled={isPending}
-                required
-              />
-              {folderName.includes('/') && (
-                <p className="text-sm text-destructive">
-                  Le nom du dossier ne peut pas contenir de "/"
-                </p>
-              )}
-            </div>
-            {currentPath && (
-              <p className="text-sm text-muted-foreground">
-                Chemin: {currentPath}/{folderName || '...'}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-2">
+          <FolderPlus className="w-4 h-4" />
+          Nouveau dossier
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Nouveau dossier</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          {currentPath && (
+            <p className="text-xs text-muted-foreground">
+              Dans : <span className="font-mono">{currentPath}</span>
+            </p>
+          )}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="folder-name">Nom du dossier</Label>
+            <Input
+              id="folder-name"
+              value={folderName}
+              onChange={(e) => setFolderName(e.target.value)}
+              placeholder="Nom du dossier"
+              autoFocus
+              disabled={isPending}
+            />
+            {folderName.includes("/") && (
+              <p className="text-xs text-destructive">
+                Le nom ne peut pas contenir de "/"
               </p>
             )}
           </div>
@@ -83,13 +83,20 @@ export default function CreateFolderDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => setOpen(false)}
               disabled={isPending}
             >
               Annuler
             </Button>
-            <Button type="submit" disabled={isPending || !folderName.trim() || folderName.includes('/')}>
-              {isPending ? 'Création...' : 'Créer'}
+            <Button type="submit" disabled={!isValid || isPending}>
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Création...
+                </>
+              ) : (
+                "Créer"
+              )}
             </Button>
           </DialogFooter>
         </form>

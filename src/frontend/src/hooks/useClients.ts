@@ -1,31 +1,18 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useActor } from './useActor';
-import type { Client, Address } from '../backend';
-import { toast } from 'sonner';
-import { enqueueOfflineOperation } from '../offline/outbox';
-import { useOnlineStatus } from './useOnlineStatus';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import type { Address, Client } from "../backend";
+import { useActor } from "./useActor";
 
 export function useGetClients() {
   const { actor, isFetching } = useActor();
 
   return useQuery<Client[]>({
-    queryKey: ['clients'],
+    queryKey: ["clients"],
     queryFn: async () => {
-      if (!actor) {
-        return [];
-      }
-      
-      try {
-        const clients = await actor.getClients();
-        return clients;
-      } catch (error) {
-        console.error('Error fetching clients:', error);
-        throw error;
-      }
+      if (!actor) return [];
+      return actor.getClients();
     },
     enabled: !!actor && !isFetching,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 }
 
@@ -33,75 +20,88 @@ export function useGetClient(clientId: string) {
   const { actor, isFetching } = useActor();
 
   return useQuery<Client>({
-    queryKey: ['client', clientId],
+    queryKey: ["client", clientId],
     queryFn: async () => {
-      if (!actor) {
-        throw new Error('Acteur non disponible');
-      }
-      
-      try {
-        const client = await actor.getClient(clientId);
-        return client;
-      } catch (error) {
-        console.error('Error fetching client:', error);
-        throw error;
-      }
+      if (!actor) throw new Error("Actor non disponible");
+      return actor.getClient(clientId);
     },
     enabled: !!actor && !isFetching && !!clientId,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 }
 
-export function useCreateOrUpdateClient() {
+export function useSearchClients(searchString: string) {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<Client[]>({
+    queryKey: ["clients", "search", searchString],
+    queryFn: async () => {
+      if (!actor) return [];
+      if (!searchString.trim()) return actor.getClients();
+      return actor.searchClients(searchString);
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useCreateClient() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-  const { isOnline } = useOnlineStatus();
 
   return useMutation({
-    mutationFn: async (params: {
+    mutationFn: async ({
+      id,
+      name,
+      address,
+      phone,
+      email,
+    }: {
       id: string;
       name: string;
       address: Address;
       phone: string;
       email: string;
     }) => {
-      if (!isOnline) {
-        await enqueueOfflineOperation({
-          type: 'createOrUpdateClient',
-          data: params,
-          timestamp: Date.now(),
-        });
-        return;
-      }
-
-      if (!actor) {
-        throw new Error('Acteur non disponible');
-      }
-      
-      await actor.createOrUpdateClient(
-        params.id,
-        params.name,
-        params.address,
-        params.phone,
-        params.email
-      );
+      if (!actor) throw new Error("Actor non disponible");
+      await actor.createOrUpdateClient(id, name, address, phone, email);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      queryClient.invalidateQueries({ queryKey: ['client'] });
-      toast.success('Client enregistré avec succès');
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      toast.success("Client créé avec succès");
     },
-    onError: (error: any) => {
-      console.error('Error creating/updating client:', error);
-      const message = error.message || 'Échec de l\'enregistrement du client';
-      if (message.includes('Non autorisé')) {
-        toast.error('Accès refusé - Veuillez vous reconnecter');
-      } else if (message.includes('liste noire')) {
-        toast.error('Les clients sur la liste noire ne peuvent pas être modifiés');
-      } else {
-        toast.error(`Erreur: ${message}`);
-      }
+    onError: (error: Error) => {
+      toast.error(`Erreur lors de la création du client: ${error.message}`);
+    },
+  });
+}
+
+export function useUpdateClient() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      name,
+      address,
+      phone,
+      email,
+    }: {
+      id: string;
+      name: string;
+      address: Address;
+      phone: string;
+      email: string;
+    }) => {
+      if (!actor) throw new Error("Actor non disponible");
+      await actor.createOrUpdateClient(id, name, address, phone, email);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["client", variables.id] });
+      toast.success("Client mis à jour avec succès");
+    },
+    onError: (error: Error) => {
+      toast.error(`Erreur lors de la mise à jour du client: ${error.message}`);
     },
   });
 }

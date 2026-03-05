@@ -1,15 +1,29 @@
-# Specification
+# Vial Traite Service - Gestion Clientèle
 
-## Summary
-**Goal:** Restore the Vial Traite Service application to its last known working state after the draft expired, rebuilding both backend and frontend with all existing features and data models intact.
+## Current State
+Application de gestion clientèle avec :
+- Dossiers clients (coordonnées, interventions, liste noire)
+- Dossier technique (fichiers PDF, photos, vidéos avec sous-dossiers)
+- Système d'accès avec approbation par administrateur
+- Mode hors-ligne avec synchronisation
+- Design aux couleurs du logo Vial Traite Service
 
-**Planned changes:**
-- Rebuild the Motoko backend (single actor in `backend/main.mo`) with all data models: clients, interventions, user profiles, media/blob storage, technical folder, blacklist management, and role-based access control.
-- Restore the frontend with all pages: Dashboard (calendar + interventions by date), Clients (list with search and blacklist badges), Client Dossiers (contact info, blacklist status, intervention history), Interventions (add/edit/delete/view with media attachments), and Technical Folder (upload, create folders, rename, move, view files).
-- Restore Internet Identity authentication with proper post-login redirect.
-- Restore offline sync functionality: outbox, sync engine, and connectivity status bar.
-- Restore PWA manifest and service worker for installability.
-- Restore data export (JSON/PDF) dialog.
-- Preserve existing brand color theme defined in `frontend/src/index.css`.
+## Requested Changes (Diff)
 
-**User-visible outcome:** The app deploys, opens without crashing, and all existing features are fully functional — authentication, client management, interventions, technical folder, dashboard calendar, offline sync, PWA install, role-based access, and data export.
+### Add
+- Rien à ajouter
+
+### Modify
+- **Bug critique** : `getUserRole` dans `access-control.mo` retourne `#guest` au lieu de faire `Runtime.trap("User is not registered")` quand l'utilisateur n'est pas enregistré. Cela empêche toute connexion, y compris pour l'administrateur, car `hasPermission` et `isAdmin` plantent avant que l'utilisateur puisse s'initialiser.
+- `hasPermission` : vérification anonyme en premier, retourne `false` si anonyme
+- `isAdmin` : vérification anonyme en premier, retourne `false` si anonyme
+- `isCallerApproved` : doit retourner `true` si l'utilisateur est admin (via `Auth.isAdmin`) OU si approuvé dans `UserApproval`
+
+### Remove
+- Rien à supprimer
+
+## Implementation Plan
+1. Corriger `getUserRole` pour retourner `#guest` au lieu de `Runtime.trap` quand l'utilisateur n'est pas trouvé dans la map
+2. Ajouter vérification anonyme dans `hasPermission` et `isAdmin`
+3. S'assurer que `isCallerApproved` retourne `true` pour les admins
+4. Conserver tout le reste de l'application identique

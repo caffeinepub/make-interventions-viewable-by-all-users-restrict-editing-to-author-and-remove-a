@@ -1,52 +1,35 @@
+import Auth "authorization/access-control";
+import UserApproval "user-approval/approval";
+import Runtime "mo:core/Runtime";
 import List "mo:core/List";
+import Map "mo:core/Map";
 import Array "mo:core/Array";
+import Iter "mo:core/Iter";
+import Nat "mo:core/Nat";
+import Order "mo:core/Order";
 import Text "mo:core/Text";
 import Time "mo:core/Time";
-import Order "mo:core/Order";
-import Map "mo:core/Map";
-import Iter "mo:core/Iter";
-import Runtime "mo:core/Runtime";
-import Auth "authorization/access-control";
 import Principal "mo:core/Principal";
-import MixinStorage "blob-storage/Mixin";
-import Storage "blob-storage/Storage";
 import MixinAuthorization "authorization/MixinAuthorization";
+import Storage "blob-storage/Storage";
+import MixinStorage "blob-storage/Mixin";
 
 actor {
-  let clients = Map.empty<Text, Client>();
+  // Types
   type Folder = {
     name : Text;
     files : Map.Map<Text, Storage.ExternalBlob>;
     subfolders : Map.Map<Text, Folder>;
   };
 
-  // Top-level technical folder state
-  let technicalFolder = Map.empty<Text, Folder>();
-  let interventions = Map.empty<Text, List.List<Intervention>>();
-  let userProfiles = Map.empty<Principal, UserProfile>();
-  let accessControlState = Auth.initState();
-
-  // Media storage (conceptual)
-  // In practice, large files like photos should be stored off-chain and referenced here
-  let mediaStorage = Map.empty<Text, MediaItem>();
-
-  include MixinStorage();
-  include MixinAuthorization(accessControlState);
-
-  module Client {
-    public func compare(client1 : Client, client2 : Client) : Order.Order {
-      client1.info.name.compare(client2.info.name);
-    };
-  };
-
-  public type Address = {
+  type Address = {
     street : Text;
     city : Text;
     state : Text;
     zip : Text;
   };
 
-  public type ContactInfo = {
+  type ContactInfo = {
     name : Text;
     address : Address;
     phone : Text;
@@ -85,11 +68,56 @@ actor {
     createdAt : Time.Time;
   };
 
-  // User Profile methods
-  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs peuvent voir les profils");
+  // State
+  let clients = Map.empty<Text, Client>();
+  let technicalFolder = Map.empty<Text, Folder>();
+  let interventions = Map.empty<Text, List.List<Intervention>>();
+  let userProfiles = Map.empty<Principal, UserProfile>();
+  let mediaStorage = Map.empty<Text, MediaItem>();
+  let accessControlState = Auth.initState();
+  let approvalState = UserApproval.initState(accessControlState);
+
+  include MixinStorage();
+  include MixinAuthorization(accessControlState);
+
+  module Client {
+    public func compare(client1 : Client, client2 : Client) : Order.Order {
+      client1.info.name.compare(client2.info.name);
     };
+  };
+
+  // Critical: Approval + Authorization System
+  public query ({ caller }) func isCallerApproved() : async Bool {
+    Auth.hasPermission(accessControlState, caller, #admin) or UserApproval.isApproved(approvalState, caller);
+  };
+
+  public shared ({ caller }) func requestApproval() : async () {
+    if (Auth.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Admin ist bereits genehmigt");
+    };
+    UserApproval.requestApproval(approvalState, caller);
+  };
+
+  public shared ({ caller }) func setApproval(user : Principal, status : UserApproval.ApprovalStatus) : async () {
+    if (not Auth.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Non autorisé : seuls les admin peuvent approuver/désapprouver");
+    };
+    UserApproval.setApproval(approvalState, user, status);
+    if (status == #approved) {
+      Auth.assignRole(accessControlState, caller, user, #user);
+    };
+  };
+
+  public query ({ caller }) func listApprovals() : async [UserApproval.UserApprovalInfo] {
+    if (not Auth.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Non autorisé : seuls les admin peuvent voir les demandes d'approbation");
+    };
+    UserApproval.listApprovals(approvalState);
+  };
+
+  // User Profile Methods
+  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
+    checkAccess(caller);
     userProfiles.get(caller);
   };
 
@@ -101,24 +129,18 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs peuvent enregistrer des profils");
-    };
+    checkAccess(caller);
     userProfiles.add(caller, profile);
   };
 
-  // Client methods
+  // Client Methods
   public query ({ caller }) func getClients() : async [Client] {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent voir les clients");
-    };
+    checkAccess(caller);
     clients.values().toArray().sort();
   };
 
   public query ({ caller }) func getClient(clientId : Text) : async Client {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent voir les clients");
-    };
+    checkAccess(caller);
     switch (clients.get(clientId)) {
       case (null) { Runtime.trap("Client non trouvé") };
       case (?client) { client };
@@ -132,9 +154,7 @@ actor {
     phone : Text,
     email : Text,
   ) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent créer ou mettre à jour des clients");
-    };
+    checkAccess(caller);
     switch (clients.get(id)) {
       case (null) {
         let newClient : Client = {
@@ -173,9 +193,7 @@ actor {
   };
 
   public query ({ caller }) func searchClients(searchString : Text) : async [Client] {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent rechercher des clients");
-    };
+    checkAccess(caller);
     let matches = clients.values().filter(
       func(client) {
         client.info.name.toLower().contains(#text(searchString.toLower()));
@@ -189,9 +207,7 @@ actor {
     comments : Text,
     media : [Storage.ExternalBlob],
   ) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent marquer les clients comme sur la liste noire");
-    };
+    checkAccess(caller);
     switch (clients.get(clientId)) {
       case (null) { Runtime.trap("Client non trouvé") };
       case (?client) {
@@ -207,10 +223,10 @@ actor {
     };
   };
 
-  public shared ({ caller }) func unmarkAsBlacklisted(clientId : Text) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent désigner les clients comme sur la liste noire");
-    };
+  public shared ({ caller }) func unmarkAsBlacklisted(
+    clientId : Text,
+  ) : async () {
+    checkAccess(caller);
     switch (clients.get(clientId)) {
       case (null) { Runtime.trap("Client non trouvé") };
       case (?client) {
@@ -226,7 +242,7 @@ actor {
     };
   };
 
-  // Intervention management
+  // Intervention Management
   public shared ({ caller }) func addIntervention(
     clientId : Text,
     comments : Text,
@@ -235,9 +251,7 @@ actor {
     month : Nat,
     year : Nat,
   ) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent ajouter des interventions");
-    };
+    checkAccess(caller);
     switch (clients.get(clientId)) {
       case (null) { Runtime.trap("Client non trouvé") };
       case (?_) {
@@ -264,15 +278,13 @@ actor {
   };
 
   public query ({ caller }) func getClientInterventions(clientId : Text) : async [Intervention] {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent voir les interventions");
-    };
+    checkAccess(caller);
     switch (interventions.get(clientId)) {
       case (null) { [] };
       case (?list) {
         list.toArray().map(
           func(intervention) {
-            if (intervention.employee == caller) {
+            if (intervention.employee == caller or Auth.isAdmin(accessControlState, caller)) {
               { intervention with canEdit = true; canDelete = true };
             } else {
               { intervention with canEdit = false; canDelete = false };
@@ -292,9 +304,7 @@ actor {
     month : Nat,
     year : Nat,
   ) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent mettre à jour les interventions");
-    };
+    checkAccess(caller);
     switch (interventions.get(clientId)) {
       case (null) { Runtime.trap("Client non trouvé") };
       case (?list) {
@@ -303,7 +313,7 @@ actor {
         let updatedArray = interventionArray.map(
           func(intervention) {
             if (intervention.id == interventionId) {
-              if (intervention.employee != caller) {
+              if (intervention.employee != caller and not Auth.isAdmin(accessControlState, caller)) {
                 Runtime.trap("Non autorisé : vous ne pouvez mettre à jour que vos propres interventions");
               };
               found := true;
@@ -334,9 +344,7 @@ actor {
   };
 
   public shared ({ caller }) func deleteIntervention(interventionId : Text, clientId : Text) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent supprimer des interventions");
-    };
+    checkAccess(caller);
     switch (interventions.get(clientId)) {
       case (null) { Runtime.trap("Client non trouvé") };
       case (?list) {
@@ -345,7 +353,7 @@ actor {
         let filteredArray = interventionArray.filter(
           func(intervention) {
             if (intervention.id == interventionId) {
-              if (intervention.employee != caller) {
+              if (intervention.employee != caller and not Auth.isAdmin(accessControlState, caller)) {
                 Runtime.trap("Non autorisé : vous ne pouvez supprimer que vos propres interventions");
               };
               found := true;
@@ -365,10 +373,7 @@ actor {
   };
 
   public query ({ caller }) func getInterventionsByDate(day : Nat, month : Nat, year : Nat) : async [Intervention] {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent accéder aux interventions");
-    };
-
+    checkAccess(caller);
     let matchingInterventions = List.empty<Intervention>();
 
     interventions.forEach(
@@ -387,25 +392,21 @@ actor {
     matchingInterventions.toArray();
   };
 
-  // Media Management - FIXED: Added authorization checks
+  // Media Management
   public query ({ caller }) func getMediaItem(mediaId : Text) : async ?MediaItem {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent accéder aux médias");
-    };
+    checkAccess(caller);
     mediaStorage.get(mediaId);
   };
 
   public query ({ caller }) func listAllMediaItems() : async [MediaItem] {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent lister les médias");
-    };
+    checkAccess(caller);
     mediaStorage.values().toArray();
   };
 
-  public shared ({ caller }) func uploadMediaItem(file : Storage.ExternalBlob) : async Text {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent télécharger des médias");
-    };
+  public shared ({ caller }) func uploadMediaItem(
+    { file : Storage.ExternalBlob },
+  ) : async Text {
+    checkAccess(caller);
     let mediaId = caller.toText().concat(Time.now().toText());
     let mediaItem : MediaItem = {
       id = mediaId;
@@ -418,9 +419,7 @@ actor {
   };
 
   public shared ({ caller }) func deleteMediaItem(mediaId : Text) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent supprimer des médias");
-    };
+    checkAccess(caller);
     switch (mediaStorage.get(mediaId)) {
       case (null) {
         Runtime.trap("Élément média introuvable");
@@ -436,12 +435,9 @@ actor {
 
   // Technical Folder Management
   public query ({ caller }) func listTechnicalFiles() : async [(Text, Storage.ExternalBlob)] {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent répertorier les fichiers techniques");
-    };
+    checkAccess(caller);
     let result = List.empty<(Text, Storage.ExternalBlob)>();
 
-    // Recursive helper to traverse folder tree
     func traverseFolderTree(folder : Folder, path : Text) {
       folder.files.toArray().forEach(
         func(file) {
@@ -465,9 +461,7 @@ actor {
   };
 
   public query ({ caller }) func downloadTechnicalFileWithPath(path : Text) : async ?Storage.ExternalBlob {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent télécharger des fichiers techniques");
-    };
+    checkAccess(caller);
 
     let parts = path.split(#char('/')).toArray();
     if (parts.size() == 0) {
@@ -488,7 +482,6 @@ actor {
     };
   };
 
-  // Helper function to recursively find file in path hierarchy
   func findFileInPath(folder : Folder, pathParts : [Text]) : ?Storage.ExternalBlob {
     if (pathParts.size() == 0) {
       return null;
@@ -507,10 +500,11 @@ actor {
     };
   };
 
-  public shared ({ caller }) func uploadTechnicalFileWithFolderPath(path : Text, blob : Storage.ExternalBlob) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent télécharger des fichiers techniques");
-    };
+  public shared ({ caller }) func uploadTechnicalFileWithFolderPath(
+    path : Text,
+    blob : Storage.ExternalBlob,
+  ) : async () {
+    checkAccess(caller);
 
     let parts = path.split(#char('/')).toArray();
     if (parts.size() < 2) {
@@ -521,7 +515,6 @@ actor {
     let fileName = parts[parts.size() - 1];
     let remainingPath = parts.sliceToArray(1, parts.size() - 1 : Nat);
 
-    // Get or create top-level folder
     var topLevelFolder = switch (technicalFolder.get(topLevelFolderName)) {
       case (null) {
         {
@@ -533,13 +526,16 @@ actor {
       case (?folder) { folder };
     };
 
-    // Recursively create/get subfolders and add file
     topLevelFolder := createSubfoldersAndAddFile(topLevelFolder, remainingPath, fileName, blob);
     technicalFolder.add(topLevelFolderName, topLevelFolder);
   };
 
-  // Helper function to create/find nested subfolders and add file
-  func createSubfoldersAndAddFile(folder : Folder, subfolders : [Text], fileName : Text, blob : Storage.ExternalBlob) : Folder {
+  func createSubfoldersAndAddFile(
+    folder : Folder,
+    subfolders : [Text],
+    fileName : Text,
+    blob : Storage.ExternalBlob,
+  ) : Folder {
     if (subfolders.size() == 0) {
       folder.files.add(fileName, blob);
       return folder;
@@ -566,9 +562,7 @@ actor {
   };
 
   public shared ({ caller }) func deleteTechnicalFileWithPath(path : Text) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent supprimer des fichiers techniques");
-    };
+    checkAccess(caller);
 
     let parts = path.split(#char('/')).toArray();
     if (parts.size() < 2) {
@@ -595,7 +589,6 @@ actor {
     };
   };
 
-  // Helper function to recursively delete file in path hierarchy
   func deleteFileInPath(folder : Folder, pathParts : [Text], fileName : Text) : (Bool, Folder) {
     if (pathParts.size() == 0) {
       switch (folder.files.get(fileName)) {
@@ -626,15 +619,9 @@ actor {
     };
   };
 
-  public shared ({ caller }) func moveTechnicalFile(
-    oldPath : Text,
-    newPath : Text,
-  ) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent déplacer des fichiers techniques");
-    };
+  public shared ({ caller }) func moveTechnicalFile(oldPath : Text, newPath : Text) : async () {
+    checkAccess(caller);
 
-    // Find the file at the old path
     let parts = oldPath.split(#char('/')).toArray();
     if (parts.size() == 0) {
       Runtime.trap("Chemin invalide");
@@ -649,9 +636,7 @@ actor {
         switch (findFileInPath(folder, remainingPath)) {
           case (null) { Runtime.trap("Le fichier à déplacer n'existe pas") };
           case (?blob) {
-            // Upload the file to the new path
             await uploadTechnicalFileWithFolderPath(newPath, blob);
-            // Delete the original file from the old path
             await deleteTechnicalFileWithPath(oldPath);
           };
         };
@@ -660,11 +645,8 @@ actor {
   };
 
   public shared ({ caller }) func createFolder(path : Text) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent créer des dossiers");
-    };
+    checkAccess(caller);
 
-    // Split the path to get folder hierarchy
     let parts = path.split(#char('/')).toArray();
     if (parts.size() == 0) {
       Runtime.trap("Chemin invalide. Vous devez spécifier le nom du dossier");
@@ -673,7 +655,6 @@ actor {
     let topLevelFolderName = parts[0];
     let remainingPath = parts.sliceToArray(1, parts.size());
 
-    // Create or get top-level folder
     var topLevelFolder = switch (technicalFolder.get(topLevelFolderName)) {
       case (null) {
         {
@@ -685,14 +666,10 @@ actor {
       case (?folder) { folder };
     };
 
-    // Create nested subfolders if needed
     topLevelFolder := createSubfolders(topLevelFolder, remainingPath);
-
-    // Update the technicalFolder map with the modified folder structure
     technicalFolder.add(topLevelFolderName, topLevelFolder);
   };
 
-  // Helper function to create/find nested subfolders
   func createSubfolders(folder : Folder, subfolders : [Text]) : Folder {
     if (subfolders.size() == 0) {
       return folder;
@@ -718,15 +695,9 @@ actor {
     folder;
   };
 
-  public shared ({ caller }) func renameFolder(
-    oldPath : Text,
-    newName : Text,
-  ) : async () {
-    if (not (Auth.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Non autorisé : seuls les utilisateurs authentifiés peuvent renommer des dossiers");
-    };
+  public shared ({ caller }) func renameFolder(oldPath : Text, newName : Text) : async () {
+    checkAccess(caller);
 
-    // Split the old path to find the folder to rename
     let parts = oldPath.split(#char('/')).toArray();
     if (parts.size() == 0) {
       Runtime.trap("Chemin invalide. Vous devez spécifier le nom du dossier");
@@ -739,12 +710,10 @@ actor {
       case (null) { Runtime.trap("Dossier de niveau supérieur introuvable") };
       case (?rootFolder) {
         if (remainingPath.size() == 0) {
-          // Renaming a top-level folder
           let renamedFolder = { rootFolder with name = newName };
           technicalFolder.remove(topLevelFolderName);
           technicalFolder.add(newName, renamedFolder);
         } else {
-          // Renaming a subfolder
           let (renamed, updatedRootFolder) = renameSubfolderInPath(rootFolder, remainingPath, newName);
           if (not renamed) {
             Runtime.trap("Échec du renommage du dossier dans le chemin spécifié");
@@ -755,17 +724,14 @@ actor {
     };
   };
 
-  // Helper function to recursively rename subfolder in path hierarchy
   func renameSubfolderInPath(folder : Folder, pathParts : [Text], newName : Text) : (Bool, Folder) {
     if (pathParts.size() == 0) {
       (false, folder);
     } else if (pathParts.size() == 1) {
-      // We're at the folder to be renamed
       let folderToRename = pathParts[0];
       switch (folder.subfolders.get(folderToRename)) {
         case (null) { (false, folder) };
         case (?subfolder) {
-          // Update the folder name
           let renamedFolder = { subfolder with name = newName };
           folder.subfolders.remove(folderToRename);
           folder.subfolders.add(newName, renamedFolder);
@@ -788,5 +754,11 @@ actor {
       };
     };
   };
-};
 
+  // Internal access check system
+  func checkAccess(caller : Principal) {
+    if (not (Auth.hasPermission(accessControlState, caller, #admin) or UserApproval.isApproved(approvalState, caller))) {
+      Runtime.trap("Nicht genehmigt");
+    };
+  };
+};

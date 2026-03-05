@@ -1,191 +1,155 @@
-import { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { useCreateOrUpdateClient } from '../../hooks/useClients';
-import type { Client } from '../../backend';
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Edit, Loader2 } from "lucide-react";
+import { useState } from "react";
+import type { Client } from "../../backend";
+import { useUpdateClient } from "../../hooks/useClients";
 
 interface EditClientDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  client: Client;
   clientId: string;
-  currentClient: Client;
 }
 
 export default function EditClientDialog({
-  open,
-  onOpenChange,
+  client,
   clientId,
-  currentClient,
 }: EditClientDialogProps) {
-  const [formData, setFormData] = useState({
-    name: '',
-    street: '',
-    city: '',
-    state: '',
-    zip: '',
-    phone: '',
-    email: '',
-  });
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(client.info.name);
+  const [street, setStreet] = useState(client.info.address.street);
+  const [city, setCity] = useState(client.info.address.city);
+  const [state, setState] = useState(client.info.address.state);
+  const [zip, setZip] = useState(client.info.address.zip);
+  const [phone, setPhone] = useState(client.info.phone);
+  const [email, setEmail] = useState(client.info.email);
 
-  const { mutate: updateClient, isPending } = useCreateOrUpdateClient();
-
-  useEffect(() => {
-    if (currentClient) {
-      setFormData({
-        name: currentClient.info.name,
-        street: currentClient.info.address.street,
-        city: currentClient.info.address.city,
-        state: currentClient.info.address.state,
-        zip: currentClient.info.address.zip,
-        phone: currentClient.info.phone,
-        email: currentClient.info.email,
-      });
-    }
-  }, [currentClient]);
+  const { mutate: updateClient, isPending } = useUpdateClient();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name.trim()) return;
+
     updateClient(
       {
         id: clientId,
-        name: formData.name,
-        address: {
-          street: formData.street,
-          city: formData.city,
-          state: formData.state,
-          zip: formData.zip,
-        },
-        phone: formData.phone,
-        email: formData.email,
+        name: name.trim(),
+        address: { street, city, state, zip },
+        phone,
+        email,
       },
       {
-        onSuccess: () => {
-          onOpenChange(false);
-        },
-      }
+        onSuccess: () => setOpen(false),
+      },
     );
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <Edit className="w-5 h-5" />
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Modifier le client</DialogTitle>
-            <DialogDescription>
-              Mettez à jour les informations du client
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Nom *</Label>
+        <DialogHeader>
+          <DialogTitle>Modifier le client</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="edit-name">Nom *</Label>
+            <Input
+              id="edit-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              disabled={isPending}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="edit-street">Rue</Label>
+            <Input
+              id="edit-street"
+              value={street}
+              onChange={(e) => setStreet(e.target.value)}
+              disabled={isPending}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-city">Ville</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                placeholder="Nom du client"
-                required
+                id="edit-city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                disabled={isPending}
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="street">Adresse *</Label>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-zip">Code postal</Label>
               <Input
-                id="street"
-                value={formData.street}
-                onChange={(e) =>
-                  setFormData({ ...formData, street: e.target.value })
-                }
-                placeholder="Rue"
-                required
+                id="edit-zip"
+                value={zip}
+                onChange={(e) => setZip(e.target.value)}
+                disabled={isPending}
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="city">Ville *</Label>
-              <Input
-                id="city"
-                value={formData.city}
-                onChange={(e) =>
-                  setFormData({ ...formData, city: e.target.value })
-                }
-                placeholder="Ville"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="state">Région *</Label>
-                <Input
-                  id="state"
-                  value={formData.state}
-                  onChange={(e) =>
-                    setFormData({ ...formData, state: e.target.value })
-                  }
-                  placeholder="Région"
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="zip">Code postal *</Label>
-                <Input
-                  id="zip"
-                  value={formData.zip}
-                  onChange={(e) =>
-                    setFormData({ ...formData, zip: e.target.value })
-                  }
-                  placeholder="Code postal"
-                  required
-                />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Téléphone *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-                placeholder="Téléphone"
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                placeholder="Email"
-                required
-              />
-            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="edit-state">Région</Label>
+            <Input
+              id="edit-state"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              disabled={isPending}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="edit-phone">Téléphone</Label>
+            <Input
+              id="edit-phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              type="tel"
+              disabled={isPending}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="edit-email">Email</Label>
+            <Input
+              id="edit-email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              disabled={isPending}
+            />
           </div>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => setOpen(false)}
               disabled={isPending}
             >
               Annuler
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? 'Mise à jour...' : 'Mettre à jour'}
+            <Button type="submit" disabled={isPending || !name.trim()}>
+              {isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Mise à jour...
+                </>
+              ) : (
+                "Enregistrer"
+              )}
             </Button>
           </DialogFooter>
         </form>

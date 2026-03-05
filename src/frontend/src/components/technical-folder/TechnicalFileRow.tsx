@@ -1,9 +1,3 @@
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Trash2, FolderInput, Eye } from 'lucide-react';
-import { useDeleteTechnicalFile, useMoveFile } from '../../hooks/useTechnicalFolder';
-import type { ExternalBlob } from '../../backend';
-import { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,131 +7,121 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import MoveFolderDialog from './MoveFolderDialog';
-import DocumentViewer from './DocumentViewer';
-import FileTypeIcon from './FileTypeIcon';
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Eye, Loader2, Move, Trash2 } from "lucide-react";
+import { useState } from "react";
+import type { ExternalBlob } from "../../backend";
+import { useDeleteTechnicalFile } from "../../hooks/useTechnicalFolder";
+import DocumentViewer from "./DocumentViewer";
+import FileTypeIcon from "./FileTypeIcon";
+import MoveFolderDialog from "./MoveFolderDialog";
 
 interface TechnicalFileRowProps {
-  path: string;
+  fileName: string;
+  filePath: string;
   blob: ExternalBlob;
+  currentFolderPath: string;
 }
 
-export default function TechnicalFileRow({ path, blob }: TechnicalFileRowProps) {
-  const { mutate: deleteFile } = useDeleteTechnicalFile();
-  const { mutate: moveFile, isPending: isMoving } = useMoveFile();
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
-  const [viewerOpen, setViewerOpen] = useState(false);
-
-  const fileName = path.split('/').pop() || path;
-  const fileExtension = fileName.split('.').pop()?.toLowerCase();
+export default function TechnicalFileRow({
+  fileName,
+  filePath,
+  blob,
+  currentFolderPath,
+}: TechnicalFileRowProps) {
+  const { mutate: deleteFile, isPending: isDeleting } =
+    useDeleteTechnicalFile();
+  const [showViewer, setShowViewer] = useState(false);
+  const [showMove, setShowMove] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleDelete = () => {
-    deleteFile(path);
-    setDeleteDialogOpen(false);
-  };
-
-  const handleMove = (destinationPath: string) => {
-    moveFile({ oldPath: path, newPath: destinationPath });
-  };
-
-  const handleView = () => {
-    setViewerOpen(true);
-  };
-
-  const renderPreview = () => {
-    const directUrl = blob.getDirectURL();
-
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(fileExtension || '')) {
-      return (
-        <img
-          src={directUrl}
-          alt={fileName}
-          className="w-12 h-12 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={handleView}
-        />
-      );
-    }
-
-    return (
-      <div className="w-12 h-12 flex items-center justify-center bg-muted rounded">
-        <FileTypeIcon fileName={fileName} className="h-6 w-6 text-muted-foreground" />
-      </div>
+    deleteFile(
+      { path: filePath },
+      {
+        onSuccess: () => setShowDeleteConfirm(false),
+      },
     );
   };
 
   return (
     <>
-      <Card>
-        <CardHeader className="py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              {renderPreview()}
-              <CardTitle className="text-sm truncate">{fileName}</CardTitle>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleView}
-                title="Voir le fichier"
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setMoveDialogOpen(true)}
-                disabled={isMoving}
-                title="Déplacer le fichier"
-              >
-                <FolderInput className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-destructive"
-                onClick={() => setDeleteDialogOpen(true)}
-                title="Supprimer le fichier"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+      <div className="flex items-center gap-3 bg-card border border-border rounded-xl p-3">
+        <FileTypeIcon fileName={fileName} className="h-8 w-8 shrink-0" />
+        <span className="flex-1 text-sm font-medium text-foreground truncate">
+          {fileName}
+        </span>
+        <div className="flex gap-1 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => setShowViewer(true)}
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => setShowMove(true)}
+          >
+            <Move className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        </div>
+      </div>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <DocumentViewer
+        open={showViewer}
+        onOpenChange={setShowViewer}
+        blob={blob}
+        fileName={fileName}
+      />
+
+      <MoveFolderDialog
+        open={showMove}
+        onOpenChange={setShowMove}
+        filePath={filePath}
+        currentFolderPath={currentFolderPath}
+      />
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer le fichier ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer ce fichier ? Cette action est irréversible.
+              "{fileName}" sera définitivement supprimé.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <MoveFolderDialog
-        open={moveDialogOpen}
-        onOpenChange={setMoveDialogOpen}
-        currentFilePath={path}
-        onConfirm={handleMove}
-      />
-
-      <DocumentViewer
-        open={viewerOpen}
-        onOpenChange={setViewerOpen}
-        blob={blob}
-        fileName={fileName}
-      />
     </>
   );
 }

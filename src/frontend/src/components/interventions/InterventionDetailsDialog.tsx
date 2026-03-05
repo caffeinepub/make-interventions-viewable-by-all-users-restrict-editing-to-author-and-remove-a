@@ -1,103 +1,78 @@
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Edit } from 'lucide-react';
-import MediaPreview from '../media/MediaPreview';
-import type { Intervention } from '../../backend';
-import { useGetUserProfile } from '../../hooks/useCurrentUser';
-import { useState } from 'react';
-import EditInterventionDialog from './EditInterventionDialog';
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Eye } from "lucide-react";
+import { useState } from "react";
+import type { Intervention } from "../../backend";
+import MediaPreview from "../media/MediaPreview";
 
 interface InterventionDetailsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   intervention: Intervention;
+  trigger?: React.ReactNode;
+}
+
+function formatDate(date: {
+  day: bigint;
+  month: bigint;
+  year: bigint;
+}): string {
+  const d = Number(date.day).toString().padStart(2, "0");
+  const m = Number(date.month).toString().padStart(2, "0");
+  const y = Number(date.year);
+  return `${d}/${m}/${y}`;
 }
 
 export default function InterventionDetailsDialog({
-  open,
-  onOpenChange,
   intervention,
+  trigger,
 }: InterventionDetailsDialogProps) {
-  const { data: authorProfile } = useGetUserProfile(intervention.employee);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
-  const handleEditClick = () => {
-    onOpenChange(false);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleEditDialogClose = (open: boolean) => {
-    setIsEditDialogOpen(open);
-    if (!open) {
-      onOpenChange(true);
-    }
-  };
+  const [open, setOpen] = useState(false);
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Détails de l'intervention</DialogTitle>
-            <DialogDescription>
-              Informations complètes de l'intervention
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label>Date</Label>
-              <p className="text-sm">
-                {intervention.date.day.toString().padStart(2, '0')}/
-                {intervention.date.month.toString().padStart(2, '0')}/
-                {intervention.date.year}
-              </p>
-            </div>
-            <div className="grid gap-2">
-              <Label>Auteur</Label>
-              <p className="text-sm">
-                {authorProfile?.name || 'Chargement...'}
-              </p>
-            </div>
-            {intervention.comments && (
-              <div className="grid gap-2">
-                <Label>Commentaires</Label>
-                <p className="text-sm whitespace-pre-wrap">
-                  {intervention.comments}
-                </p>
-              </div>
-            )}
-            {intervention.media.length > 0 && (
-              <div className="grid gap-2">
-                <Label>Médias</Label>
-                <MediaPreview media={intervention.media} clickable />
-              </div>
-            )}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger || (
+          <Button variant="ghost" size="icon">
+            <Eye className="w-4 h-4" />
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Détails de l'intervention</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">
+              Date
+            </span>
+            <span className="font-medium">{formatDate(intervention.date)}</span>
           </div>
-          {intervention.canEdit && (
-            <div className="flex justify-end">
-              <Button onClick={handleEditClick} variant="outline" size="sm">
-                <Edit className="h-4 w-4 mr-2" />
-                Modifier
-              </Button>
+          {intervention.comments && (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                Commentaires
+              </span>
+              <p className="text-sm text-foreground whitespace-pre-wrap">
+                {intervention.comments}
+              </p>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {intervention.canEdit && (
-        <EditInterventionDialog
-          open={isEditDialogOpen}
-          onOpenChange={handleEditDialogClose}
-          intervention={intervention}
-        />
-      )}
-    </>
+          {intervention.media.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                Médias
+              </span>
+              <MediaPreview media={intervention.media} clickable />
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

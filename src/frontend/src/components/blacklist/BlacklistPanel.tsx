@@ -1,119 +1,183 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { useMarkAsBlacklisted, useUnmarkAsBlacklisted } from '../../hooks/useBlacklist';
-import MediaPicker from '../media/MediaPicker';
-import MediaPreview from '../media/MediaPreview';
-import type { Client } from '../../backend';
-import { ExternalBlob } from '../../backend';
-import AppBadge from '../common/AppBadge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertTriangle, Loader2, ShieldOff } from "lucide-react";
+import { useState } from "react";
+import type { Client, ExternalBlob } from "../../backend";
+import {
+  useMarkAsBlacklisted,
+  useUnmarkAsBlacklisted,
+} from "../../hooks/useBlacklist";
+import { useInternetIdentity } from "../../hooks/useInternetIdentity";
+import MediaPicker from "../media/MediaPicker";
+import MediaPreview from "../media/MediaPreview";
 
 interface BlacklistPanelProps {
-  clientId: string;
   client: Client;
+  clientId: string;
 }
 
-export default function BlacklistPanel({ clientId, client }: BlacklistPanelProps) {
-  const [comments, setComments] = useState(client.blacklistComments || '');
-  const [media, setMedia] = useState<ExternalBlob[]>(client.blacklistMedia || []);
+export default function BlacklistPanel({
+  client,
+  clientId,
+}: BlacklistPanelProps) {
+  const { identity } = useInternetIdentity();
+  const [comments, setComments] = useState("");
+  const [media, setMedia] = useState<ExternalBlob[]>([]);
+  const [showForm, setShowForm] = useState(false);
 
-  const { mutate: markAsBlacklisted, isPending: isMarking } = useMarkAsBlacklisted();
-  const { mutate: unmarkAsBlacklisted, isPending: isUnmarking } = useUnmarkAsBlacklisted();
+  const { mutate: markBlacklisted, isPending: isMarking } =
+    useMarkAsBlacklisted();
+  const { mutate: unmarkBlacklisted, isPending: isUnmarking } =
+    useUnmarkAsBlacklisted();
 
-  const handleMediaCapture = (files: File[]) => {
-    const newMedia = files.map((file) => {
-      const reader = new FileReader();
-      return new Promise<ExternalBlob>((resolve) => {
-        reader.onload = () => {
-          const arrayBuffer = reader.result as ArrayBuffer;
-          const uint8Array = new Uint8Array(arrayBuffer);
-          resolve(ExternalBlob.fromBytes(uint8Array));
-        };
-        reader.readAsArrayBuffer(file);
-      });
-    });
+  if (!identity) return null;
 
-    Promise.all(newMedia).then((blobs) => {
-      setMedia([...media, ...blobs]);
-    });
+  const handleMark = () => {
+    markBlacklisted(
+      { clientId, comments, media },
+      {
+        onSuccess: () => {
+          setShowForm(false);
+          setComments("");
+          setMedia([]);
+        },
+      },
+    );
   };
 
-  const handleMarkAsBlacklisted = () => {
-    markAsBlacklisted({
-      clientId,
-      comments,
-      media,
-    });
+  const handleUnmark = () => {
+    unmarkBlacklisted({ clientId });
   };
 
-  const handleUnmarkAsBlacklisted = () => {
-    unmarkAsBlacklisted(clientId);
-  };
+  if (client.isBlacklisted) {
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-foreground">Liste noire</h2>
+          <Badge variant="destructive">Blacklisté</Badge>
+        </div>
+        {client.blacklistComments && (
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+            <p className="text-sm text-foreground">
+              {client.blacklistComments}
+            </p>
+          </div>
+        )}
+        {client.blacklistMedia.length > 0 && (
+          <MediaPreview media={client.blacklistMedia} />
+        )}
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              className="gap-2 self-start"
+              disabled={isUnmarking}
+            >
+              {isUnmarking ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ShieldOff className="w-4 h-4" />
+              )}
+              Retirer de la liste noire
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Retirer de la liste noire ?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Cette action retirera ce client de la liste noire. Êtes-vous sûr
+                ?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction onClick={handleUnmark}>
+                Confirmer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Statut de la liste noire</CardTitle>
-          {client.isBlacklisted && (
-            <AppBadge variant="destructive">Sur la liste noire</AppBadge>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {client.isBlacklisted ? (
-          <>
-            <div className="space-y-2">
-              <Label>Commentaires</Label>
-              <p className="text-sm whitespace-pre-wrap">
-                {client.blacklistComments || 'Aucun commentaire'}
-              </p>
-            </div>
-            {client.blacklistMedia.length > 0 && (
-              <div className="space-y-2">
-                <Label>Médias</Label>
-                <MediaPreview media={client.blacklistMedia} />
-              </div>
-            )}
-            <Button
-              onClick={handleUnmarkAsBlacklisted}
-              disabled={isUnmarking}
-              variant="outline"
-              className="w-full"
-            >
-              {isUnmarking ? 'Retrait...' : 'Retirer de la liste noire'}
-            </Button>
-          </>
-        ) : (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="comments">Commentaires</Label>
-              <Textarea
-                id="comments"
-                value={comments}
-                onChange={(e) => setComments(e.target.value)}
-                placeholder="Raison de l'ajout à la liste noire..."
-                rows={4}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Médias</Label>
-              <MediaPicker onCapture={handleMediaCapture} />
-              {media.length > 0 && <MediaPreview media={media} />}
-            </div>
-            <Button
-              onClick={handleMarkAsBlacklisted}
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-foreground">Liste noire</h2>
+        <Badge variant="secondary">Non blacklisté</Badge>
+      </div>
+      {!showForm ? (
+        <Button
+          variant="outline"
+          className="gap-2 self-start border-destructive text-destructive hover:bg-destructive/10"
+          onClick={() => setShowForm(true)}
+        >
+          <AlertTriangle className="w-4 h-4" />
+          Ajouter à la liste noire
+        </Button>
+      ) : (
+        <div className="flex flex-col gap-3 bg-card border border-border rounded-xl p-4">
+          <div className="flex flex-col gap-2">
+            <Label>Commentaires</Label>
+            <Textarea
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
+              placeholder="Raison du blacklistage..."
+              rows={3}
               disabled={isMarking}
-              variant="destructive"
-              className="w-full"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label>Pièces jointes</Label>
+            <MediaPicker
+              media={media}
+              onChange={setMedia}
+              disabled={isMarking}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowForm(false);
+                setComments("");
+                setMedia([]);
+              }}
+              disabled={isMarking}
             >
-              {isMarking ? 'Ajout...' : 'Ajouter à la liste noire'}
+              Annuler
             </Button>
-          </>
-        )}
-      </CardContent>
-    </Card>
+            <Button
+              variant="destructive"
+              onClick={handleMark}
+              disabled={isMarking}
+            >
+              {isMarking ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Enregistrement...
+                </>
+              ) : (
+                "Confirmer le blacklistage"
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

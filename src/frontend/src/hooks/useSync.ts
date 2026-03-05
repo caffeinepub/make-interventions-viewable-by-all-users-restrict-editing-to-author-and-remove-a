@@ -1,52 +1,49 @@
-import { useState, useEffect } from 'react';
-import { useActor } from './useActor';
-import { useOnlineStatus } from './useOnlineStatus';
-import { syncOfflineOperations } from '../offline/syncEngine';
-import { getOfflineOperations } from '../offline/outbox';
+import { useCallback, useEffect, useState } from "react";
+import {
+  getAll as getAllOutbox,
+  remove as removeOutbox,
+} from "../offline/outbox";
+import { syncPendingOperations } from "../offline/syncEngine";
+import { useActor } from "./useActor";
+import { useOnlineStatus } from "./useOnlineStatus";
 
 export function useSync() {
+  const isOnline = useOnlineStatus();
   const { actor } = useActor();
-  const { isOnline } = useOnlineStatus();
-  const [isSyncing, setIsSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  useEffect(() => {
-    const updatePendingCount = async () => {
-      const operations = await getOfflineOperations();
-      setPendingCount(operations.length);
-    };
-
-    updatePendingCount();
-    const interval = setInterval(updatePendingCount, 5000);
-
-    return () => clearInterval(interval);
+  const refreshPendingCount = useCallback(async () => {
+    try {
+      const items = await getAllOutbox();
+      setPendingCount(items.length);
+    } catch {
+      setPendingCount(0);
+    }
   }, []);
 
-  useEffect(() => {
-    if (isOnline && actor && pendingCount > 0 && !isSyncing) {
-      syncNow();
-    }
-  }, [isOnline, actor, pendingCount]);
-
-  const syncNow = async () => {
-    if (!actor || isSyncing) return;
-
+  const sync = useCallback(async () => {
+    if (!actor || !isOnline || isSyncing) return;
     setIsSyncing(true);
     try {
-      await syncOfflineOperations(actor);
-      const operations = await getOfflineOperations();
-      setPendingCount(operations.length);
-    } catch (error) {
-      console.error('Erreur de synchronisation:', error);
+      await syncPendingOperations(actor);
+      await refreshPendingCount();
+    } catch {
+      // silent
     } finally {
       setIsSyncing(false);
     }
-  };
+  }, [actor, isOnline, isSyncing, refreshPendingCount]);
 
-  return {
-    isSyncing,
-    pendingCount,
-    syncNow,
-    canSync: isOnline && pendingCount > 0,
-  };
+  useEffect(() => {
+    refreshPendingCount();
+  }, [refreshPendingCount]);
+
+  useEffect(() => {
+    if (isOnline && pendingCount > 0 && actor) {
+      sync();
+    }
+  }, [isOnline, pendingCount, actor, sync]);
+
+  return { isOnline, pendingCount, isSyncing, sync, refreshPendingCount };
 }

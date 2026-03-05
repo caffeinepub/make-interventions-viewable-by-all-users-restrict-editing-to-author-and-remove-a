@@ -1,71 +1,92 @@
-import { useEffect } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 export default function LoginPage() {
-  console.log('LoginPage: Rendering');
-  const { login, loginStatus, identity, isInitializing } = useInternetIdentity();
+  const { login, loginStatus, identity, isInitializing } =
+    useInternetIdentity();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (identity) {
-      console.log('LoginPage: User authenticated, redirecting to /clients');
-      navigate({ to: '/clients' });
+    if (!isInitializing && identity) {
+      navigate({ to: "/" });
     }
-  }, [identity, navigate]);
+  }, [identity, isInitializing, navigate]);
+
+  const isLoggingIn = loginStatus === "logging-in";
 
   const handleLogin = async () => {
     try {
-      console.log('LoginPage: Starting login');
       await login();
-    } catch (error: any) {
-      console.error('Erreur de connexion:', error);
+    } catch (error: unknown) {
+      const err = error as Error;
+      if (err?.message === "User is already authenticated") {
+        navigate({ to: "/" });
+      }
     }
   };
 
-  const isLoggingIn = loginStatus === 'logging-in';
-
   if (isInitializing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-muted-foreground">Chargement...</p>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground text-sm">Initialisation...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold">Bienvenue</CardTitle>
-          <CardDescription>
-            Connectez-vous pour accéder à votre espace
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background px-6">
+      <div className="w-full max-w-sm flex flex-col items-center gap-8">
+        <div className="flex flex-col items-center gap-4">
+          <img
+            src="/assets/generated/vial-traite-logo.dim_400x200.png"
+            alt="Vial Traite Service"
+            className="w-48 h-auto"
+          />
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-foreground">
+              Vial Traite Service
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Gestion des clients et interventions
+            </p>
+          </div>
+        </div>
+
+        <div className="w-full bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+          <div className="text-center">
+            <h2 className="text-lg font-semibold text-foreground">Connexion</h2>
+            <p className="text-muted-foreground text-sm mt-1">
+              Connectez-vous pour accéder à votre espace
+            </p>
+          </div>
+
           <Button
             onClick={handleLogin}
             disabled={isLoggingIn}
-            size="lg"
             className="w-full"
+            size="lg"
           >
             {isLoggingIn ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Connexion en cours...
               </>
             ) : (
-              'Se connecter'
+              "Se connecter"
             )}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+
+        <p className="text-xs text-muted-foreground text-center">
+          Authentification sécurisée via Internet Identity
+        </p>
+      </div>
     </div>
   );
 }
