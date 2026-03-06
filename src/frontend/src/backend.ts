@@ -169,6 +169,7 @@ export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     addIntervention(clientId: string, comments: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    claimAdminIfNoneExists(): Promise<void>;
     createFolder(path: string): Promise<void>;
     createOrUpdateClient(id: string, name: string, address: Address, phone: string, email: string): Promise<void>;
     deleteIntervention(interventionId: string, clientId: string): Promise<void>;
@@ -183,6 +184,7 @@ export interface backendInterface {
     getInterventionsByDate(day: bigint, month: bigint, year: bigint): Promise<Array<Intervention>>;
     getMediaItem(mediaId: string): Promise<MediaItem | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
+    hasAdminRegistered(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     isCallerApproved(): Promise<boolean>;
     listAllMediaItems(): Promise<Array<MediaItem>>;
@@ -328,6 +330,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n10(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async claimAdminIfNoneExists(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.claimAdminIfNoneExists();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.claimAdminIfNoneExists();
             return result;
         }
     }
@@ -525,6 +541,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getUserProfile(arg0);
             return from_candid_opt_n14(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async hasAdminRegistered(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.hasAdminRegistered();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.hasAdminRegistered();
+            return result;
         }
     }
     async isCallerAdmin(): Promise<boolean> {

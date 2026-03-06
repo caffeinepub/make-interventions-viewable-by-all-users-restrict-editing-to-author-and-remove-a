@@ -108,6 +108,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'claimAdminIfNoneExists' : IDL.Func([], [], []),
   'createFolder' : IDL.Func([IDL.Text], [], []),
   'createOrUpdateClient' : IDL.Func(
       [IDL.Text, IDL.Text, Address, IDL.Text, IDL.Text],
@@ -142,6 +143,7 @@ export const idlService = IDL.Service({
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
+  'hasAdminRegistered' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
   'listAllMediaItems' : IDL.Func([], [IDL.Vec(MediaItem)], ['query']),
@@ -295,6 +297,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'claimAdminIfNoneExists' : IDL.Func([], [], []),
     'createFolder' : IDL.Func([IDL.Text], [], []),
     'createOrUpdateClient' : IDL.Func(
         [IDL.Text, IDL.Text, Address, IDL.Text, IDL.Text],
@@ -329,6 +332,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
+    'hasAdminRegistered' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
     'listAllMediaItems' : IDL.Func([], [IDL.Vec(MediaItem)], ['query']),

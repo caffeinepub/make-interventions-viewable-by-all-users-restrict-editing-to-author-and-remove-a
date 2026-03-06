@@ -122,3 +122,40 @@ export function useSetApproval() {
     },
   });
 }
+
+export function useHasAdminRegistered() {
+  const { actor, isFetching } = useActor();
+  return useQuery<boolean>({
+    queryKey: ["hasAdminRegistered"],
+    queryFn: async () => {
+      if (!actor) return true; // default to true (safe — don't show claim button unless confirmed false)
+      try {
+        return await (actor as any).hasAdminRegistered();
+      } catch {
+        return true;
+      }
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useClaimAdminIfNoneExists() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!actor) throw new Error("Actor non disponible");
+      await (actor as any).claimAdminIfNoneExists();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["isCallerApproved"] });
+      queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
+      queryClient.invalidateQueries({ queryKey: ["hasAdminRegistered"] });
+      toast.success("Accès administrateur activé");
+    },
+    onError: (error: Error) => {
+      toast.error(`Erreur: ${error.message}`);
+    },
+  });
+}

@@ -93,6 +93,7 @@ export interface _SERVICE {
     undefined
   >,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'claimAdminIfNoneExists' : ActorMethod<[], undefined>,
   'createFolder' : ActorMethod<[string], undefined>,
   'createOrUpdateClient' : ActorMethod<
     [string, string, Address, string, string],
@@ -113,6 +114,7 @@ export interface _SERVICE {
   >,
   'getMediaItem' : ActorMethod<[string], [] | [MediaItem]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'hasAdminRegistered' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'isCallerApproved' : ActorMethod<[], boolean>,
   'listAllMediaItems' : ActorMethod<[], Array<MediaItem>>,

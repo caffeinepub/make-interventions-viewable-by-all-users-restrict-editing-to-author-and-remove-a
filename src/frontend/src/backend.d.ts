@@ -76,6 +76,7 @@ export enum UserRole {
 export interface backendInterface {
     addIntervention(clientId: string, comments: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    claimAdminIfNoneExists(): Promise<void>;
     createFolder(path: string): Promise<void>;
     createOrUpdateClient(id: string, name: string, address: Address, phone: string, email: string): Promise<void>;
     deleteIntervention(interventionId: string, clientId: string): Promise<void>;
@@ -90,6 +91,7 @@ export interface backendInterface {
     getInterventionsByDate(day: bigint, month: bigint, year: bigint): Promise<Array<Intervention>>;
     getMediaItem(mediaId: string): Promise<MediaItem | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
+    hasAdminRegistered(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     isCallerApproved(): Promise<boolean>;
     listAllMediaItems(): Promise<Array<MediaItem>>;

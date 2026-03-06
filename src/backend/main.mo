@@ -13,7 +13,9 @@ import Principal "mo:core/Principal";
 import MixinAuthorization "authorization/MixinAuthorization";
 import Storage "blob-storage/Storage";
 import MixinStorage "blob-storage/Mixin";
+import Migration "migration";
 
+(with migration = Migration.run)
 actor {
   // Types
   type Folder = {
@@ -77,6 +79,9 @@ actor {
   let accessControlState = Auth.initState();
   let approvalState = UserApproval.initState(accessControlState);
 
+  // Track if an admin has been assigned
+  var adminAssigned : Bool = false;
+
   include MixinStorage();
   include MixinAuthorization(accessControlState);
 
@@ -86,21 +91,44 @@ actor {
     };
   };
 
+  func isAdmin(caller : Principal) : Bool {
+    Auth.isAdmin(accessControlState, caller);
+  };
+
+  func hasPermission(caller : Principal, role : Auth.UserRole) : Bool {
+    Auth.hasPermission(accessControlState, caller, role);
+  };
+
+  public query ({ caller }) func hasAdminRegistered() : async Bool {
+    adminAssigned;
+  };
+
+  public shared ({ caller }) func claimAdminIfNoneExists() : async () {
+    if (adminAssigned) {
+      Runtime.trap("Un administrateur est déjà enregistré");
+    };
+
+    // Assign admin role and mark as approved
+    Auth.assignRole(accessControlState, caller, caller, #admin);
+    UserApproval.setApproval(approvalState, caller, #approved);
+    adminAssigned := true;
+  };
+
   // Critical: Approval + Authorization System
   public query ({ caller }) func isCallerApproved() : async Bool {
-    Auth.hasPermission(accessControlState, caller, #admin) or UserApproval.isApproved(approvalState, caller);
+    isAdmin(caller) or UserApproval.isApproved(approvalState, caller);
   };
 
   public shared ({ caller }) func requestApproval() : async () {
-    if (Auth.hasPermission(accessControlState, caller, #admin)) {
-      Runtime.trap("Admin ist bereits genehmigt");
+    if (isAdmin(caller)) {
+      Runtime.trap("Administrateur est déjà approuvé");
     };
     UserApproval.requestApproval(approvalState, caller);
   };
 
   public shared ({ caller }) func setApproval(user : Principal, status : UserApproval.ApprovalStatus) : async () {
-    if (not Auth.hasPermission(accessControlState, caller, #admin)) {
-      Runtime.trap("Non autorisé : seuls les admin peuvent approuver/désapprouver");
+    if (not isAdmin(caller)) {
+      Runtime.trap("Non autorisé : seuls les administrateurs peuvent approuver/désapprouver");
     };
     UserApproval.setApproval(approvalState, user, status);
     if (status == #approved) {
@@ -109,8 +137,8 @@ actor {
   };
 
   public query ({ caller }) func listApprovals() : async [UserApproval.UserApprovalInfo] {
-    if (not Auth.hasPermission(accessControlState, caller, #admin)) {
-      Runtime.trap("Non autorisé : seuls les admin peuvent voir les demandes d'approbation");
+    if (not isAdmin(caller)) {
+      Runtime.trap("Non autorisé : seuls les administrateurs peuvent voir les demandes d'approbation");
     };
     UserApproval.listApprovals(approvalState);
   };
@@ -122,7 +150,7 @@ actor {
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (caller != user and not Auth.isAdmin(accessControlState, caller)) {
+    if (caller != user and not isAdmin(caller)) {
       Runtime.trap("Non autorisé : vous ne pouvez voir que votre propre profil");
     };
     userProfiles.get(user);
@@ -284,7 +312,7 @@ actor {
       case (?list) {
         list.toArray().map(
           func(intervention) {
-            if (intervention.employee == caller or Auth.isAdmin(accessControlState, caller)) {
+            if (intervention.employee == caller or isAdmin(caller)) {
               { intervention with canEdit = true; canDelete = true };
             } else {
               { intervention with canEdit = false; canDelete = false };
@@ -313,7 +341,7 @@ actor {
         let updatedArray = interventionArray.map(
           func(intervention) {
             if (intervention.id == interventionId) {
-              if (intervention.employee != caller and not Auth.isAdmin(accessControlState, caller)) {
+              if (intervention.employee != caller and not isAdmin(caller)) {
                 Runtime.trap("Non autorisé : vous ne pouvez mettre à jour que vos propres interventions");
               };
               found := true;
@@ -353,7 +381,7 @@ actor {
         let filteredArray = interventionArray.filter(
           func(intervention) {
             if (intervention.id == interventionId) {
-              if (intervention.employee != caller and not Auth.isAdmin(accessControlState, caller)) {
+              if (intervention.employee != caller and not isAdmin(caller)) {
                 Runtime.trap("Non autorisé : vous ne pouvez supprimer que vos propres interventions");
               };
               found := true;
@@ -425,7 +453,7 @@ actor {
         Runtime.trap("Élément média introuvable");
       };
       case (?mediaItem) {
-        if (mediaItem.owner != caller and not Auth.isAdmin(accessControlState, caller)) {
+        if (mediaItem.owner != caller and not isAdmin(caller)) {
           Runtime.trap("Non autorisé : vous ne pouvez supprimer que vos propres médias");
         };
         mediaStorage.remove(mediaId);
@@ -755,10 +783,10 @@ actor {
     };
   };
 
-  // Internal access check system
+  // Internal access check system - SAFE: uses safeIsAdmin
   func checkAccess(caller : Principal) {
-    if (not (Auth.hasPermission(accessControlState, caller, #admin) or UserApproval.isApproved(approvalState, caller))) {
-      Runtime.trap("Nicht genehmigt");
+    if (not (isAdmin(caller) or UserApproval.isApproved(approvalState, caller))) {
+      Runtime.trap("Non autorisé");
     };
   };
 };
