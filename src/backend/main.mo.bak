@@ -108,8 +108,8 @@ actor {
       Runtime.trap("Un administrateur est déjà enregistré");
     };
 
-    // Assign admin role bypassing permission check (no admin exists yet)
-    Auth.assignFirstAdmin(accessControlState, caller);
+    // Assign admin role and mark as approved
+    Auth.assignRole(accessControlState, caller, caller, #admin);
     UserApproval.setApproval(approvalState, caller, #approved);
     adminAssigned := true;
   };
