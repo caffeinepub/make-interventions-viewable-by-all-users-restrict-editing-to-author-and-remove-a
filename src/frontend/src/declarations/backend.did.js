@@ -143,6 +143,11 @@ export const idlService = IDL.Service({
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
+  'getUserProfilesByPrincipals' : IDL.Func(
+      [IDL.Vec(IDL.Principal)],
+      [IDL.Vec(IDL.Tuple(IDL.Principal, UserProfile))],
+      ['query'],
+    ),
   'hasAdminRegistered' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
@@ -330,6 +335,11 @@ export const idlFactory = ({ IDL }) => {
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
+        ['query'],
+      ),
+    'getUserProfilesByPrincipals' : IDL.Func(
+        [IDL.Vec(IDL.Principal)],
+        [IDL.Vec(IDL.Tuple(IDL.Principal, UserProfile))],
         ['query'],
       ),
     'hasAdminRegistered' : IDL.Func([], [IDL.Bool], ['query']),

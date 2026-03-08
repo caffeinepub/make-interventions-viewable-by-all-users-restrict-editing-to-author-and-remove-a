@@ -114,6 +114,10 @@ export interface _SERVICE {
   >,
   'getMediaItem' : ActorMethod<[string], [] | [MediaItem]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'getUserProfilesByPrincipals' : ActorMethod<
+    [Array<Principal>],
+    Array<[Principal, UserProfile]>
+  >,
   'hasAdminRegistered' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'isCallerApproved' : ActorMethod<[], boolean>,

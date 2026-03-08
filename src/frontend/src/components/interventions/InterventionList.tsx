@@ -19,8 +19,9 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Intervention } from "../../backend";
+import { useUserProfilesByPrincipals } from "../../hooks/useCurrentUser";
 import {
   useDeleteIntervention,
   useGetClientInterventions,
@@ -54,6 +55,15 @@ export default function InterventionList({ clientId }: InterventionListProps) {
   const { mutate: deleteIntervention, isPending: isDeleting } =
     useDeleteIntervention();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const employeePrincipals = useMemo(
+    () =>
+      interventions
+        ? Array.from(new Set(interventions.map((i) => i.employee)))
+        : [],
+    [interventions],
+  );
+  const { data: profileMap } = useUserProfilesByPrincipals(employeePrincipals);
 
   const handleDelete = (intervention: Intervention) => {
     setDeletingId(intervention.id);
@@ -105,6 +115,11 @@ export default function InterventionList({ clientId }: InterventionListProps) {
                 <div className="flex flex-col gap-1 min-w-0">
                   <span className="text-sm font-medium text-foreground">
                     {formatDate(intervention.date)}
+                  </span>
+                  <span className="text-xs text-primary font-medium">
+                    Par :{" "}
+                    {profileMap?.get(intervention.employee.toString()) ??
+                      "Inconnu"}
                   </span>
                   {intervention.comments && (
                     <p className="text-sm text-muted-foreground line-clamp-2">

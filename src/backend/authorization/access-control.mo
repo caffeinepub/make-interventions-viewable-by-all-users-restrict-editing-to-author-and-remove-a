@@ -47,11 +47,10 @@ module {
     };
   };
 
-  // Assign the very first admin without any permission check.
-  // Must only be called when no admin exists yet.
+  // Assigns the first admin directly without any permission check.
+  // Must only be called when no admin exists yet (adminAssigned == false).
   public func assignFirstAdmin(state : AccessControlState, user : Principal) {
     state.userRoles.add(user, #admin);
-    state.adminAssigned := true;
   };
 
   public func assignRole(state : AccessControlState, caller : Principal, user : Principal, role : UserRole) {
@@ -62,16 +61,16 @@ module {
   };
 
   public func hasPermission(state : AccessControlState, caller : Principal, requiredRole : UserRole) : Bool {
-    let userRole = getUserRole(state, caller);
-    if (userRole == #admin or requiredRole == #guest) { true } else {
-      userRole == requiredRole;
+    // Safe lookup — does not trap on unknown principals
+    switch (state.userRoles.get(caller)) {
+      case (?#admin) { true };
+      case (?role) { requiredRole == #guest or role == requiredRole };
+      case (null) { requiredRole == #guest };
     };
   };
 
   public func isAdmin(state : AccessControlState, caller : Principal) : Bool {
-    switch (state.userRoles.get(caller)) {
-      case (?#admin) { true };
-      case (_) { false };
-    };
+    // Safe lookup — does not trap on unknown principals
+    state.userRoles.get(caller) == ?#admin;
   };
 };

@@ -91,6 +91,7 @@ export interface backendInterface {
     getInterventionsByDate(day: bigint, month: bigint, year: bigint): Promise<Array<Intervention>>;
     getMediaItem(mediaId: string): Promise<MediaItem | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
+    getUserProfilesByPrincipals(principals: Array<Principal>): Promise<Array<[Principal, UserProfile]>>;
     hasAdminRegistered(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     isCallerApproved(): Promise<boolean>;

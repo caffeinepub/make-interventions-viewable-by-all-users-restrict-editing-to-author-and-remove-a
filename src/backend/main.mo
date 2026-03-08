@@ -108,7 +108,9 @@ actor {
       Runtime.trap("Un administrateur est déjà enregistré");
     };
 
-    // Assign admin role bypassing permission check (no admin exists yet)
+    // Use assignFirstAdmin to bypass the circular permission check.
+    // This writes the admin role directly without requiring the caller
+    // to already be registered — which would trap on unknown principals.
     Auth.assignFirstAdmin(accessControlState, caller);
     UserApproval.setApproval(approvalState, caller, #approved);
     adminAssigned := true;
@@ -154,6 +156,13 @@ actor {
       Runtime.trap("Non autorisé : vous ne pouvez voir que votre propre profil");
     };
     userProfiles.get(user);
+  };
+
+  public query ({ caller }) func getUserProfilesByPrincipals(principals : [Principal]) : async [(Principal, UserProfile)] {
+    checkAccess(caller);
+    userProfiles.filter(
+      func(principal, _profile) { principals.find(func(p) { p == principal }) != null }
+    ).toArray();
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {

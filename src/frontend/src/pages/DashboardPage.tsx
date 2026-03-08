@@ -9,9 +9,10 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Intervention } from "../backend";
 import InterventionDetailsDialog from "../components/interventions/InterventionDetailsDialog";
+import { useUserProfilesByPrincipals } from "../hooks/useCurrentUser";
 import { useGetInterventionsByDate } from "../hooks/useInterventions";
 import { useIsCallerAdmin } from "../hooks/useUserApproval";
 
@@ -41,6 +42,17 @@ export default function DashboardPage() {
     error,
     refetch,
   } = useGetInterventionsByDate(day, month, year);
+
+  const employeePrincipals = useMemo(
+    () =>
+      interventions
+        ? Array.from(
+            new Set(interventions.map((i: Intervention) => i.employee)),
+          )
+        : [],
+    [interventions],
+  );
+  const { data: profileMap } = useUserProfilesByPrincipals(employeePrincipals);
 
   return (
     <div className="flex flex-col gap-6 px-4 py-4">
@@ -96,8 +108,11 @@ export default function DashboardPage() {
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {interventions.map((intervention: Intervention) => (
-              <li key={intervention.id}>
+            {interventions.map((intervention: Intervention, idx: number) => (
+              <li
+                key={intervention.id}
+                data-ocid={`dashboard.intervention.item.${idx + 1}`}
+              >
                 <InterventionDetailsDialog
                   intervention={intervention}
                   trigger={
@@ -108,6 +123,11 @@ export default function DashboardPage() {
                       <div className="flex flex-col gap-1">
                         <span className="text-sm font-medium text-foreground">
                           {formatDate(intervention.date)}
+                        </span>
+                        <span className="text-xs text-primary font-medium">
+                          Par :{" "}
+                          {profileMap?.get(intervention.employee.toString()) ??
+                            "Inconnu"}
                         </span>
                         {intervention.comments && (
                           <p className="text-sm text-muted-foreground line-clamp-2">

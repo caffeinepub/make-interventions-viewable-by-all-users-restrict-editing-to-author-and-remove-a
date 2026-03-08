@@ -7,8 +7,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Eye } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Intervention } from "../../backend";
+import { useUserProfilesByPrincipals } from "../../hooks/useCurrentUser";
 import MediaPreview from "../media/MediaPreview";
 
 interface InterventionDetailsDialogProps {
@@ -33,6 +34,14 @@ export default function InterventionDetailsDialog({
 }: InterventionDetailsDialogProps) {
   const [open, setOpen] = useState(false);
 
+  const principals = useMemo(
+    () => [intervention.employee],
+    [intervention.employee],
+  );
+  const { data: profileMap } = useUserProfilesByPrincipals(principals);
+  const employeeName =
+    profileMap?.get(intervention.employee.toString()) ?? "Inconnu";
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -52,6 +61,12 @@ export default function InterventionDetailsDialog({
               Date
             </span>
             <span className="font-medium">{formatDate(intervention.date)}</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">
+              Effectuée par
+            </span>
+            <span className="font-medium text-primary">{employeeName}</span>
           </div>
           {intervention.comments && (
             <div className="flex flex-col gap-1">

@@ -184,6 +184,7 @@ export interface backendInterface {
     getInterventionsByDate(day: bigint, month: bigint, year: bigint): Promise<Array<Intervention>>;
     getMediaItem(mediaId: string): Promise<MediaItem | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
+    getUserProfilesByPrincipals(principals: Array<Principal>): Promise<Array<[Principal, UserProfile]>>;
     hasAdminRegistered(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     isCallerApproved(): Promise<boolean>;
@@ -541,6 +542,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getUserProfile(arg0);
             return from_candid_opt_n14(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getUserProfilesByPrincipals(arg0: Array<Principal>): Promise<Array<[Principal, UserProfile]>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getUserProfilesByPrincipals(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getUserProfilesByPrincipals(arg0);
+            return result;
         }
     }
     async hasAdminRegistered(): Promise<boolean> {
