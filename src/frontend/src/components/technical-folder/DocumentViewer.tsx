@@ -39,11 +39,21 @@ export default function DocumentViewer({
   const fileExtension = fileName.split(".").pop()?.toLowerCase();
   const directUrl = blob.getDirectURL();
 
-  const isImage = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(
-    fileExtension || "",
-  );
-  const isPDF = fileExtension === "pdf";
-  const isVideo = ["mp4", "webm", "ogg", "mov"].includes(fileExtension || "");
+  // Detect MIME type from data URL if no extension match
+  const mimeTypeFromDataUrl = directUrl.startsWith("data:")
+    ? directUrl.split(";")[0].split(":")[1]
+    : null;
+
+  const isImage =
+    ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(
+      fileExtension || "",
+    ) ||
+    (mimeTypeFromDataUrl?.startsWith("image/") ?? false);
+  const isPDF =
+    fileExtension === "pdf" || mimeTypeFromDataUrl === "application/pdf";
+  const isVideo =
+    ["mp4", "webm", "ogg", "mov"].includes(fileExtension || "") ||
+    (mimeTypeFromDataUrl?.startsWith("video/") ?? false);
 
   useEffect(() => {
     if (!open) {
@@ -79,9 +89,11 @@ export default function DocumentViewer({
       const bytes = await blob.getBytes();
       const mimeType = isPDF
         ? "application/pdf"
-        : isImage
-          ? "image/jpeg"
-          : "application/octet-stream";
+        : isVideo
+          ? "video/mp4"
+          : isImage
+            ? "image/jpeg"
+            : "application/octet-stream";
       const blobObj = new Blob([bytes], { type: mimeType });
       const url = URL.createObjectURL(blobObj);
       const a = document.createElement("a");
@@ -125,6 +137,23 @@ export default function DocumentViewer({
   };
 
   const renderContent = () => {
+    if (isVideo) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <video
+            src={directUrl}
+            controls
+            className="max-w-full max-h-full"
+            style={{
+              transform: `scale(${zoom / 100})`,
+            }}
+          >
+            <track kind="captions" />
+          </video>
+        </div>
+      );
+    }
+
     if (isImage) {
       return (
         <div
@@ -161,23 +190,6 @@ export default function DocumentViewer({
       );
     }
 
-    if (isVideo) {
-      return (
-        <div className="flex items-center justify-center">
-          <video
-            src={directUrl}
-            controls
-            className="max-w-full max-h-full"
-            style={{
-              transform: `scale(${zoom / 100})`,
-            }}
-          >
-            <track kind="captions" />
-          </video>
-        </div>
-      );
-    }
-
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
         <div className="text-6xl">📄</div>
@@ -196,7 +208,9 @@ export default function DocumentViewer({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={`${isFullscreen ? "max-w-full h-screen" : "max-w-4xl h-[90vh]"} p-0 flex flex-col`}
+        className={`${
+          isFullscreen ? "max-w-full h-screen" : "max-w-4xl h-[90vh]"
+        } p-0 flex flex-col`}
       >
         <DialogHeader className="px-6 py-4 border-b">
           <div className="flex items-center justify-between">

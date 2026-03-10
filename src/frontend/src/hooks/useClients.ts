@@ -16,6 +16,22 @@ export function useGetClients() {
   });
 }
 
+export function useGetClientsWithIds() {
+  const { actor, isFetching } = useActor();
+  return useQuery<Array<{ id: string } & Client>>({
+    queryKey: ["clientsWithIds"],
+    queryFn: async () => {
+      if (!actor) return [];
+      // Cast to any because backend.ts may lag behind backend.d.ts declarations
+      const pairs = (await (actor as any).getClientsWithIds()) as Array<
+        [string, Client]
+      >;
+      return pairs.map(([id, client]) => ({ id, ...client }));
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
 export function useGetClient(clientId: string) {
   const { actor, isFetching } = useActor();
 
@@ -66,6 +82,7 @@ export function useCreateClient() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["clientsWithIds"] });
       toast.success("Client créé avec succès");
     },
     onError: (error: Error) => {
@@ -97,6 +114,7 @@ export function useUpdateClient() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["clientsWithIds"] });
       queryClient.invalidateQueries({ queryKey: ["client", variables.id] });
       toast.success("Client mis à jour avec succès");
     },

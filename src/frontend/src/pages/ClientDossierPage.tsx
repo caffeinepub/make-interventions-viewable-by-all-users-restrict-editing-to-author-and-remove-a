@@ -10,33 +10,18 @@ import {
   Phone,
   RefreshCw,
 } from "lucide-react";
-import type { Client } from "../backend";
 import BlacklistPanel from "../components/blacklist/BlacklistPanel";
 import EditClientDialog from "../components/clients/EditClientDialog";
 import InterventionList from "../components/interventions/InterventionList";
-import { useGetClients } from "../hooks/useClients";
+import { useGetClient } from "../hooks/useClients";
 
 export default function ClientDossierPage() {
   const params = useParams({ strict: false });
   const navigate = useNavigate();
   const clientParam = (params as Record<string, string>).clientId || "";
+  const clientId = decodeURIComponent(clientParam);
 
-  const { data: clients, isLoading, error, refetch } = useGetClients();
-
-  // Decode client from param - find by index encoded in the param
-  const decodedParam = decodeURIComponent(clientParam);
-  const lastDash = decodedParam.lastIndexOf("-");
-  const indexStr = lastDash >= 0 ? decodedParam.substring(lastDash + 1) : "";
-  const index = Number.parseInt(indexStr, 10);
-
-  const client: Client | undefined =
-    clients && !Number.isNaN(index) && index < clients.length
-      ? clients[index]
-      : clients?.find((c) => c.info.name === decodedParam);
-
-  const clientId = client
-    ? `${client.info.name.toLowerCase().replace(/\s+/g, "-")}-${index}`
-    : clientParam;
+  const { data: client, isLoading, error, refetch } = useGetClient(clientId);
 
   if (isLoading) {
     return (
@@ -89,6 +74,7 @@ export default function ClientDossierPage() {
           variant="ghost"
           size="icon"
           onClick={() => navigate({ to: "/clients" })}
+          data-ocid="client_dossier.button"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>

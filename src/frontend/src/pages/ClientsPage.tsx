@@ -10,33 +10,28 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useState } from "react";
-import type { Client } from "../backend";
 import CreateClientDialog from "../components/clients/CreateClientDialog";
-import { useGetClients, useSearchClients } from "../hooks/useClients";
+import { useGetClientsWithIds } from "../hooks/useClients";
 
 export default function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
   const {
-    data: allClients,
-    isLoading: allLoading,
-    error: allError,
-    refetch: refetchAll,
-  } = useGetClients();
+    data: clientsWithIds,
+    isLoading,
+    error,
+    refetch,
+  } = useGetClientsWithIds();
 
-  const { data: searchResults, isLoading: searchLoading } =
-    useSearchClients(searchQuery);
+  const clients = searchQuery.trim()
+    ? (clientsWithIds || []).filter((c) =>
+        c.info.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : clientsWithIds || [];
 
-  const isSearching = searchQuery.trim().length > 0;
-  const clients = isSearching ? searchResults : allClients;
-  const isLoading = isSearching ? searchLoading : allLoading;
-  const error = allError;
-
-  const handleClientClick = (client: Client, index: number) => {
-    navigate({
-      to: `/clients/${encodeURIComponent(`${client.info.name}-${index}`)}`,
-    });
+  const handleClientClick = (clientId: string) => {
+    navigate({ to: `/clients/${encodeURIComponent(clientId)}` });
   };
 
   if (error) {
@@ -51,11 +46,7 @@ export default function ClientsPage() {
             {(error as Error).message}
           </p>
         </div>
-        <Button
-          onClick={() => refetchAll()}
-          variant="outline"
-          className="gap-2"
-        >
+        <Button onClick={() => refetch()} variant="outline" className="gap-2">
           <RefreshCw className="w-4 h-4" />
           Réessayer
         </Button>
@@ -74,6 +65,7 @@ export default function ClientsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Rechercher un client..."
             className="pl-9"
+            data-ocid="clients.search_input"
           />
         </div>
       </div>
@@ -81,13 +73,19 @@ export default function ClientsPage() {
       {/* Client list */}
       <div className="flex-1 overflow-auto">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
+          <div
+            className="flex items-center justify-center py-12"
+            data-ocid="clients.loading_state"
+          >
             <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : !clients || clients.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-3 px-6">
+        ) : clients.length === 0 ? (
+          <div
+            className="flex flex-col items-center justify-center py-12 gap-3 px-6"
+            data-ocid="clients.empty_state"
+          >
             <p className="text-muted-foreground text-center">
-              {isSearching
+              {searchQuery.trim()
                 ? "Aucun client trouvé pour cette recherche"
                 : "Aucun client enregistré"}
             </p>
@@ -95,11 +93,12 @@ export default function ClientsPage() {
         ) : (
           <ul className="divide-y divide-border">
             {clients.map((client, index) => (
-              <li key={client.info.name}>
+              <li key={client.id}>
                 <button
                   type="button"
-                  onClick={() => handleClientClick(client, index)}
+                  onClick={() => handleClientClick(client.id)}
                   className="w-full flex items-center justify-between px-4 py-4 hover:bg-muted/50 transition-colors text-left"
+                  data-ocid={`clients.item.${index + 1}`}
                 >
                   <div className="flex flex-col gap-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -132,7 +131,11 @@ export default function ClientsPage() {
       <div className="fixed bottom-20 right-4 z-30">
         <CreateClientDialog
           trigger={
-            <Button size="icon" className="w-14 h-14 rounded-full shadow-lg">
+            <Button
+              size="icon"
+              className="w-14 h-14 rounded-full shadow-lg"
+              data-ocid="clients.open_modal_button"
+            >
               <UserPlus className="w-6 h-6" />
             </Button>
           }

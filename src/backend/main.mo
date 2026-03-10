@@ -108,10 +108,7 @@ actor {
       Runtime.trap("Un administrateur est déjà enregistré");
     };
 
-    // Use assignFirstAdmin to bypass the circular permission check.
-    // This writes the admin role directly without requiring the caller
-    // to already be registered — which would trap on unknown principals.
-    Auth.assignFirstAdmin(accessControlState, caller);
+    accessControlState.userRoles.add(caller, #admin);
     UserApproval.setApproval(approvalState, caller, #approved);
     adminAssigned := true;
   };
@@ -145,9 +142,8 @@ actor {
     UserApproval.listApprovals(approvalState);
   };
 
-  // User Profile Methods
+  // User Profile Methods - no checkAccess: any authenticated user can save/get their own profile
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    checkAccess(caller);
     userProfiles.get(caller);
   };
 
@@ -165,8 +161,8 @@ actor {
     ).toArray();
   };
 
+  // No checkAccess - any authenticated user can set their own name (needed before approval)
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    checkAccess(caller);
     userProfiles.add(caller, profile);
   };
 
@@ -174,6 +170,12 @@ actor {
   public query ({ caller }) func getClients() : async [Client] {
     checkAccess(caller);
     clients.values().toArray().sort();
+  };
+
+  // Returns clients with their IDs so frontend can navigate correctly
+  public query ({ caller }) func getClientsWithIds() : async [(Text, Client)] {
+    checkAccess(caller);
+    clients.toArray();
   };
 
   public query ({ caller }) func getClient(clientId : Text) : async Client {
@@ -792,7 +794,7 @@ actor {
     };
   };
 
-  // Internal access check system - SAFE: uses safeIsAdmin
+  // Internal access check system
   func checkAccess(caller : Principal) {
     if (not (isAdmin(caller) or UserApproval.isApproved(approvalState, caller))) {
       Runtime.trap("Non autorisé");

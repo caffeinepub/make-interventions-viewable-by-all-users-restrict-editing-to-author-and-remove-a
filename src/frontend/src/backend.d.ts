@@ -88,6 +88,7 @@ export interface backendInterface {
     getClient(clientId: string): Promise<Client>;
     getClientInterventions(clientId: string): Promise<Array<Intervention>>;
     getClients(): Promise<Array<Client>>;
+    getClientsWithIds(): Promise<Array<[string, Client]>>;
     getInterventionsByDate(day: bigint, month: bigint, year: bigint): Promise<Array<Intervention>>;
     getMediaItem(mediaId: string): Promise<MediaItem | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;

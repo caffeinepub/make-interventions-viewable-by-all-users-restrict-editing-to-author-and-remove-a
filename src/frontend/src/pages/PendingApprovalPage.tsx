@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -10,6 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSaveCallerUserProfile } from "../hooks/useCurrentUser";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useClaimAdminIfNoneExists,
@@ -23,6 +26,8 @@ export default function PendingApprovalPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
+  const [name, setName] = useState("");
+
   const {
     mutate: requestApproval,
     isPending: isRequesting,
@@ -31,6 +36,9 @@ export default function PendingApprovalPage() {
 
   const { mutate: claimAdmin, isPending: isClaiming } =
     useClaimAdminIfNoneExists();
+
+  const { mutate: saveProfile, isPending: isSavingProfile } =
+    useSaveCallerUserProfile();
 
   const {
     data: isApproved,
@@ -43,7 +51,6 @@ export default function PendingApprovalPage() {
 
   const [alreadyRequested, setAlreadyRequested] = useState(false);
 
-  // If approved, redirect to main app
   useEffect(() => {
     if (isApproved) {
       queryClient.invalidateQueries({ queryKey: ["isCallerApproved"] });
@@ -63,25 +70,41 @@ export default function PendingApprovalPage() {
     navigate({ to: "/login" });
   };
 
+  const handleClaimAdmin = () => {
+    if (!name.trim()) return;
+    saveProfile(
+      { name: name.trim() },
+      {
+        onSuccess: () => {
+          claimAdmin(undefined, {
+            onSuccess: () => {
+              navigate({ to: "/" });
+            },
+          });
+        },
+      },
+    );
+  };
+
   const handleRequest = () => {
-    requestApproval();
+    if (!name.trim()) return;
+    saveProfile(
+      { name: name.trim() },
+      {
+        onSuccess: () => {
+          requestApproval();
+        },
+      },
+    );
   };
 
   const handleRefresh = () => {
     refetchApproval();
   };
 
-  const handleClaimAdmin = () => {
-    claimAdmin(undefined, {
-      onSuccess: () => {
-        navigate({ to: "/" });
-      },
-    });
-  };
-
-  // While loading admin status, show a spinner
   const isLoadingChecks = checkingApproval || checkingAdmin;
   const noAdminYet = hasAdminRegistered === false;
+  const isSubmitting = isSavingProfile || isClaiming || isRequesting;
 
   return (
     <div
@@ -101,7 +124,6 @@ export default function PendingApprovalPage() {
         {/* Card */}
         <div className="w-full bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col gap-5">
           {isLoadingChecks ? (
-            /* Loading state */
             <div
               data-ocid="pending_approval.loading_state"
               className="flex flex-col items-center gap-4 py-4"
@@ -125,20 +147,31 @@ export default function PendingApprovalPage() {
                   Aucun administrateur enregistré
                 </h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Aucun administrateur n'est encore enregistré. Cliquez pour
-                  vous définir comme administrateur.
+                  Entrez votre nom puis cliquez pour vous définir comme
+                  administrateur.
                 </p>
               </div>
 
               <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="admin-name">Votre prénom et nom</Label>
+                  <Input
+                    id="admin-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ex: Jean Dupont"
+                    data-ocid="pending_approval.input"
+                  />
+                </div>
+
                 <Button
                   onClick={handleClaimAdmin}
-                  disabled={isClaiming}
+                  disabled={isSubmitting || !name.trim()}
                   className="w-full"
                   size="lg"
                   data-ocid="pending_approval.primary_button"
                 >
-                  {isClaiming ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Activation…
@@ -166,7 +199,6 @@ export default function PendingApprovalPage() {
           ) : (
             /* Admin already registered — normal "request access" flow */
             <>
-              {/* Status icon */}
               <div className="flex justify-center">
                 {alreadyRequested ? (
                   <div className="w-16 h-16 rounded-full bg-accent/15 flex items-center justify-center">
@@ -179,7 +211,6 @@ export default function PendingApprovalPage() {
                 )}
               </div>
 
-              {/* Message */}
               <div className="text-center flex flex-col gap-2">
                 <h2 className="text-lg font-semibold text-foreground">
                   {alreadyRequested ? "Demande envoyée" : "Accès requis"}
@@ -187,29 +218,41 @@ export default function PendingApprovalPage() {
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {alreadyRequested
                     ? "Votre demande d'accès est en attente d'approbation par l'administrateur."
-                    : "Vous devez demander l'accès à l'application. Un administrateur examinera votre demande."}
+                    : "Entrez votre nom et demandez l'accès. Un administrateur examinera votre demande."}
                 </p>
               </div>
 
-              {/* Action buttons */}
               <div className="flex flex-col gap-3">
                 {!alreadyRequested ? (
-                  <Button
-                    onClick={handleRequest}
-                    disabled={isRequesting}
-                    className="w-full"
-                    size="lg"
-                    data-ocid="pending_approval.primary_button"
-                  >
-                    {isRequesting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Envoi en cours...
-                      </>
-                    ) : (
-                      "Demander l'accès"
-                    )}
-                  </Button>
+                  <>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="user-name">Votre prénom et nom</Label>
+                      <Input
+                        id="user-name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Ex: Jean Dupont"
+                        data-ocid="pending_approval.input"
+                      />
+                    </div>
+
+                    <Button
+                      onClick={handleRequest}
+                      disabled={isSubmitting || !name.trim()}
+                      className="w-full"
+                      size="lg"
+                      data-ocid="pending_approval.primary_button"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Envoi en cours...
+                        </>
+                      ) : (
+                        "Demander l'accès"
+                      )}
+                    </Button>
+                  </>
                 ) : (
                   <Button
                     onClick={handleRefresh}
