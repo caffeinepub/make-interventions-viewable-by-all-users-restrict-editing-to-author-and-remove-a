@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useActor } from "../hooks/useActor";
 import { useSaveCallerUserProfile } from "../hooks/useCurrentUser";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
@@ -25,6 +26,7 @@ export default function PendingApprovalPage() {
   const { clear } = useInternetIdentity();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { actor, isFetching: actorFetching } = useActor();
 
   const [name, setName] = useState("");
 
@@ -102,7 +104,8 @@ export default function PendingApprovalPage() {
     refetchApproval();
   };
 
-  const isLoadingChecks = checkingApproval || checkingAdmin;
+  const isLoadingChecks =
+    actorFetching || !actor || checkingApproval || checkingAdmin;
   const noAdminYet = hasAdminRegistered === false;
   const isSubmitting = isSavingProfile || isClaiming || isRequesting;
 

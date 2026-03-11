@@ -13,6 +13,7 @@ import { useEffect } from "react";
 import ProfileSetupDialog from "./components/auth/ProfileSetupDialog";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import MobileLayout from "./components/layout/MobileLayout";
+import { useActor } from "./hooks/useActor";
 import { useGetCallerUserProfile } from "./hooks/useCurrentUser";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import { useIsCallerAdmin, useIsCallerApproved } from "./hooks/useUserApproval";
@@ -66,6 +67,7 @@ function AuthenticatedLayoutInner() {
     isFetched,
   } = useGetCallerUserProfile();
   const { identity } = useInternetIdentity();
+  const { actor, isFetching: actorFetching } = useActor();
   const { data: isAdmin, isLoading: adminLoading } = useIsCallerAdmin();
   const { data: isApproved, isLoading: approvalLoading } =
     useIsCallerApproved();
@@ -74,8 +76,9 @@ function AuthenticatedLayoutInner() {
   const showProfileSetup =
     isAuthenticated && !profileLoading && isFetched && userProfile === null;
 
-  // Wait until we know admin/approval status
-  const statusLoading = adminLoading || approvalLoading;
+  // Wait until actor is ready AND admin/approval queries have resolved
+  const statusLoading =
+    actorFetching || !actor || adminLoading || approvalLoading;
 
   // While we don't yet have a definitive answer, show a loading spinner
   // to prevent any content flash before approval is confirmed
