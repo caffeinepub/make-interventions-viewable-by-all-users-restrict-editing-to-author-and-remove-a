@@ -79,8 +79,10 @@ actor {
   let accessControlState = Auth.initState();
   let approvalState = UserApproval.initState(accessControlState);
 
-  // Track if an admin has been assigned
-  var adminAssigned : Bool = false;
+  // Stable admin principal - persists across upgrades and redeployments
+  // This ensures the admin is NEVER locked out even if role state is lost
+  stable var adminPrincipal : ?Principal = null;
+  stable var adminAssigned : Bool = false;
 
   include MixinStorage();
   include MixinAuthorization(accessControlState);
@@ -92,7 +94,15 @@ actor {
   };
 
   func isAdmin(caller : Principal) : Bool {
-    Auth.isAdmin(accessControlState, caller);
+    // Check both the role store AND the stable adminPrincipal (pure, no state mutation)
+    // The stable adminPrincipal ensures the admin is always recognized even if
+    // the role store is reset after an upgrade
+    let isRoleAdmin = Auth.isAdmin(accessControlState, caller);
+    let isStableAdmin = switch (adminPrincipal) {
+      case (?p) { p == caller };
+      case (null) { false };
+    };
+    isStableAdmin or isRoleAdmin;
   };
 
   func hasPermission(caller : Principal, role : Auth.UserRole) : Bool {
@@ -111,11 +121,17 @@ actor {
     accessControlState.userRoles.add(caller, #admin);
     UserApproval.setApproval(approvalState, caller, #approved);
     adminAssigned := true;
+    adminPrincipal := ?caller; // Store stably for self-healing across upgrades
   };
 
   // Critical: Approval + Authorization System
   public query ({ caller }) func isCallerApproved() : async Bool {
-    isAdmin(caller) or UserApproval.isApproved(approvalState, caller);
+    // Admin is always approved - check stable principal first
+    let adminCheck = switch (adminPrincipal) {
+      case (?p) { p == caller };
+      case (null) { false };
+    };
+    adminCheck or Auth.isAdmin(accessControlState, caller) or UserApproval.isApproved(approvalState, caller);
   };
 
   public shared ({ caller }) func requestApproval() : async () {
@@ -794,7 +810,7 @@ actor {
     };
   };
 
-  // Internal access check system
+  // Internal access check system - also checks stable adminPrincipal for self-healing
   func checkAccess(caller : Principal) {
     if (not (isAdmin(caller) or UserApproval.isApproved(approvalState, caller))) {
       Runtime.trap("Non autorisé");

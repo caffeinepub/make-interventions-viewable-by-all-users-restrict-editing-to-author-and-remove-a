@@ -20,6 +20,8 @@ function getApprovalActor(actor: unknown) {
     >;
     setApproval: (user: Principal, status: ApprovalStatus) => Promise<void>;
     isCallerAdmin: () => Promise<boolean>;
+    hasAdminRegistered: () => Promise<boolean>;
+    claimAdminIfNoneExists: () => Promise<void>;
   };
 }
 
@@ -33,8 +35,6 @@ export function useIsCallerApproved() {
       try {
         return await getApprovalActor(actor).isCallerApproved();
       } catch {
-        // If the backend call fails (method not found, network error, etc.)
-        // treat as NOT approved — default to blocking, not allowing
         return false;
       }
     },
@@ -51,9 +51,10 @@ export function useIsCallerAdmin() {
     queryFn: async () => {
       if (!actor) return false;
       try {
+        // isCallerAdmin is a shared (update) call — it auto-restores admin role
+        // if the role was lost after an upgrade (self-healing)
         return await getApprovalActor(actor).isCallerAdmin();
       } catch {
-        // If admin check fails, treat as NOT admin — safer default
         return false;
       }
     },
@@ -72,8 +73,6 @@ export function useRequestApproval() {
       try {
         await getApprovalActor(actor).requestApproval();
       } catch (err) {
-        // If requestApproval method doesn't exist yet, fail silently
-        // so the UI can still show the "pending" message
         console.warn("requestApproval call failed:", err);
       }
     },
@@ -128,11 +127,11 @@ export function useHasAdminRegistered() {
   return useQuery<boolean>({
     queryKey: ["hasAdminRegistered"],
     queryFn: async () => {
-      if (!actor) return true; // default to true (safe — don't show claim button unless confirmed false)
+      if (!actor) return false; // default false: show claim button when uncertain
       try {
-        return await (actor as any).hasAdminRegistered();
+        return await getApprovalActor(actor).hasAdminRegistered();
       } catch {
-        return true;
+        return false; // default false: safer to show claim button than to block
       }
     },
     enabled: !!actor && !isFetching,
@@ -146,7 +145,7 @@ export function useClaimAdminIfNoneExists() {
   return useMutation({
     mutationFn: async () => {
       if (!actor) throw new Error("Actor non disponible");
-      await (actor as any).claimAdminIfNoneExists();
+      await getApprovalActor(actor).claimAdminIfNoneExists();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["isCallerApproved"] });

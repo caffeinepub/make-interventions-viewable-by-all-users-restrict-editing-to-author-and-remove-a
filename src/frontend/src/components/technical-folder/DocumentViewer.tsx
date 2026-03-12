@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Download,
+  Loader2,
   Maximize2,
   Minimize2,
   RotateCw,
@@ -21,6 +22,8 @@ interface DocumentViewerProps {
   onOpenChange: (open: boolean) => void;
   blob: ExternalBlob;
   fileName: string;
+  /** Optional override to force a specific MIME type (bypasses extension detection) */
+  forceMimeType?: string;
 }
 
 export default function DocumentViewer({
@@ -28,6 +31,7 @@ export default function DocumentViewer({
   onOpenChange,
   blob,
   fileName,
+  forceMimeType,
 }: DocumentViewerProps) {
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
@@ -35,54 +39,91 @@ export default function DocumentViewer({
   const [isPinching, setIsPinching] = useState(false);
   const [initialDistance, setInitialDistance] = useState(0);
   const [initialZoom, setInitialZoom] = useState(100);
+  // For PDF: we create a proper blob URL with application/pdf MIME type
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const fileExtension = fileName.split(".").pop()?.toLowerCase();
   const directUrl = blob.getDirectURL();
 
-  // Detect MIME type from data URL if no extension match
+  // Detect MIME type from forceMimeType override, data URL, or file extension
   const mimeTypeFromDataUrl = directUrl.startsWith("data:")
     ? directUrl.split(";")[0].split(":")[1]
     : null;
 
+  const forcedIsImage = forceMimeType?.startsWith("image/") ?? false;
+  const forcedIsVideo = forceMimeType?.startsWith("video/") ?? false;
+  const forcedIsPDF = forceMimeType === "application/pdf";
+
   const isImage =
-    ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(
-      fileExtension || "",
-    ) ||
-    (mimeTypeFromDataUrl?.startsWith("image/") ?? false);
+    forcedIsImage ||
+    (!forcedIsVideo &&
+      !forcedIsPDF &&
+      (["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(
+        fileExtension || "",
+      ) ||
+        (mimeTypeFromDataUrl?.startsWith("image/") ?? false)));
+
   const isPDF =
-    fileExtension === "pdf" || mimeTypeFromDataUrl === "application/pdf";
+    forcedIsPDF ||
+    (!forcedIsImage &&
+      !forcedIsVideo &&
+      (fileExtension === "pdf" || mimeTypeFromDataUrl === "application/pdf"));
+
   const isVideo =
-    ["mp4", "webm", "ogg", "mov"].includes(fileExtension || "") ||
-    (mimeTypeFromDataUrl?.startsWith("video/") ?? false);
+    forcedIsVideo ||
+    (!forcedIsImage &&
+      !forcedIsPDF &&
+      (["mp4", "webm", "ogg", "mov"].includes(fileExtension || "") ||
+        (mimeTypeFromDataUrl?.startsWith("video/") ?? false)));
+
+  // When opening a PDF, create a proper blob URL with application/pdf MIME type
+  // so the browser can render it inline in the iframe
+  useEffect(() => {
+    if (!open || !isPDF) return;
+    let revoked = false;
+    setPdfLoading(true);
+    blob
+      .getBytes()
+      .then((bytes) => {
+        if (revoked) return;
+        const pdfBlob = new Blob([bytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(pdfBlob);
+        setPdfBlobUrl(url);
+      })
+      .catch(() => {
+        // Fall back to direct URL if getBytes fails
+        setPdfBlobUrl(directUrl);
+      })
+      .finally(() => {
+        if (!revoked) setPdfLoading(false);
+      });
+    return () => {
+      revoked = true;
+      setPdfBlobUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    };
+  }, [open, isPDF, blob, directUrl]);
 
   useEffect(() => {
     if (!open) {
       setZoom(100);
       setRotation(0);
       setIsFullscreen(false);
+      setPdfBlobUrl(null);
     }
   }, [open]);
 
-  const handleZoomIn = () => {
-    setZoom((prev) => Math.min(prev + 25, 400));
-  };
-
-  const handleZoomOut = () => {
-    setZoom((prev) => Math.max(prev - 25, 25));
-  };
-
+  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 25, 400));
+  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 25, 25));
   const handleReset = () => {
     setZoom(100);
     setRotation(0);
   };
-
-  const handleRotate = () => {
-    setRotation((prev) => (prev + 90) % 360);
-  };
-
-  const handleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
-  };
+  const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
+  const handleFullscreen = () => setIsFullscreen(!isFullscreen);
 
   const handleDownload = async () => {
     try {
@@ -108,12 +149,11 @@ export default function DocumentViewer({
     }
   };
 
-  const getDistance = (touch1: React.Touch, touch2: React.Touch) => {
-    return Math.sqrt(
+  const getDistance = (touch1: React.Touch, touch2: React.Touch) =>
+    Math.sqrt(
       (touch2.clientX - touch1.clientX) ** 2 +
         (touch2.clientY - touch1.clientY) ** 2,
     );
-  };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
@@ -127,14 +167,11 @@ export default function DocumentViewer({
     if (isPinching && e.touches.length === 2) {
       const currentDistance = getDistance(e.touches[0], e.touches[1]);
       const scale = currentDistance / initialDistance;
-      const newZoom = Math.max(25, Math.min(400, initialZoom * scale));
-      setZoom(newZoom);
+      setZoom(Math.max(25, Math.min(400, initialZoom * scale)));
     }
   };
 
-  const handleTouchEnd = () => {
-    setIsPinching(false);
-  };
+  const handleTouchEnd = () => setIsPinching(false);
 
   const renderContent = () => {
     if (isVideo) {
@@ -144,9 +181,7 @@ export default function DocumentViewer({
             src={directUrl}
             controls
             className="max-w-full max-h-full"
-            style={{
-              transform: `scale(${zoom / 100})`,
-            }}
+            style={{ transform: `scale(${zoom / 100})` }}
           >
             <track kind="captions" />
           </video>
@@ -173,16 +208,38 @@ export default function DocumentViewer({
               objectFit: "contain",
             }}
             className="select-none"
+            onError={(e) => {
+              // If image fails, try rendering as video
+              const target = e.currentTarget;
+              const parent = target.parentElement;
+              if (parent && !parent.querySelector("video")) {
+                const video = document.createElement("video");
+                video.src = directUrl;
+                video.controls = true;
+                video.className = "max-w-full max-h-full";
+                target.replaceWith(video);
+              }
+            }}
           />
         </div>
       );
     }
 
     if (isPDF) {
+      if (pdfLoading) {
+        return (
+          <div className="flex items-center justify-center h-full gap-3">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
+              Chargement du PDF...
+            </span>
+          </div>
+        );
+      }
       return (
         <div className="w-full h-full">
           <iframe
-            src={directUrl}
+            src={pdfBlobUrl || directUrl}
             className="w-full h-full border-0"
             title={fileName}
           />

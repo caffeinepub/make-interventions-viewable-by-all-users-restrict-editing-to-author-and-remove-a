@@ -34,14 +34,39 @@ export function useGetClientsWithIds() {
 
 export function useGetClient(clientId: string) {
   const { actor, isFetching } = useActor();
+  const queryClient = useQueryClient();
 
   return useQuery<Client>({
     queryKey: ["client", clientId],
     queryFn: async () => {
       if (!actor) throw new Error("Actor non disponible");
-      return actor.getClient(clientId);
+      try {
+        return await actor.getClient(clientId);
+      } catch (primaryError) {
+        // Fallback: try to reconstruct client data from the cached list
+        // This is safe for non-blacklisted clients (no blob media to process)
+        const cachedClients = queryClient.getQueryData<
+          Array<{ id: string } & Client>
+        >(["clientsWithIds"]);
+        if (cachedClients) {
+          const found = cachedClients.find((c) => c.id === clientId);
+          if (found) {
+            // Return a clean Client object without the `id` property
+            // The blacklistMedia may be raw Uint8Arrays from the cache;
+            // we clear them here to avoid rendering issues.
+            const { id: _id, ...rest } = found;
+            const client: Client = {
+              ...rest,
+              blacklistMedia: [], // safe fallback — media re-loaded on demand
+            };
+            return client;
+          }
+        }
+        throw primaryError;
+      }
     },
     enabled: !!actor && !isFetching && !!clientId,
+    retry: 2,
   });
 }
 
