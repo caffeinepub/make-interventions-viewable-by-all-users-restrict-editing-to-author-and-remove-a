@@ -132,6 +132,7 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getClients' : IDL.Func([], [IDL.Vec(Client)], ['query']),
+  'getClientsWithIds' : IDL.Func([], [IDL.Vec(IDL.Tuple(IDL.Text, Client))], ['query']),
   'getInterventionsByDate' : IDL.Func(
       [IDL.Nat, IDL.Nat, IDL.Nat],
       [IDL.Vec(Intervention)],
@@ -326,6 +327,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getClients' : IDL.Func([], [IDL.Vec(Client)], ['query']),
+  'getClientsWithIds' : IDL.Func([], [IDL.Vec(IDL.Tuple(IDL.Text, Client))], ['query']),
     'getInterventionsByDate' : IDL.Func(
         [IDL.Nat, IDL.Nat, IDL.Nat],
         [IDL.Vec(Intervention)],

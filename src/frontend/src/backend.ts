@@ -502,6 +502,20 @@ export class Backend implements backendInterface {
             return from_candid_vec_n23(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getClientsWithIds(): Promise<Array<[string, Client]>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getClientsWithIds();
+                return await Promise.all(result.map(async ([id, client]: [string, any]) => [id, await from_candid_Client_n17(this._uploadFile, this._downloadFile, client)] as [string, Client]));
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getClientsWithIds();
+            return await Promise.all(result.map(async ([id, client]: [string, any]) => [id, await from_candid_Client_n17(this._uploadFile, this._downloadFile, client)] as [string, Client]));
+        }
+    }
     async getInterventionsByDate(arg0: bigint, arg1: bigint, arg2: bigint): Promise<Array<Intervention>> {
         if (this.processError) {
             try {

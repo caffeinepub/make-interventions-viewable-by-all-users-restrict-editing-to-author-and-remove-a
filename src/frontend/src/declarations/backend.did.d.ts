@@ -108,6 +108,7 @@ export interface _SERVICE {
   'getClient' : ActorMethod<[string], Client>,
   'getClientInterventions' : ActorMethod<[string], Array<Intervention>>,
   'getClients' : ActorMethod<[], Array<Client>>,
+  'getClientsWithIds' : ActorMethod<[], Array<[string, Client]>>,
   'getInterventionsByDate' : ActorMethod<
     [bigint, bigint, bigint],
     Array<Intervention>
