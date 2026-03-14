@@ -2,19 +2,17 @@ import Auth "authorization/access-control";
 import UserApproval "user-approval/approval";
 import Runtime "mo:core/Runtime";
 import List "mo:core/List";
-import Map "mo:core/Map";
-import Array "mo:core/Array";
-import Iter "mo:core/Iter";
-import Nat "mo:core/Nat";
 import Order "mo:core/Order";
+import Map "mo:core/Map";
+import Iter "mo:core/Iter";
+import Array "mo:core/Array"; 
+import Nat "mo:core/Nat";
 import Text "mo:core/Text";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
-import MixinAuthorization "authorization/MixinAuthorization";
 import Storage "blob-storage/Storage";
 import MixinStorage "blob-storage/Mixin";
-
-
+import MixinAuthorization "authorization/MixinAuthorization";
 
 actor {
   // Types
@@ -70,19 +68,40 @@ actor {
     createdAt : Time.Time;
   };
 
+  public type ScheduledIntervention = {
+    id : Text;
+    clientId : Text;
+    clientName : Text;
+    assignedEmployee : Principal;
+    reason : Text;
+    startTime : Text;
+    endTime : Text;
+    description : Text;
+    media : [Storage.ExternalBlob];
+    employeeSignature : ?Text;
+    clientSignature : ?Text;
+    date : { day : Nat; month : Nat; year : Nat };
+    weekNumber : Nat;
+    weekYear : Nat;
+    createdBy : Principal;
+    createdAt : Time.Time;
+    updatedAt : Time.Time;
+  };
+
   // State
   let clients = Map.empty<Text, Client>();
   let technicalFolder = Map.empty<Text, Folder>();
   let interventions = Map.empty<Text, List.List<Intervention>>();
   let userProfiles = Map.empty<Principal, UserProfile>();
   let mediaStorage = Map.empty<Text, MediaItem>();
+  let scheduledInterventions = Map.empty<Text, ScheduledIntervention>();
   let accessControlState = Auth.initState();
   let approvalState = UserApproval.initState(accessControlState);
 
   // Stable admin principal - persists across upgrades and redeployments
   // This ensures the admin is NEVER locked out even if role state is lost
-  stable var adminPrincipal : ?Principal = null;
-  stable var adminAssigned : Bool = false;
+  var adminPrincipal : ?Principal = null;
+  var adminAssigned : Bool = false;
 
   include MixinStorage();
   include MixinAuthorization(accessControlState);
@@ -810,7 +829,152 @@ actor {
     };
   };
 
-  // Internal access check system - also checks stable adminPrincipal for self-healing
+  // Weekly Planning Functionality
+  public shared ({ caller }) func createScheduledIntervention(
+    clientId : Text,
+    clientName : Text,
+    assignedEmployee : Principal,
+    reason : Text,
+    startTime : Text,
+    endTime : Text,
+    description : Text,
+    media : [Storage.ExternalBlob],
+    day : Nat,
+    month : Nat,
+    year : Nat,
+    weekNumber : Nat,
+    weekYear : Nat,
+  ) : async Text {
+    checkAccess(caller);
+
+    let id = Time.now().toText();
+    let scheduledIntervention : ScheduledIntervention = {
+      id;
+      clientId;
+      clientName;
+      assignedEmployee;
+      reason;
+      startTime;
+      endTime;
+      description;
+      media;
+      employeeSignature = null;
+      clientSignature = null;
+      date = { day; month; year };
+      weekNumber;
+      weekYear;
+      createdBy = caller;
+      createdAt = Time.now();
+      updatedAt = Time.now();
+    };
+
+    scheduledInterventions.add(id, scheduledIntervention);
+    id;
+  };
+
+  public shared ({ caller }) func updateScheduledIntervention(
+    id : Text,
+    clientId : Text,
+    clientName : Text,
+    assignedEmployee : Principal,
+    reason : Text,
+    startTime : Text,
+    endTime : Text,
+    description : Text,
+    media : [Storage.ExternalBlob],
+    employeeSignature : ?Text,
+    clientSignature : ?Text,
+    day : Nat,
+    month : Nat,
+    year : Nat,
+    weekNumber : Nat,
+    weekYear : Nat,
+  ) : async () {
+    checkAccess(caller);
+
+    switch (scheduledInterventions.get(id)) {
+      case (null) { Runtime.trap("Intervention programmée non trouvée") };
+      case (?existingIntervention) {
+        if (existingIntervention.createdBy != caller and not isAdmin(caller)) {
+          Runtime.trap("Non autorisé : vous ne pouvez mettre à jour que vos propres interventions programmées");
+        };
+        let updatedIntervention : ScheduledIntervention = {
+          id;
+          clientId;
+          clientName;
+          assignedEmployee;
+          reason;
+          startTime;
+          endTime;
+          description;
+          media;
+          employeeSignature;
+          clientSignature;
+          date = { day; month; year };
+          weekNumber;
+          weekYear;
+          createdBy = existingIntervention.createdBy;
+          createdAt = existingIntervention.createdAt;
+          updatedAt = Time.now();
+        };
+        scheduledInterventions.add(id, updatedIntervention);
+      };
+    };
+  };
+
+  public shared ({ caller }) func deleteScheduledIntervention(id : Text) : async () {
+    checkAccess(caller);
+
+    switch (scheduledInterventions.get(id)) {
+      case (null) { Runtime.trap("Intervention programmée non trouvée") };
+      case (?existingIntervention) {
+        if (existingIntervention.createdBy != caller and not isAdmin(caller)) {
+          Runtime.trap("Non autorisé : vous ne pouvez supprimer que vos propres interventions programmées");
+        };
+        scheduledInterventions.remove(id);
+      };
+    };
+  };
+
+  public query ({ caller }) func getScheduledInterventionsByWeek(weekNumber : Nat, weekYear : Nat) : async [ScheduledIntervention] {
+    checkAccess(caller);
+
+    let matchingInterventions = List.empty<ScheduledIntervention>();
+
+    scheduledInterventions.forEach(
+      func(_id, intervention) {
+        if (intervention.weekNumber == weekNumber and intervention.weekYear == weekYear) {
+          matchingInterventions.add(intervention);
+        };
+      }
+    );
+
+    matchingInterventions.toArray();
+  };
+
+  public query ({ caller }) func getScheduledInterventionById(id : Text) : async ?ScheduledIntervention {
+    checkAccess(caller);
+    scheduledInterventions.get(id);
+  };
+
+  public query ({ caller }) func getApprovedEmployees() : async [(Principal, UserProfile)] {
+    checkAccess(caller);
+    
+    let approvedEmployees = List.empty<(Principal, UserProfile)>();
+
+    // Iterate over all userProfiles and filter approved users
+    userProfiles.forEach(
+      func(principal, profile) {
+        if (UserApproval.isApproved(approvalState, principal)) {
+          approvedEmployees.add((principal, profile));
+        };
+      }
+    );
+
+    approvedEmployees.toArray();
+  };
+
+  // Internal access check system - checks stable adminPrincipal for self-healing upgrade
   func checkAccess(caller : Principal) {
     if (not (isAdmin(caller) or UserApproval.isApproved(approvalState, caller))) {
       Runtime.trap("Non autorisé");

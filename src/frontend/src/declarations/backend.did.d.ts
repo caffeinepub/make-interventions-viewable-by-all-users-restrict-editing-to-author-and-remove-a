@@ -51,6 +51,25 @@ export interface MediaItem {
   'file' : ExternalBlob,
   'createdAt' : Time,
 }
+export interface ScheduledIntervention {
+  'id' : string,
+  'media' : Array<ExternalBlob>,
+  'startTime' : string,
+  'clientId' : string,
+  'endTime' : string,
+  'clientName' : string,
+  'weekYear' : bigint,
+  'date' : { 'day' : bigint, 'month' : bigint, 'year' : bigint },
+  'createdAt' : Time,
+  'createdBy' : Principal,
+  'description' : string,
+  'weekNumber' : bigint,
+  'updatedAt' : Time,
+  'clientSignature' : [] | [string],
+  'employeeSignature' : [] | [string],
+  'assignedEmployee' : Principal,
+  'reason' : string,
+}
 export type Time = bigint;
 export interface UserApprovalInfo {
   'status' : ApprovalStatus,
@@ -99,10 +118,30 @@ export interface _SERVICE {
     [string, string, Address, string, string],
     undefined
   >,
+  'createScheduledIntervention' : ActorMethod<
+    [
+      string,
+      string,
+      Principal,
+      string,
+      string,
+      string,
+      string,
+      Array<ExternalBlob>,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+    ],
+    string
+  >,
   'deleteIntervention' : ActorMethod<[string, string], undefined>,
   'deleteMediaItem' : ActorMethod<[string], undefined>,
+  'deleteScheduledIntervention' : ActorMethod<[string], undefined>,
   'deleteTechnicalFileWithPath' : ActorMethod<[string], undefined>,
   'downloadTechnicalFileWithPath' : ActorMethod<[string], [] | [ExternalBlob]>,
+  'getApprovedEmployees' : ActorMethod<[], Array<[Principal, UserProfile]>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getClient' : ActorMethod<[string], Client>,
@@ -114,6 +153,14 @@ export interface _SERVICE {
     Array<Intervention>
   >,
   'getMediaItem' : ActorMethod<[string], [] | [MediaItem]>,
+  'getScheduledInterventionById' : ActorMethod<
+    [string],
+    [] | [ScheduledIntervention]
+  >,
+  'getScheduledInterventionsByWeek' : ActorMethod<
+    [bigint, bigint],
+    Array<ScheduledIntervention>
+  >,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'getUserProfilesByPrincipals' : ActorMethod<
     [Array<Principal>],
@@ -138,6 +185,27 @@ export interface _SERVICE {
   'unmarkAsBlacklisted' : ActorMethod<[string], undefined>,
   'updateIntervention' : ActorMethod<
     [string, string, string, Array<ExternalBlob>, bigint, bigint, bigint],
+    undefined
+  >,
+  'updateScheduledIntervention' : ActorMethod<
+    [
+      string,
+      string,
+      string,
+      Principal,
+      string,
+      string,
+      string,
+      string,
+      Array<ExternalBlob>,
+      [] | [string],
+      [] | [string],
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+    ],
     undefined
   >,
   'uploadMediaItem' : ActorMethod<[{ 'file' : ExternalBlob }], string>,

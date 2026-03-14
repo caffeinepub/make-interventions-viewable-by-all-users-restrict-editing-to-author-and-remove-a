@@ -1,31 +1,34 @@
-# Dossiers Clients - Vial Traite Service
+# Vial Traite Service
 
 ## Current State
-L'application est fonctionnelle (Version 31) avec gestion des clients, interventions, dossier technique, et contrôle d'accès par approbation admin. Le problème actuel : l'administrateur se retrouve bloqué sur la page "Accès requis" car `getUserRole` déclenche un trap si le principal n'est pas dans la map des rôles (ex. après un redéploiement), ce qui bloque même l'admin.
+
+L'application gère des clients, interventions, un dossier technique, et un contrôle d'accès (admin + salariés approuvés). Les interventions sont liées aux fiches clients, nominatives, avec médias. Un tableau de bord avec calendrier permet de retrouver les interventions par date. Pas de planning hebdomadaire ni de signatures électroniques.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Nouvelle fonction backend `hasAdminRegistered() : Bool` — retourne true si au moins un admin est enregistré dans le système
-- Nouvelle fonction backend `claimAdminIfNoneExists()` — permet au premier appelant de se déclarer admin si aucun admin n'existe encore (auto-bootstrap sans token)
-- Sur la page PendingApprovalPage : si `hasAdminRegistered()` retourne false, afficher un bouton "Je suis l'administrateur" permettant d'appeler `claimAdminIfNoneExists()`
+- Type `ScheduledIntervention` : id, clientId, assignedEmployee (Principal), reason (motif), startTime (Text HH:MM), endTime (Text HH:MM), description, media ([ExternalBlob]), employeeSignature (?Text base64), clientSignature (?Text base64), date {day, month, year}, weekYear (Nat), weekNumber (Nat), createdBy (Principal), createdAt (Time)
+- Backend : `createScheduledIntervention`, `updateScheduledIntervention`, `deleteScheduledIntervention`, `getScheduledInterventionsByWeek(weekNumber, year)`, `getScheduledInterventionById`
+- Page `/planning` : vue grille hebdomadaire — lignes = jours (Lun–Ven), colonnes = salariés approuvés ; navigation semaine précédente/suivante
+- Formulaire d'intervention planifiée : recherche client existant ou création rapide, motif, horaires début/fin, description, ajout photos/vidéos, signatures électroniques (canvas dessin au doigt/souris) pour le salarié et le client
+- Page de détail intervention planifiée : lecture seule avec affichage des signatures et médias
+- Lien vers `/planning` depuis la navigation principale (MobileLayout)
 
 ### Modify
-- `access-control.mo` : `hasPermission` et `isAdmin` ne doivent plus appeler `getUserRole` qui fait un trap — utiliser une version sûre qui retourne false si le principal n'est pas trouvé
-- `checkAccess` dans `main.mo` : utiliser la version sécurisée sans trap
-- `isCallerApproved` dans `main.mo` : utiliser `hasPermissionSafe` pour éviter tout trap
+- `MobileLayout` : ajouter lien de navigation vers `/planning`
+- `App.tsx` : ajouter la route `/planning` et `/planning/$interventionId`
+- Backend `main.mo` : ajouter les fonctions et types pour les interventions planifiées
 
 ### Remove
-- Rien à supprimer
+- Rien
 
 ## Implementation Plan
-1. Régénérer le backend Motoko avec :
-   - `hasPermissionSafe` dans access-control (switch sur la map, retourne false si absent)
-   - `hasAdminRegistered()` public query
-   - `claimAdminIfNoneExists()` public shared — assigne #admin au caller si `adminAssigned == false`
-   - `checkAccess` et `isCallerApproved` utilisent la version sécurisée
-2. Mettre à jour PendingApprovalPage :
-   - Appeler `hasAdminRegistered()` au chargement
-   - Si false : afficher bouton "Je suis l'administrateur" → appelle `claimAdminIfNoneExists()` puis redirige vers l'app
-   - Si true : comportement normal (demande d'accès)
-3. Valider et déployer
+
+1. Ajouter type `ScheduledIntervention` et map `scheduledInterventions` dans `main.mo`
+2. Implémenter `createScheduledIntervention`, `updateScheduledIntervention`, `deleteScheduledIntervention`, `getScheduledInterventionsByWeek`, `getScheduledInterventionById`
+3. Générer les bindings TypeScript
+4. Créer page `PlanningPage.tsx` avec grille Lun–Ven × salariés
+5. Créer `ScheduledInterventionFormDialog.tsx` avec canvas signature
+6. Créer `ScheduledInterventionDetailPage.tsx`
+7. Ajouter routes dans `App.tsx`
+8. Ajouter lien planning dans `MobileLayout`

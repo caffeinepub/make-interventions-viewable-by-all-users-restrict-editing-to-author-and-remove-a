@@ -14,8 +14,34 @@ export class ExternalBlob {
     static fromBytes(blob: Uint8Array<ArrayBuffer>): ExternalBlob;
     withUploadProgress(onProgress: (percentage: number) => void): ExternalBlob;
 }
-export interface UserProfile {
-    name: string;
+export interface ScheduledIntervention {
+    id: string;
+    media: Array<ExternalBlob>;
+    startTime: string;
+    clientId: string;
+    endTime: string;
+    clientName: string;
+    weekYear: bigint;
+    date: {
+        day: bigint;
+        month: bigint;
+        year: bigint;
+    };
+    createdAt: Time;
+    createdBy: Principal;
+    description: string;
+    weekNumber: bigint;
+    updatedAt: Time;
+    clientSignature?: string;
+    employeeSignature?: string;
+    assignedEmployee: Principal;
+    reason: string;
+}
+export interface Address {
+    zip: string;
+    street: string;
+    city: string;
+    state: string;
 }
 export type Time = bigint;
 export interface MediaItem {
@@ -57,11 +83,8 @@ export interface Intervention {
     comments: string;
     interventionTimestamp: Time;
 }
-export interface Address {
-    zip: string;
-    street: string;
-    city: string;
-    state: string;
+export interface UserProfile {
+    name: string;
 }
 export enum ApprovalStatus {
     pending = "pending",
@@ -79,10 +102,13 @@ export interface backendInterface {
     claimAdminIfNoneExists(): Promise<void>;
     createFolder(path: string): Promise<void>;
     createOrUpdateClient(id: string, name: string, address: Address, phone: string, email: string): Promise<void>;
+    createScheduledIntervention(clientId: string, clientName: string, assignedEmployee: Principal, reason: string, startTime: string, endTime: string, description: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint, weekNumber: bigint, weekYear: bigint): Promise<string>;
     deleteIntervention(interventionId: string, clientId: string): Promise<void>;
     deleteMediaItem(mediaId: string): Promise<void>;
+    deleteScheduledIntervention(id: string): Promise<void>;
     deleteTechnicalFileWithPath(path: string): Promise<void>;
     downloadTechnicalFileWithPath(path: string): Promise<ExternalBlob | null>;
+    getApprovedEmployees(): Promise<Array<[Principal, UserProfile]>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getClient(clientId: string): Promise<Client>;
@@ -91,6 +117,8 @@ export interface backendInterface {
     getClientsWithIds(): Promise<Array<[string, Client]>>;
     getInterventionsByDate(day: bigint, month: bigint, year: bigint): Promise<Array<Intervention>>;
     getMediaItem(mediaId: string): Promise<MediaItem | null>;
+    getScheduledInterventionById(id: string): Promise<ScheduledIntervention | null>;
+    getScheduledInterventionsByWeek(weekNumber: bigint, weekYear: bigint): Promise<Array<ScheduledIntervention>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     getUserProfilesByPrincipals(principals: Array<Principal>): Promise<Array<[Principal, UserProfile]>>;
     hasAdminRegistered(): Promise<boolean>;
@@ -108,6 +136,7 @@ export interface backendInterface {
     setApproval(user: Principal, status: ApprovalStatus): Promise<void>;
     unmarkAsBlacklisted(clientId: string): Promise<void>;
     updateIntervention(interventionId: string, clientId: string, comments: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint): Promise<void>;
+    updateScheduledIntervention(id: string, clientId: string, clientName: string, assignedEmployee: Principal, reason: string, startTime: string, endTime: string, description: string, media: Array<ExternalBlob>, employeeSignature: string | null, clientSignature: string | null, day: bigint, month: bigint, year: bigint, weekNumber: bigint, weekYear: bigint): Promise<void>;
     uploadMediaItem(arg0: {
         file: ExternalBlob;
     }): Promise<string>;

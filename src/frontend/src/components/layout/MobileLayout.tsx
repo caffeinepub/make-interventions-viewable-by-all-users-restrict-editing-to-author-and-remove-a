@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import {
+  CalendarRange,
   Download,
   FolderOpen,
   LayoutDashboard,
@@ -27,6 +28,7 @@ interface MobileLayoutProps {
 
 const navItems = [
   { path: "/clients", label: "Clients", icon: Users },
+  { path: "/planning", label: "Planning", icon: CalendarRange },
   { path: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { path: "/technical-folder", label: "Dossier Technique", icon: FolderOpen },
 ];
@@ -129,9 +131,10 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
             <button
               type="button"
               key={path}
+              data-ocid="nav.link"
               onClick={() => navigate({ to: path })}
               className={cn(
-                "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors flex-1",
+                "flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-colors flex-1",
                 isActive(path)
                   ? "text-primary bg-primary/10"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted",

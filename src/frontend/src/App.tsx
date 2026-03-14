@@ -23,6 +23,8 @@ import ClientsPage from "./pages/ClientsPage";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import PendingApprovalPage from "./pages/PendingApprovalPage";
+import PlanningPage from "./pages/PlanningPage";
+import ScheduledInterventionDetailPage from "./pages/ScheduledInterventionDetailPage";
 import TechnicalFolderPage from "./pages/TechnicalFolderPage";
 
 const queryClient = new QueryClient({
@@ -76,12 +78,9 @@ function AuthenticatedLayoutInner() {
   const showProfileSetup =
     isAuthenticated && !profileLoading && isFetched && userProfile === null;
 
-  // Wait until actor is ready AND admin/approval queries have resolved
   const statusLoading =
     actorFetching || !actor || adminLoading || approvalLoading;
 
-  // While we don't yet have a definitive answer, show a loading spinner
-  // to prevent any content flash before approval is confirmed
   if (isAuthenticated && statusLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -95,12 +94,6 @@ function AuthenticatedLayoutInner() {
     );
   }
 
-  // Block access ONLY when:
-  // 1. User is authenticated
-  // 2. Status queries have FINISHED loading (statusLoading === false)
-  // 3. We have explicit confirmation they are NOT admin
-  // 4. We have explicit confirmation they are NOT approved
-  // While statusLoading is true, the spinner above is shown — never block prematurely.
   const showPendingApproval =
     isAuthenticated &&
     !statusLoading &&
@@ -171,6 +164,18 @@ const adminAccessRoute = createRoute({
   component: AdminAccessPage,
 });
 
+const planningRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: "/planning",
+  component: PlanningPage,
+});
+
+const scheduledInterventionDetailRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: "/planning/$interventionId",
+  component: ScheduledInterventionDetailPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authenticatedRoute.addChildren([
@@ -180,6 +185,8 @@ const routeTree = rootRoute.addChildren([
     dashboardRoute,
     technicalFolderRoute,
     adminAccessRoute,
+    planningRoute,
+    scheduledInterventionDetailRoute,
   ]),
 ]);
 
