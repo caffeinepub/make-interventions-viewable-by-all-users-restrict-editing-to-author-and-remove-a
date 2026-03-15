@@ -88,6 +88,17 @@ actor {
     updatedAt : Time.Time;
   };
 
+  public type WorkHours = {
+    id : Text;
+    employee : Principal;
+    date : { day : Nat; month : Nat; year : Nat };
+    morningStart : Text;
+    morningEnd : Text;
+    afternoonStart : Text;
+    afternoonEnd : Text;
+    updatedAt : Time.Time;
+  };
+
   // State
   let clients = Map.empty<Text, Client>();
   let technicalFolder = Map.empty<Text, Folder>();
@@ -95,11 +106,11 @@ actor {
   let userProfiles = Map.empty<Principal, UserProfile>();
   let mediaStorage = Map.empty<Text, MediaItem>();
   let scheduledInterventions = Map.empty<Text, ScheduledIntervention>();
+  let workHoursStore = Map.empty<Text, WorkHours>();
   let accessControlState = Auth.initState();
   let approvalState = UserApproval.initState(accessControlState);
 
   // Stable admin principal - persists across upgrades and redeployments
-  // This ensures the admin is NEVER locked out even if role state is lost
   var adminPrincipal : ?Principal = null;
   var adminAssigned : Bool = false;
 
@@ -113,9 +124,6 @@ actor {
   };
 
   func isAdmin(caller : Principal) : Bool {
-    // Check both the role store AND the stable adminPrincipal (pure, no state mutation)
-    // The stable adminPrincipal ensures the admin is always recognized even if
-    // the role store is reset after an upgrade
     let isRoleAdmin = Auth.isAdmin(accessControlState, caller);
     let isStableAdmin = switch (adminPrincipal) {
       case (?p) { p == caller };
@@ -124,7 +132,7 @@ actor {
     isStableAdmin or isRoleAdmin;
   };
 
-  func hasPermission(caller : Principal, role : Auth.UserRole) : Bool {
+  func _hasPermission(caller : Principal, role : Auth.UserRole) : Bool {
     Auth.hasPermission(accessControlState, caller, role);
   };
 
@@ -136,16 +144,13 @@ actor {
     if (adminAssigned) {
       Runtime.trap("Un administrateur est déjà enregistré");
     };
-
     accessControlState.userRoles.add(caller, #admin);
     UserApproval.setApproval(approvalState, caller, #approved);
     adminAssigned := true;
-    adminPrincipal := ?caller; // Store stably for self-healing across upgrades
+    adminPrincipal := ?caller;
   };
 
-  // Critical: Approval + Authorization System
   public query ({ caller }) func isCallerApproved() : async Bool {
-    // Admin is always approved - check stable principal first
     let adminCheck = switch (adminPrincipal) {
       case (?p) { p == caller };
       case (null) { false };
@@ -177,7 +182,6 @@ actor {
     UserApproval.listApprovals(approvalState);
   };
 
-  // User Profile Methods - no checkAccess: any authenticated user can save/get their own profile
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     userProfiles.get(caller);
   };
@@ -196,7 +200,6 @@ actor {
     ).toArray();
   };
 
-  // No checkAccess - any authenticated user can set their own name (needed before approval)
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
     userProfiles.add(caller, profile);
   };
@@ -207,7 +210,6 @@ actor {
     clients.values().toArray().sort();
   };
 
-  // Returns clients with their IDs so frontend can navigate correctly
   public query ({ caller }) func getClientsWithIds() : async [(Text, Client)] {
     checkAccess(caller);
     clients.toArray();
@@ -232,12 +234,7 @@ actor {
     switch (clients.get(id)) {
       case (null) {
         let newClient : Client = {
-          info = {
-            name;
-            address;
-            phone;
-            email;
-          };
+          info = { name; address; phone; email };
           isBlacklisted = false;
           blacklistComments = "";
           blacklistMedia = [];
@@ -250,12 +247,7 @@ actor {
           Runtime.trap("Les clients sur la liste noire ne peuvent pas être mis à jour");
         };
         let updatedClient : Client = {
-          info = {
-            name;
-            address;
-            phone;
-            email;
-          };
+          info = { name; address; phone; email };
           isBlacklisted = existingClient.isBlacklisted;
           blacklistComments = existingClient.blacklistComments;
           blacklistMedia = existingClient.blacklistMedia;
@@ -297,9 +289,7 @@ actor {
     };
   };
 
-  public shared ({ caller }) func unmarkAsBlacklisted(
-    clientId : Text,
-  ) : async () {
+  public shared ({ caller }) func unmarkAsBlacklisted(clientId : Text) : async () {
     checkAccess(caller);
     switch (clients.get(clientId)) {
       case (null) { Runtime.trap("Client non trouvé") };
@@ -449,20 +439,15 @@ actor {
   public query ({ caller }) func getInterventionsByDate(day : Nat, month : Nat, year : Nat) : async [Intervention] {
     checkAccess(caller);
     let matchingInterventions = List.empty<Intervention>();
-
     interventions.forEach(
       func(_clientId, interventionsList) {
         for (intervention : Intervention in interventionsList.values()) {
-          if (
-            intervention.date.day == day and intervention.date.month == month and intervention.date.year == year
-          ) {
+          if (intervention.date.day == day and intervention.date.month == month and intervention.date.year == year) {
             matchingInterventions.add(intervention);
           };
-
         };
       }
     );
-
     matchingInterventions.toArray();
   };
 
@@ -495,9 +480,7 @@ actor {
   public shared ({ caller }) func deleteMediaItem(mediaId : Text) : async () {
     checkAccess(caller);
     switch (mediaStorage.get(mediaId)) {
-      case (null) {
-        Runtime.trap("Élément média introuvable");
-      };
+      case (null) { Runtime.trap("Élément média introuvable") };
       case (?mediaItem) {
         if (mediaItem.owner != caller and not isAdmin(caller)) {
           Runtime.trap("Non autorisé : vous ne pouvez supprimer que vos propres médias");
@@ -511,40 +494,26 @@ actor {
   public query ({ caller }) func listTechnicalFiles() : async [(Text, Storage.ExternalBlob)] {
     checkAccess(caller);
     let result = List.empty<(Text, Storage.ExternalBlob)>();
-
     func traverseFolderTree(folder : Folder, path : Text) {
       folder.files.toArray().forEach(
-        func(file) {
-          result.add((path.concat(file.0), file.1));
-        }
+        func(file) { result.add((path.concat(file.0), file.1)); }
       );
       folder.subfolders.toArray().forEach(
-        func(subfolder) {
-          traverseFolderTree(subfolder.1, path.concat(subfolder.0).concat("/"));
-        }
+        func(subfolder) { traverseFolderTree(subfolder.1, path.concat(subfolder.0).concat("/")); }
       );
     };
-
     technicalFolder.forEach(
-      func(folderName, folder) {
-        traverseFolderTree(folder, folderName.concat("/"));
-      }
+      func(folderName, folder) { traverseFolderTree(folder, folderName.concat("/")); }
     );
-
     result.toArray();
   };
 
   public query ({ caller }) func downloadTechnicalFileWithPath(path : Text) : async ?Storage.ExternalBlob {
     checkAccess(caller);
-
     let parts = path.split(#char('/')).toArray();
-    if (parts.size() == 0) {
-      return null;
-    };
-
+    if (parts.size() == 0) { return null; };
     let topLevelFolderName = parts[0];
     let remainingPath = parts.sliceToArray(1, parts.size() : Nat);
-
     switch (technicalFolder.get(topLevelFolderName)) {
       case (null) { null };
       case (?folder) {
@@ -557,13 +526,9 @@ actor {
   };
 
   func findFileInPath(folder : Folder, pathParts : [Text]) : ?Storage.ExternalBlob {
-    if (pathParts.size() == 0) {
-      return null;
-    };
-
+    if (pathParts.size() == 0) { return null; };
     let currentPart = pathParts[0];
     let remainingParts = pathParts.sliceToArray(1, pathParts.size() : Nat);
-
     if (remainingParts.size() == 0) {
       return folder.files.get(currentPart);
     } else {
@@ -574,62 +539,39 @@ actor {
     };
   };
 
-  public shared ({ caller }) func uploadTechnicalFileWithFolderPath(
-    path : Text,
-    blob : Storage.ExternalBlob,
-  ) : async () {
+  public shared ({ caller }) func uploadTechnicalFileWithFolderPath(path : Text, blob : Storage.ExternalBlob) : async () {
     checkAccess(caller);
-
     let parts = path.split(#char('/')).toArray();
     if (parts.size() < 2) {
       Runtime.trap("Chemin non valide. Doit inclure au moins un dossier et un nom de fichier");
     };
-
     let topLevelFolderName = parts[0];
     let fileName = parts[parts.size() - 1];
     let remainingPath = parts.sliceToArray(1, parts.size() - 1 : Nat);
-
     var topLevelFolder = switch (technicalFolder.get(topLevelFolderName)) {
       case (null) {
-        {
-          name = topLevelFolderName;
-          files = Map.empty<Text, Storage.ExternalBlob>();
-          subfolders = Map.empty<Text, Folder>();
-        };
+        { name = topLevelFolderName; files = Map.empty<Text, Storage.ExternalBlob>(); subfolders = Map.empty<Text, Folder>() };
       };
       case (?folder) { folder };
     };
-
     topLevelFolder := createSubfoldersAndAddFile(topLevelFolder, remainingPath, fileName, blob);
     technicalFolder.add(topLevelFolderName, topLevelFolder);
   };
 
-  func createSubfoldersAndAddFile(
-    folder : Folder,
-    subfolders : [Text],
-    fileName : Text,
-    blob : Storage.ExternalBlob,
-  ) : Folder {
+  func createSubfoldersAndAddFile(folder : Folder, subfolders : [Text], fileName : Text, blob : Storage.ExternalBlob) : Folder {
     if (subfolders.size() == 0) {
       folder.files.add(fileName, blob);
       return folder;
     };
-
     let currentFolderName = subfolders[0];
     let remainingSubfolders = subfolders.sliceToArray(1, subfolders.size() : Nat);
-
     var currentFolder = switch (folder.subfolders.get(currentFolderName)) {
       case (null) {
-        let newSubfolder : Folder = {
-          name = currentFolderName;
-          files = Map.empty<Text, Storage.ExternalBlob>();
-          subfolders = Map.empty<Text, Folder>();
-        };
+        let newSubfolder : Folder = { name = currentFolderName; files = Map.empty<Text, Storage.ExternalBlob>(); subfolders = Map.empty<Text, Folder>() };
         newSubfolder;
       };
       case (?existingFolder) { existingFolder };
     };
-
     currentFolder := createSubfoldersAndAddFile(currentFolder, remainingSubfolders, fileName, blob);
     folder.subfolders.add(currentFolderName, currentFolder);
     folder;
@@ -637,23 +579,18 @@ actor {
 
   public shared ({ caller }) func deleteTechnicalFileWithPath(path : Text) : async () {
     checkAccess(caller);
-
     let parts = path.split(#char('/')).toArray();
     if (parts.size() < 2) {
       Runtime.trap("Chemin non valide. Doit inclure au moins un dossier et un nom de fichier");
     };
-
     let topLevelFolderName = parts[0];
     let fileName = parts[parts.size() - 1];
     let remainingPath = parts.sliceToArray(1, parts.size() - 1 : Nat);
-
     switch (technicalFolder.get(topLevelFolderName)) {
       case (null) { Runtime.trap("Dossier de niveau supérieur introuvable") };
       case (?folder) {
         let (fileDeleted, updatedFolder) = deleteFileInPath(folder, remainingPath, fileName);
-        if (not fileDeleted) {
-          Runtime.trap("Fichier introuvable dans le chemin spécifié");
-        };
+        if (not fileDeleted) { Runtime.trap("Fichier introuvable dans le chemin spécifié"); };
         if (updatedFolder.files.size() == 0 and updatedFolder.subfolders.size() == 0) {
           technicalFolder.remove(topLevelFolderName);
         } else {
@@ -667,15 +604,11 @@ actor {
     if (pathParts.size() == 0) {
       switch (folder.files.get(fileName)) {
         case (null) { (false, folder) };
-        case (?_) {
-          folder.files.remove(fileName);
-          (true, folder);
-        };
+        case (?_) { folder.files.remove(fileName); (true, folder) };
       };
     } else {
       let currentFolderName = pathParts[0];
       let remainingParts = pathParts.sliceToArray(1, pathParts.size() : Nat);
-
       switch (folder.subfolders.get(currentFolderName)) {
         case (null) { (false, folder) };
         case (?subfolder) {
@@ -695,15 +628,10 @@ actor {
 
   public shared ({ caller }) func moveTechnicalFile(oldPath : Text, newPath : Text) : async () {
     checkAccess(caller);
-
     let parts = oldPath.split(#char('/')).toArray();
-    if (parts.size() == 0) {
-      Runtime.trap("Chemin invalide");
-    };
-
+    if (parts.size() == 0) { Runtime.trap("Chemin invalide"); };
     let topLevelFolderName = parts[0];
     let remainingPath = parts.sliceToArray(1, parts.size() : Nat);
-
     switch (technicalFolder.get(topLevelFolderName)) {
       case (null) { Runtime.trap("Dossier de niveau supérieur introuvable") };
       case (?folder) {
@@ -720,50 +648,31 @@ actor {
 
   public shared ({ caller }) func createFolder(path : Text) : async () {
     checkAccess(caller);
-
     let parts = path.split(#char('/')).toArray();
-    if (parts.size() == 0) {
-      Runtime.trap("Chemin invalide. Vous devez spécifier le nom du dossier");
-    };
-
+    if (parts.size() == 0) { Runtime.trap("Chemin invalide. Vous devez spécifier le nom du dossier"); };
     let topLevelFolderName = parts[0];
     let remainingPath = parts.sliceToArray(1, parts.size());
-
     var topLevelFolder = switch (technicalFolder.get(topLevelFolderName)) {
       case (null) {
-        {
-          name = topLevelFolderName;
-          files = Map.empty<Text, Storage.ExternalBlob>();
-          subfolders = Map.empty<Text, Folder>();
-        };
+        { name = topLevelFolderName; files = Map.empty<Text, Storage.ExternalBlob>(); subfolders = Map.empty<Text, Folder>() };
       };
       case (?folder) { folder };
     };
-
     topLevelFolder := createSubfolders(topLevelFolder, remainingPath);
     technicalFolder.add(topLevelFolderName, topLevelFolder);
   };
 
   func createSubfolders(folder : Folder, subfolders : [Text]) : Folder {
-    if (subfolders.size() == 0) {
-      return folder;
-    };
-
+    if (subfolders.size() == 0) { return folder; };
     let currentFolderName = subfolders[0];
     let remainingSubfolders = subfolders.sliceToArray(1, subfolders.size() : Nat);
-
     var currentFolder = switch (folder.subfolders.get(currentFolderName)) {
       case (null) {
-        let newSubfolder : Folder = {
-          name = currentFolderName;
-          files = Map.empty<Text, Storage.ExternalBlob>();
-          subfolders = Map.empty<Text, Folder>();
-        };
+        let newSubfolder : Folder = { name = currentFolderName; files = Map.empty<Text, Storage.ExternalBlob>(); subfolders = Map.empty<Text, Folder>() };
         newSubfolder;
       };
       case (?existingFolder) { existingFolder };
     };
-
     currentFolder := createSubfolders(currentFolder, remainingSubfolders);
     folder.subfolders.add(currentFolderName, currentFolder);
     folder;
@@ -771,15 +680,10 @@ actor {
 
   public shared ({ caller }) func renameFolder(oldPath : Text, newName : Text) : async () {
     checkAccess(caller);
-
     let parts = oldPath.split(#char('/')).toArray();
-    if (parts.size() == 0) {
-      Runtime.trap("Chemin invalide. Vous devez spécifier le nom du dossier");
-    };
-
+    if (parts.size() == 0) { Runtime.trap("Chemin invalide. Vous devez spécifier le nom du dossier"); };
     let topLevelFolderName = parts[0];
     let remainingPath = parts.sliceToArray(1, parts.size());
-
     switch (technicalFolder.get(topLevelFolderName)) {
       case (null) { Runtime.trap("Dossier de niveau supérieur introuvable") };
       case (?rootFolder) {
@@ -789,9 +693,7 @@ actor {
           technicalFolder.add(newName, renamedFolder);
         } else {
           let (renamed, updatedRootFolder) = renameSubfolderInPath(rootFolder, remainingPath, newName);
-          if (not renamed) {
-            Runtime.trap("Échec du renommage du dossier dans le chemin spécifié");
-          };
+          if (not renamed) { Runtime.trap("Échec du renommage du dossier dans le chemin spécifié"); };
           technicalFolder.add(topLevelFolderName, updatedRootFolder);
         };
       };
@@ -815,14 +717,11 @@ actor {
     } else {
       let currentFolderName = pathParts[0];
       let remainingParts = pathParts.sliceToArray(1, pathParts.size() : Nat);
-
       switch (folder.subfolders.get(currentFolderName)) {
         case (null) { (false, folder) };
         case (?subfolder) {
           let (renamed, updatedSubfolder) = renameSubfolderInPath(subfolder, remainingParts, newName);
-          if (renamed) {
-            folder.subfolders.add(currentFolderName, updatedSubfolder);
-          };
+          if (renamed) { folder.subfolders.add(currentFolderName, updatedSubfolder); };
           (renamed, folder);
         };
       };
@@ -846,7 +745,6 @@ actor {
     weekYear : Nat,
   ) : async Text {
     checkAccess(caller);
-
     let id = Time.now().toText();
     let scheduledIntervention : ScheduledIntervention = {
       id;
@@ -867,7 +765,6 @@ actor {
       createdAt = Time.now();
       updatedAt = Time.now();
     };
-
     scheduledInterventions.add(id, scheduledIntervention);
     id;
   };
@@ -891,7 +788,6 @@ actor {
     weekYear : Nat,
   ) : async () {
     checkAccess(caller);
-
     switch (scheduledInterventions.get(id)) {
       case (null) { Runtime.trap("Intervention programmée non trouvée") };
       case (?existingIntervention) {
@@ -899,20 +795,10 @@ actor {
           Runtime.trap("Non autorisé : vous ne pouvez mettre à jour que vos propres interventions programmées");
         };
         let updatedIntervention : ScheduledIntervention = {
-          id;
-          clientId;
-          clientName;
-          assignedEmployee;
-          reason;
-          startTime;
-          endTime;
-          description;
-          media;
-          employeeSignature;
-          clientSignature;
+          id; clientId; clientName; assignedEmployee; reason; startTime; endTime; description; media;
+          employeeSignature; clientSignature;
           date = { day; month; year };
-          weekNumber;
-          weekYear;
+          weekNumber; weekYear;
           createdBy = existingIntervention.createdBy;
           createdAt = existingIntervention.createdAt;
           updatedAt = Time.now();
@@ -924,7 +810,6 @@ actor {
 
   public shared ({ caller }) func deleteScheduledIntervention(id : Text) : async () {
     checkAccess(caller);
-
     switch (scheduledInterventions.get(id)) {
       case (null) { Runtime.trap("Intervention programmée non trouvée") };
       case (?existingIntervention) {
@@ -938,9 +823,7 @@ actor {
 
   public query ({ caller }) func getScheduledInterventionsByWeek(weekNumber : Nat, weekYear : Nat) : async [ScheduledIntervention] {
     checkAccess(caller);
-
     let matchingInterventions = List.empty<ScheduledIntervention>();
-
     scheduledInterventions.forEach(
       func(_id, intervention) {
         if (intervention.weekNumber == weekNumber and intervention.weekYear == weekYear) {
@@ -948,7 +831,6 @@ actor {
         };
       }
     );
-
     matchingInterventions.toArray();
   };
 
@@ -959,10 +841,7 @@ actor {
 
   public query ({ caller }) func getApprovedEmployees() : async [(Principal, UserProfile)] {
     checkAccess(caller);
-    
     let approvedEmployees = List.empty<(Principal, UserProfile)>();
-
-    // Iterate over all userProfiles and filter approved users
     userProfiles.forEach(
       func(principal, profile) {
         if (UserApproval.isApproved(approvalState, principal)) {
@@ -970,11 +849,61 @@ actor {
         };
       }
     );
-
     approvedEmployees.toArray();
   };
 
-  // Internal access check system - checks stable adminPrincipal for self-healing upgrade
+  // Work Hours (Feuille d'heures)
+  public shared ({ caller }) func saveWorkHours(
+    day : Nat,
+    month : Nat,
+    year : Nat,
+    morningStart : Text,
+    morningEnd : Text,
+    afternoonStart : Text,
+    afternoonEnd : Text,
+  ) : async () {
+    checkAccess(caller);
+    let id = caller.toText() # day.toText() # month.toText() # year.toText();
+    let workHours : WorkHours = {
+      id;
+      employee = caller;
+      date = { day; month; year };
+      morningStart;
+      morningEnd;
+      afternoonStart;
+      afternoonEnd;
+      updatedAt = Time.now();
+    };
+    workHoursStore.add(id, workHours);
+  };
+
+  public query ({ caller }) func getWorkHoursForMonth(employee : Principal, month : Nat, year : Nat) : async [WorkHours] {
+    checkAccess(caller);
+    let result = List.empty<WorkHours>();
+    workHoursStore.forEach(
+      func(_id, wh) {
+        if (wh.employee == employee and wh.date.month == month and wh.date.year == year) {
+          result.add(wh);
+        };
+      }
+    );
+    result.toArray();
+  };
+
+  public query ({ caller }) func getAllEmployeesWorkHoursForMonth(month : Nat, year : Nat) : async [WorkHours] {
+    checkAccess(caller);
+    let result = List.empty<WorkHours>();
+    workHoursStore.forEach(
+      func(_id, wh) {
+        if (wh.date.month == month and wh.date.year == year) {
+          result.add(wh);
+        };
+      }
+    );
+    result.toArray();
+  };
+
+  // Internal access check
   func checkAccess(caller : Principal) {
     if (not (isAdmin(caller) or UserApproval.isApproved(approvalState, caller))) {
       Runtime.trap("Non autorisé");

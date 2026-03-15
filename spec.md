@@ -1,34 +1,40 @@
 # Vial Traite Service
 
 ## Current State
-
-L'application gère des clients, interventions, un dossier technique, et un contrôle d'accès (admin + salariés approuvés). Les interventions sont liées aux fiches clients, nominatives, avec médias. Un tableau de bord avec calendrier permet de retrouver les interventions par date. Pas de planning hebdomadaire ni de signatures électroniques.
+Application complète de gestion clients/interventions avec :
+- Authentification Internet Identity avec contrôle d'accès admin unique
+- Gestion clients, interventions nominatives, dossier technique
+- Planning hebdomadaire avec assignation d'interventions par salarié et signatures électroniques
+- Navigation mobile avec 4 onglets : Clients, Planning, Tableau de bord, Dossier Technique
+- Export de données
 
 ## Requested Changes (Diff)
 
 ### Add
-- Type `ScheduledIntervention` : id, clientId, assignedEmployee (Principal), reason (motif), startTime (Text HH:MM), endTime (Text HH:MM), description, media ([ExternalBlob]), employeeSignature (?Text base64), clientSignature (?Text base64), date {day, month, year}, weekYear (Nat), weekNumber (Nat), createdBy (Principal), createdAt (Time)
-- Backend : `createScheduledIntervention`, `updateScheduledIntervention`, `deleteScheduledIntervention`, `getScheduledInterventionsByWeek(weekNumber, year)`, `getScheduledInterventionById`
-- Page `/planning` : vue grille hebdomadaire — lignes = jours (Lun–Ven), colonnes = salariés approuvés ; navigation semaine précédente/suivante
-- Formulaire d'intervention planifiée : recherche client existant ou création rapide, motif, horaires début/fin, description, ajout photos/vidéos, signatures électroniques (canvas dessin au doigt/souris) pour le salarié et le client
-- Page de détail intervention planifiée : lecture seule avec affichage des signatures et médias
-- Lien vers `/planning` depuis la navigation principale (MobileLayout)
+- **Backend** : nouveau type `WorkHours` avec champs `employee`, `date {day, month, year}`, `morningStart`, `morningEnd`, `afternoonStart`, `afternoonEnd` (tous Text optionnels)
+- **Backend** : `saveWorkHours(day, month, year, morningStart, morningEnd, afternoonStart, afternoonEnd)` — seul le caller peut sauvegarder ses propres heures
+- **Backend** : `getWorkHoursForMonth(employee: Principal, month, year)` — retourne la liste des WorkHours du mois pour cet employé (lecture par tous les utilisateurs approuvés)
+- **Backend** : `getAllEmployeesWorkHoursForMonth(month, year)` — retourne les WorkHours de tous les employés pour le mois (lecture par tous)
+- **Frontend** : nouvelle page `TimesheetPage` avec :
+  - Navigation par semaine (flèches précédent/suivant) et par mois
+  - Vue semaine : grille Lun-Ven, saisie matin (début/fin) et après-midi (début/fin) pour chaque jour
+  - Total journalier calculé automatiquement (en heures)
+  - Total hebdomadaire et mensuel affichés automatiquement
+  - Seul l'utilisateur connecté peut modifier ses propres heures (formulaire en lecture seule pour les autres)
+  - Sélecteur d'employé pour voir les heures des autres salariés (lecture seule)
+- **Frontend** : ajout de l'onglet "Feuille d'heures" dans MobileLayout (icône Clock)
+- **Frontend** : nouvelle route `/timesheet` dans App.tsx
 
 ### Modify
-- `MobileLayout` : ajouter lien de navigation vers `/planning`
-- `App.tsx` : ajouter la route `/planning` et `/planning/$interventionId`
-- Backend `main.mo` : ajouter les fonctions et types pour les interventions planifiées
+- `MobileLayout.tsx` : ajouter l'onglet Feuille d'heures avec icône Clock
+- `App.tsx` : ajouter la route `/timesheet`
 
 ### Remove
 - Rien
 
 ## Implementation Plan
-
-1. Ajouter type `ScheduledIntervention` et map `scheduledInterventions` dans `main.mo`
-2. Implémenter `createScheduledIntervention`, `updateScheduledIntervention`, `deleteScheduledIntervention`, `getScheduledInterventionsByWeek`, `getScheduledInterventionById`
-3. Générer les bindings TypeScript
-4. Créer page `PlanningPage.tsx` avec grille Lun–Ven × salariés
-5. Créer `ScheduledInterventionFormDialog.tsx` avec canvas signature
-6. Créer `ScheduledInterventionDetailPage.tsx`
-7. Ajouter routes dans `App.tsx`
-8. Ajouter lien planning dans `MobileLayout`
+1. Ajouter le type `WorkHours` et la map `workHoursStore` dans le backend Motoko
+2. Implémenter `saveWorkHours`, `getWorkHoursForMonth`, `getAllEmployeesWorkHoursForMonth`
+3. Mettre à jour `backend.d.ts` avec les nouvelles interfaces
+4. Créer `TimesheetPage.tsx` avec navigation semaine/mois, saisie détaillée, totaux automatiques
+5. Mettre à jour `MobileLayout.tsx` et `App.tsx`

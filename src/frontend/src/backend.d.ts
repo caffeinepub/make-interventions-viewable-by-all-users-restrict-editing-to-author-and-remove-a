@@ -37,6 +37,20 @@ export interface ScheduledIntervention {
     assignedEmployee: Principal;
     reason: string;
 }
+export interface WorkHours {
+    id: string;
+    employee: Principal;
+    date: {
+        day: bigint;
+        month: bigint;
+        year: bigint;
+    };
+    morningStart: string;
+    morningEnd: string;
+    afternoonStart: string;
+    afternoonEnd: string;
+    updatedAt: Time;
+}
 export interface Address {
     zip: string;
     street: string;
@@ -132,6 +146,9 @@ export interface backendInterface {
     renameFolder(oldPath: string, newName: string): Promise<void>;
     requestApproval(): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    saveWorkHours(day: bigint, month: bigint, year: bigint, morningStart: string, morningEnd: string, afternoonStart: string, afternoonEnd: string): Promise<void>;
+    getWorkHoursForMonth(employee: Principal, month: bigint, year: bigint): Promise<Array<WorkHours>>;
+    getAllEmployeesWorkHoursForMonth(month: bigint, year: bigint): Promise<Array<WorkHours>>;
     searchClients(searchString: string): Promise<Array<Client>>;
     setApproval(user: Principal, status: ApprovalStatus): Promise<void>;
     unmarkAsBlacklisted(clientId: string): Promise<void>;

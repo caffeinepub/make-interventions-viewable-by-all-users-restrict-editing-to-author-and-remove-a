@@ -26,6 +26,7 @@ import PendingApprovalPage from "./pages/PendingApprovalPage";
 import PlanningPage from "./pages/PlanningPage";
 import ScheduledInterventionDetailPage from "./pages/ScheduledInterventionDetailPage";
 import TechnicalFolderPage from "./pages/TechnicalFolderPage";
+import TimesheetPage from "./pages/TimesheetPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -176,6 +177,12 @@ const scheduledInterventionDetailRoute = createRoute({
   component: ScheduledInterventionDetailPage,
 });
 
+const timesheetRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: "/timesheet",
+  component: TimesheetPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authenticatedRoute.addChildren([
@@ -187,6 +194,7 @@ const routeTree = rootRoute.addChildren([
     adminAccessRoute,
     planningRoute,
     scheduledInterventionDetailRoute,
+    timesheetRoute,
   ]),
 ]);
 

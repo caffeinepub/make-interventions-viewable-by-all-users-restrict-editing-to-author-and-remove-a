@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import {
   CalendarRange,
+  Clock,
   Download,
   FolderOpen,
   LayoutDashboard,
@@ -29,6 +30,7 @@ interface MobileLayoutProps {
 const navItems = [
   { path: "/clients", label: "Clients", icon: Users },
   { path: "/planning", label: "Planning", icon: CalendarRange },
+  { path: "/timesheet", label: "Heures", icon: Clock },
   { path: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { path: "/technical-folder", label: "Dossier Technique", icon: FolderOpen },
 ];
@@ -126,7 +128,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
 
       {/* Bottom navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border">
-        <div className="flex items-center justify-around h-16 px-2">
+        <div className="flex items-center justify-around h-16 px-1">
           {navItems.map(({ path, label, icon: Icon }) => (
             <button
               type="button"
@@ -134,14 +136,16 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
               data-ocid="nav.link"
               onClick={() => navigate({ to: path })}
               className={cn(
-                "flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-colors flex-1",
+                "flex flex-col items-center gap-1 px-1 py-2 rounded-xl transition-colors flex-1",
                 isActive(path)
                   ? "text-primary bg-primary/10"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted",
               )}
             >
               <Icon className="w-5 h-5" />
-              <span className="text-xs font-medium">{label}</span>
+              <span className="text-[10px] font-medium leading-tight text-center">
+                {label}
+              </span>
             </button>
           ))}
         </div>
