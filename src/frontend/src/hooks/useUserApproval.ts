@@ -19,7 +19,8 @@ function getApprovalActor(actor: unknown) {
       Array<{ principal: Principal; status: ApprovalStatus }>
     >;
     setApproval: (user: Principal, status: ApprovalStatus) => Promise<void>;
-    isCallerAdmin: () => Promise<boolean>;
+    // syncAdminRole: restores admin role from stable storage and returns admin status
+    syncAdminRole: () => Promise<boolean>;
     hasAdminRegistered: () => Promise<boolean>;
     claimAdminIfNoneExists: () => Promise<void>;
   };
@@ -51,9 +52,8 @@ export function useIsCallerAdmin() {
     queryFn: async () => {
       if (!actor) return false;
       try {
-        // isCallerAdmin is a shared (update) call — it auto-restores admin role
-        // if the role was lost after an upgrade (self-healing)
-        return await getApprovalActor(actor).isCallerAdmin();
+        // syncAdminRole restores the admin role from stable storage if needed (self-healing)
+        return await getApprovalActor(actor).syncAdminRole();
       } catch {
         return false;
       }
@@ -127,11 +127,11 @@ export function useHasAdminRegistered() {
   return useQuery<boolean>({
     queryKey: ["hasAdminRegistered"],
     queryFn: async () => {
-      if (!actor) return false; // default false: show claim button when uncertain
+      if (!actor) return false;
       try {
         return await getApprovalActor(actor).hasAdminRegistered();
       } catch {
-        return false; // default false: safer to show claim button than to block
+        return false;
       }
     },
     enabled: !!actor && !isFetching,

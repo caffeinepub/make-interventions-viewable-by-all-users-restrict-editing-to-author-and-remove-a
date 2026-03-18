@@ -131,6 +131,21 @@ actor {
     isStableAdmin or isRoleAdmin;
   };
 
+  // Restores admin role in accessControlState from stable storage if needed,
+  // then returns whether the caller is admin. Self-healing after redeployment.
+  public shared ({ caller }) func syncAdminRole() : async Bool {
+    let stableAdminMatch = switch (adminPrincipal) {
+      case (?p) { p == caller };
+      case (null) { false };
+    };
+    if (stableAdminMatch and not Auth.isAdmin(accessControlState, caller)) {
+      // Restore role from stable storage
+      accessControlState.userRoles.add(caller, #admin);
+      UserApproval.setApproval(approvalState, caller, #approved);
+    };
+    isAdmin(caller);
+  };
+
   func _hasPermission(caller : Principal, role : Auth.UserRole) : Bool {
     Auth.hasPermission(accessControlState, caller, role);
   };
