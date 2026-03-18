@@ -14,6 +14,7 @@ export interface ApprovalEntry {
 function getApprovalActor(actor: unknown) {
   return actor as {
     isCallerApproved: () => Promise<boolean>;
+    isCallerAdmin: () => Promise<boolean>;
     requestApproval: () => Promise<void>;
     listApprovals: () => Promise<
       Array<{ principal: Principal; status: ApprovalStatus }>
@@ -22,6 +23,7 @@ function getApprovalActor(actor: unknown) {
     syncAdminRole: () => Promise<boolean>;
     hasAdminRegistered: () => Promise<boolean>;
     claimAdminIfNoneExists: () => Promise<void>;
+    getCallerUserRole: () => Promise<"admin" | "user" | "guest">;
   };
 }
 
@@ -35,6 +37,60 @@ function isCanisterStoppedError(err: unknown): boolean {
     str.includes('"reject_code": 5') ||
     str.includes("reject_code: 5")
   );
+}
+
+async function checkAdminWithRetry(
+  actor: ReturnType<typeof getApprovalActor>,
+): Promise<boolean | "canister_stopped"> {
+  // Try multiple methods to detect admin status robustly
+  // Method 1: syncAdminRole with retry for stopped canister
+  let lastStoppedError = false;
+  let shouldBreak = false;
+  for (let attempt = 0; attempt < 3 && !shouldBreak; attempt++) {
+    try {
+      const result = await actor.syncAdminRole();
+      return result;
+    } catch (err) {
+      if (isCanisterStoppedError(err)) {
+        lastStoppedError = true;
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, (attempt + 1) * 2000));
+        }
+      } else {
+        // Non-IC0508 error on syncAdminRole — try isCallerAdmin
+        shouldBreak = true;
+      }
+    }
+  }
+
+  if (lastStoppedError) {
+    // Try isCallerAdmin as alternative
+    try {
+      return await actor.isCallerAdmin();
+    } catch (err) {
+      if (isCanisterStoppedError(err)) {
+        return "canister_stopped";
+      }
+    }
+    return "canister_stopped";
+  }
+
+  // Method 2: isCallerAdmin (fallback)
+  try {
+    return await actor.isCallerAdmin();
+  } catch {
+    // ignore
+  }
+
+  // Method 3: getCallerUserRole
+  try {
+    const role = await actor.getCallerUserRole();
+    return role === "admin";
+  } catch {
+    // ignore
+  }
+
+  return false;
 }
 
 export function useIsCallerApproved() {
@@ -66,34 +122,18 @@ export function useIsCallerAdmin() {
     queryKey: ["isCallerAdmin"],
     queryFn: async () => {
       if (!actor) return false;
-      // Try up to 4 times with increasing delay
-      // If IC0508 on all attempts, THROW so App shows "starting" screen
-      let lastError: unknown;
-      for (let attempt = 0; attempt < 4; attempt++) {
-        try {
-          const result = await getApprovalActor(actor).syncAdminRole();
-          return result;
-        } catch (err) {
-          lastError = err;
-          if (isCanisterStoppedError(err)) {
-            if (attempt < 3) {
-              await new Promise((r) => setTimeout(r, (attempt + 1) * 2500));
-              continue;
-            }
-            // All retries exhausted with IC0508 — throw so App shows "starting" screen
-            throw new Error("CANISTER_STOPPED");
-          }
-          // Non-IC0508 error — admin not recognized, return false (don't block)
-          return false;
-        }
+      const result = await checkAdminWithRetry(getApprovalActor(actor));
+      if (result === "canister_stopped") {
+        throw new Error("CANISTER_STOPPED");
       }
-      throw lastError;
+      return result;
     },
     enabled: !!actor && !isFetching,
     staleTime: 0,
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    retry: 0, // Manual retry logic above
+    // CRITICAL: do NOT refetch on window focus — this causes the admin tab to flicker/disappear
+    refetchOnWindowFocus: false,
+    retry: 0, // Manual retry logic in checkAdminWithRetry
   });
 }
 
@@ -127,7 +167,11 @@ export function useListApprovals() {
     queryKey: ["listApprovals"],
     queryFn: async () => {
       if (!actor) return [];
-      return getApprovalActor(actor).listApprovals();
+      try {
+        return await getApprovalActor(actor).listApprovals();
+      } catch {
+        return [];
+      }
     },
     enabled: !!actor && !isFetching,
     staleTime: 1000 * 30,
@@ -180,43 +224,44 @@ export function useClaimAdminIfNoneExists() {
       await getApprovalActor(actor).claimAdminIfNoneExists();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["isCallerApproved"] });
       queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
+      queryClient.invalidateQueries({ queryKey: ["isCallerApproved"] });
       queryClient.invalidateQueries({ queryKey: ["hasAdminRegistered"] });
-      toast.success("Accès administrateur activé");
+      queryClient.invalidateQueries({ queryKey: ["currentUserProfile"] });
     },
     onError: (error: Error) => {
-      // If admin already registered, show a helpful message
-      const msg = error.message || "";
-      if (msg.includes("déjà enregistré") || msg.includes("already")) {
-        toast.error(
-          "Un administrateur est déjà enregistré. Utilisez 'Récupérer mon accès'.",
-        );
-      } else {
-        toast.error(`Erreur: ${error.message}`);
-      }
+      toast.error(`Erreur lors de la revendication admin: ${error.message}`);
     },
   });
 }
 
-// syncAdminRole to re-check admin status from stable storage
 export function useRecoverAdminAccess() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<boolean> => {
       if (!actor) throw new Error("Actor non disponible");
-      // Retry up to 5 times with increasing delay
-      for (let attempt = 0; attempt < 5; attempt++) {
-        try {
-          const isAdmin = await getApprovalActor(actor).syncAdminRole();
-          if (isAdmin) return true;
-          if (attempt < 4)
-            await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
-        } catch {
-          if (attempt < 4)
-            await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
-        }
+      const aa = getApprovalActor(actor);
+      // Try to sync admin role from stable storage
+      try {
+        const result = await aa.syncAdminRole();
+        if (result) return true;
+      } catch {
+        // ignore
+      }
+      // Try isCallerAdmin
+      try {
+        const result = await aa.isCallerAdmin();
+        if (result) return true;
+      } catch {
+        // ignore
+      }
+      // Try getCallerUserRole
+      try {
+        const role = await aa.getCallerUserRole();
+        if (role === "admin") return true;
+      } catch {
+        // ignore
       }
       return false;
     },
@@ -224,13 +269,16 @@ export function useRecoverAdminAccess() {
       if (isAdmin) {
         queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
         queryClient.invalidateQueries({ queryKey: ["isCallerApproved"] });
-        toast.success("Accès administrateur restauré");
+        queryClient.invalidateQueries({ queryKey: ["hasAdminRegistered"] });
+        toast.success("Accès administrateur récupéré !");
       } else {
-        toast.error("Votre compte n'est pas reconnu comme administrateur.");
+        toast.error(
+          "Récupération impossible: ce compte n'est pas enregistré comme administrateur.",
+        );
       }
     },
     onError: (error: Error) => {
-      toast.error(`Erreur lors de la récupération: ${error.message}`);
+      toast.error(`Erreur: ${error.message}`);
     },
   });
 }

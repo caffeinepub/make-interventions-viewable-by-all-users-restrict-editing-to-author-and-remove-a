@@ -26,16 +26,14 @@ export function useActor() {
       };
 
       const actor = await createActorWithConfig(actorOptions);
-
-      // Initialize access control but NEVER let it block actor creation
-      // If canister is starting (IC0508) or any error, silently continue
+      // CRITICAL: wrap initialization in try/catch — never block actor creation
       try {
         const adminToken = getSecretParameter("caffeineAdminToken") || "";
         await actor._initializeAccessControlWithSecret(adminToken);
-      } catch {
-        // Silently ignore — actor is still usable for all other calls
+      } catch (err) {
+        // Initialization failure is non-fatal — actor is still usable
+        console.warn("Actor initialization warning (non-fatal):", err);
       }
-
       return actor;
     },
     // Only refetch when identity changes

@@ -13,13 +13,11 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { ThemeProvider } from "next-themes";
-import { useEffect } from "react";
-import ProfileSetupDialog from "./components/auth/ProfileSetupDialog";
+import { useEffect, useRef, useState } from "react";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import MobileLayout from "./components/layout/MobileLayout";
 import { UserAccessProvider } from "./contexts/UserAccessContext";
 import { useActor } from "./hooks/useActor";
-import { useGetCallerUserProfile } from "./hooks/useCurrentUser";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import { useIsCallerAdmin, useIsCallerApproved } from "./hooks/useUserApproval";
 import AdminAccessPage from "./pages/AdminAccessPage";
@@ -47,12 +45,12 @@ function LoadingScreen({ message }: { message: string }) {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <div className="flex flex-col items-center gap-4">
         <img
-          src="/assets/generated/vial-traite-logo-transparent.dim_400x200.png"
+          src="/assets/generated/vial-traite-logo.dim_400x100.png"
           alt="Vial Traite Service"
-          className="w-40 h-auto opacity-80"
+          className="w-48 h-auto"
         />
-        <div className="flex items-center gap-3">
-          <div className="w-6 h-6 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+        <div className="flex items-center gap-3 mt-2">
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-muted-foreground text-sm">{message}</p>
         </div>
       </div>
@@ -65,9 +63,9 @@ function ServerStartingScreen({ onRetry }: { onRetry: () => void }) {
     <div className="flex items-center justify-center min-h-screen bg-background px-6">
       <div className="flex flex-col items-center gap-6 text-center max-w-sm">
         <img
-          src="/assets/generated/vial-traite-logo-transparent.dim_400x200.png"
+          src="/assets/generated/vial-traite-logo.dim_400x100.png"
           alt="Vial Traite Service"
-          className="w-44 h-auto"
+          className="w-52 h-auto"
         />
         <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center">
           <span className="text-2xl">⏳</span>
@@ -91,39 +89,6 @@ function ServerStartingScreen({ onRetry }: { onRetry: () => void }) {
         <p className="text-xs text-muted-foreground">
           Si le problème persiste, revenez dans quelques minutes.
         </p>
-      </div>
-    </div>
-  );
-}
-
-function ActorFailedScreen() {
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-background px-6">
-      <div className="flex flex-col items-center gap-5 text-center max-w-sm">
-        <img
-          src="/assets/generated/vial-traite-logo-transparent.dim_400x200.png"
-          alt="Vial Traite Service"
-          className="w-40 h-auto opacity-80"
-        />
-        <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
-          <span className="text-2xl">⚠️</span>
-        </div>
-        <div className="flex flex-col gap-2">
-          <h2 className="text-lg font-semibold text-foreground">
-            Connexion impossible
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Impossible de se connecter au serveur. Vérifiez votre connexion et
-            réessayez.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
-        >
-          Recharger la page
-        </button>
       </div>
     </div>
   );
@@ -171,11 +136,20 @@ function AuthenticatedLayoutInner() {
   const queryClient = useQueryClient();
   const adminQuery = useIsCallerAdmin();
   const approvalQuery = useIsCallerApproved();
-  const {
-    data: userProfile,
-    isLoading: profileLoading,
-    isFetched: profileFetched,
-  } = useGetCallerUserProfile();
+
+  /**
+   * CRITICAL: isAdmin is a one-way latch — once true, it NEVER goes back to false.
+   * This prevents the admin tab from disappearing on query refetch or window focus.
+   */
+  const isAdminLatchRef = useRef(false);
+  const [isAdminLatch, setIsAdminLatch] = useState(false);
+
+  useEffect(() => {
+    if (adminQuery.data === true && !isAdminLatchRef.current) {
+      isAdminLatchRef.current = true;
+      setIsAdminLatch(true);
+    }
+  }, [adminQuery.data]);
 
   // Step 1: Wait for actor
   if (actorFetching) {
@@ -184,16 +158,42 @@ function AuthenticatedLayoutInner() {
 
   // Step 2: Actor failed
   if (!actor) {
-    return <ActorFailedScreen />;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background px-6">
+        <div className="flex flex-col items-center gap-5 text-center max-w-sm">
+          <img
+            src="/assets/generated/vial-traite-logo.dim_400x100.png"
+            alt="Vial Traite Service"
+            className="w-48 h-auto opacity-80"
+          />
+          <div className="flex flex-col gap-2">
+            <h2 className="text-lg font-semibold text-foreground">
+              Connexion impossible
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Impossible de se connecter au serveur. Vérifiez votre connexion et
+              réessayez.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
+          >
+            Recharger la page
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // Step 3: Wait for admin/approval checks
-  if (adminQuery.isLoading || approvalQuery.isLoading) {
+  if (adminQuery.isLoading || (approvalQuery.isLoading && !isAdminLatch)) {
     return <LoadingScreen message="Vérification des accès..." />;
   }
 
-  // Step 4: If admin check errored with canister stopped → show starting screen
-  if (adminQuery.isError) {
+  // Step 4: Canister stopped error
+  if (adminQuery.isError && !isAdminLatch) {
     const msg = (adminQuery.error as Error)?.message ?? "";
     const isCanisterStopped =
       msg.includes("CANISTER_STOPPED") ||
@@ -210,39 +210,35 @@ function AuthenticatedLayoutInner() {
         />
       );
     }
-    // Non-canister error → continue to access page
+    // Non-canister error → continue to access page (treat as non-admin)
   }
 
-  const needsProfileSetup =
-    !profileLoading && profileFetched && userProfile === null;
+  // Use latched value — once admin, always admin in this session
+  const isAdmin = isAdminLatch;
 
-  const isAdmin = adminQuery.data === true;
-
-  // Step 5: Admin gets immediate access — pass isAdmin=true via context
+  // Step 5: Admin gets immediate access
   if (isAdmin) {
     return (
       <UserAccessProvider isAdmin={true}>
         <MobileLayout>
-          {needsProfileSetup && <ProfileSetupDialog />}
           <Outlet />
         </MobileLayout>
       </UserAccessProvider>
     );
   }
 
-  // Step 6: Approved users — isAdmin=false
+  // Step 6: Approved users
   if (approvalQuery.data === true) {
     return (
       <UserAccessProvider isAdmin={false}>
         <MobileLayout>
-          {needsProfileSetup && <ProfileSetupDialog />}
           <Outlet />
         </MobileLayout>
       </UserAccessProvider>
     );
   }
 
-  // Step 7: Not approved → access request page
+  // Step 7: Not approved → access request page (shows claim admin option if no admin exists)
   return <PendingApprovalPage />;
 }
 

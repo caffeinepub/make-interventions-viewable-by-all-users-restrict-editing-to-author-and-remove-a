@@ -1,15 +1,15 @@
-import Auth "authorization/access-control";
-import UserApproval "user-approval/approval";
-import Runtime "mo:core/Runtime";
-import List "mo:core/List";
-import Order "mo:core/Order";
 import Map "mo:core/Map";
-import Array "mo:core/Array";
-import Nat "mo:core/Nat";
-import Text "mo:core/Text";
+import List "mo:core/List";
+import Iter "mo:core/Iter";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
+import Order "mo:core/Order";
+import Runtime "mo:core/Runtime";
+import Array "mo:core/Array";
+import Text "mo:core/Text";
 import Storage "blob-storage/Storage";
+import Auth "authorization/access-control";
+import UserApproval "user-approval/approval";
 import MixinStorage "blob-storage/Mixin";
 import MixinAuthorization "authorization/MixinAuthorization";
 
@@ -123,36 +123,26 @@ actor {
   };
 
   // Safe admin check: once stable admin is set, ONLY the stable principal is admin.
-  // This prevents other users from gaining admin via the role map after canister restart.
   func isAdmin(caller : Principal) : Bool {
     switch (adminPrincipal) {
-      case (?p) { p == caller }; // Stable admin set: ONLY trust stable principal
+      case (?p) { p == caller };
       case (null) {
-        // No stable admin yet (before first admin claims), fall back to role map
         accessControlState.userRoles.get(caller) == ?#admin;
       };
     };
   };
 
-  // Restores admin role in accessControlState from stable storage if needed,
-  // then returns whether the caller is admin. Self-healing after redeployment.
   public shared ({ caller }) func syncAdminRole() : async Bool {
     let stableAdminMatch = switch (adminPrincipal) {
       case (?p) { p == caller };
       case (null) { false };
     };
-    // Safe map lookup (no trap)
     let roleInMap = accessControlState.userRoles.get(caller) == ?#admin;
     if (stableAdminMatch and not roleInMap) {
-      // Restore role from stable storage after redeployment
       accessControlState.userRoles.add(caller, #admin);
       UserApproval.setApproval(approvalState, caller, #approved);
     };
     isAdmin(caller);
-  };
-
-  func _hasPermission(caller : Principal, role : Auth.UserRole) : Bool {
-    Auth.hasPermission(accessControlState, caller, role);
   };
 
   public query ({ caller }) func hasAdminRegistered() : async Bool {
@@ -171,13 +161,11 @@ actor {
   };
 
   public query ({ caller }) func isCallerApproved() : async Bool {
-    // Check stable admin first (short-circuit, no map lookup needed)
     let adminCheck = switch (adminPrincipal) {
       case (?p) { p == caller };
       case (null) { false };
     };
     if (adminCheck) return true;
-    // Direct map lookups (safe, no trap)
     let roleAdminCheck = accessControlState.userRoles.get(caller) == ?#admin;
     if (roleAdminCheck) return true;
     UserApproval.isApproved(approvalState, caller);
@@ -224,15 +212,17 @@ actor {
     userProfiles.get(user);
   };
 
-  // APPROVED USER ONLY
+  // ADMIN ONLY - Bulk profile fetch for administrative purposes
   public query ({ caller }) func getUserProfilesByPrincipals(principals : [Principal]) : async [(Principal, UserProfile)] {
-    checkAccess(caller);
+    if (not isAdmin(caller)) {
+      Runtime.trap("Non autorisé : seuls les administrateurs peuvent voir plusieurs profils");
+    };
     userProfiles.filter(
       func(principal, _profile) { principals.find(func(p) { p == principal }) != null }
     ).toArray();
   };
 
-  // NO ACCESS CHECK - Profile can be saved before approval (needed for admin claim)
+  // NO ACCESS CHECK - Profile can be saved before approval (needed for registration flow)
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
     userProfiles.add(caller, profile);
   };
@@ -243,6 +233,7 @@ actor {
     clients.values().toArray().sort();
   };
 
+  // APPROVED USER ONLY
   public query ({ caller }) func getClientsWithIds() : async [(Text, Client)] {
     checkAccess(caller);
     clients.toArray();
@@ -805,7 +796,7 @@ actor {
     id;
   };
 
-  // CREATOR OR ADMIN ONLY
+  // CREATOR, ASSIGNED EMPLOYEE, OR ADMIN ONLY
   public shared ({ caller }) func updateScheduledIntervention(
     id : Text,
     clientId : Text,
@@ -828,8 +819,8 @@ actor {
     switch (scheduledInterventions.get(id)) {
       case (null) { Runtime.trap("Intervention programmée non trouvée") };
       case (?existingIntervention) {
-        if (existingIntervention.createdBy != caller and not isAdmin(caller)) {
-          Runtime.trap("Non autorisé : vous ne pouvez mettre à jour que vos propres interventions programmées");
+        if (existingIntervention.createdBy != caller and existingIntervention.assignedEmployee != caller and not isAdmin(caller)) {
+          Runtime.trap("Non autorisé : seuls le créateur, l'employé assigné ou l'administrateur peuvent mettre à jour cette intervention");
         };
         let updatedIntervention : ScheduledIntervention = {
           id; clientId; clientName; assignedEmployee; reason; startTime; endTime; description; media;
@@ -890,7 +881,7 @@ actor {
     approvedEmployees.toArray();
   };
 
-  // Work Hours - ALL REQUIRE APPROVED ACCESS
+  // Work Hours - OWNER OR ADMIN ONLY for viewing
   public shared ({ caller }) func saveWorkHours(
     day : Nat,
     month : Nat,
@@ -915,8 +906,12 @@ actor {
     workHoursStore.add(id, workHours);
   };
 
+  // OWNER OR ADMIN ONLY - Can only view own hours unless admin
   public query ({ caller }) func getWorkHoursForMonth(employee : Principal, month : Nat, year : Nat) : async [WorkHours] {
     checkAccess(caller);
+    if (employee != caller and not isAdmin(caller)) {
+      Runtime.trap("Non autorisé : vous ne pouvez voir que vos propres heures de travail");
+    };
     let result = List.empty<WorkHours>();
     workHoursStore.forEach(
       func(_id, wh) {
@@ -928,8 +923,11 @@ actor {
     result.toArray();
   };
 
+  // ADMIN ONLY - View all employees' work hours
   public query ({ caller }) func getAllEmployeesWorkHoursForMonth(month : Nat, year : Nat) : async [WorkHours] {
-    checkAccess(caller);
+    if (not isAdmin(caller)) {
+      Runtime.trap("Non autorisé : seuls les administrateurs peuvent voir les heures de tous les employés");
+    };
     let result = List.empty<WorkHours>();
     workHoursStore.forEach(
       func(_id, wh) {
