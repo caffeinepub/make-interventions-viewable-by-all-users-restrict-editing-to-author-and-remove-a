@@ -15,7 +15,6 @@ export function useActor() {
       const isAuthenticated = !!identity;
 
       if (!isAuthenticated) {
-        // Return anonymous actor if not authenticated
         return await createActorWithConfig();
       }
 
@@ -26,14 +25,24 @@ export function useActor() {
       };
 
       const actor = await createActorWithConfig(actorOptions);
+
+      // Initialize access control in background — NEVER block actor creation
       const adminToken = getSecretParameter("caffeineAdminToken") || "";
-      await actor._initializeAccessControlWithSecret(adminToken);
+      try {
+        await actor._initializeAccessControlWithSecret(adminToken);
+      } catch (initErr) {
+        // Silently ignore — canister may still be starting up (IC0508)
+        // The actor is still usable for all other calls
+        console.warn("[useActor] init skipped (canister starting):", initErr);
+      }
+
       return actor;
     },
-    // Only refetch when identity changes
     staleTime: Number.POSITIVE_INFINITY,
-    // This will cause the actor to be recreated when the identity changes
     enabled: true,
+    // Retry once after 3s if actor creation itself fails
+    retry: 1,
+    retryDelay: 3000,
   });
 
   // When the actor changes, invalidate dependent queries
