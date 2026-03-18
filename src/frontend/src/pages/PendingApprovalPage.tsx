@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  AlertTriangle,
   CheckCircle2,
   Clock,
   Loader2,
@@ -19,6 +20,7 @@ import {
   useClaimAdminIfNoneExists,
   useHasAdminRegistered,
   useIsCallerApproved,
+  useRecoverAdminAccess,
   useRequestApproval,
 } from "../hooks/useUserApproval";
 
@@ -29,6 +31,7 @@ export default function PendingApprovalPage() {
   const { actor, isFetching: actorFetching } = useActor();
 
   const [name, setName] = useState("");
+  const [showAdminRecovery, setShowAdminRecovery] = useState(false);
 
   const {
     mutate: requestApproval,
@@ -43,13 +46,23 @@ export default function PendingApprovalPage() {
     useSaveCallerUserProfile();
 
   const {
+    mutate: recoverAdmin,
+    isPending: isRecovering,
+    data: recoveryResult,
+  } = useRecoverAdminAccess();
+
+  const {
     data: isApproved,
     refetch: refetchApproval,
     isLoading: checkingApproval,
   } = useIsCallerApproved();
 
-  const { data: hasAdminRegistered, isLoading: checkingAdmin } =
-    useHasAdminRegistered();
+  const {
+    data: hasAdminRegistered,
+    isLoading: checkingAdmin,
+    isError: adminCheckError,
+    refetch: refetchAdminCheck,
+  } = useHasAdminRegistered();
 
   const [alreadyRequested, setAlreadyRequested] = useState(false);
 
@@ -65,6 +78,13 @@ export default function PendingApprovalPage() {
       setAlreadyRequested(true);
     }
   }, [hasRequested]);
+
+  // If recovery succeeded (isAdmin=true), redirect to dashboard
+  useEffect(() => {
+    if (recoveryResult === true) {
+      navigate({ to: "/" });
+    }
+  }, [recoveryResult, navigate]);
 
   const handleLogout = async () => {
     await clear();
@@ -82,6 +102,9 @@ export default function PendingApprovalPage() {
             onSuccess: () => {
               queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
               queryClient.invalidateQueries({ queryKey: ["isCallerApproved"] });
+              queryClient.invalidateQueries({
+                queryKey: ["hasAdminRegistered"],
+              });
               navigate({ to: "/" });
             },
           });
@@ -106,8 +129,12 @@ export default function PendingApprovalPage() {
     refetchApproval();
   };
 
-  const isLoadingChecks =
-    actorFetching || !actor || checkingApproval || checkingAdmin;
+  const handleRecoverAdmin = () => {
+    recoverAdmin();
+  };
+
+  // Loading only blocks on actor/approval check — NOT on admin check (it renders its own states)
+  const isLoadingChecks = actorFetching || !actor || checkingApproval;
   const noAdminYet = hasAdminRegistered === false;
   const isSubmitting = isSavingProfile || isClaiming || isRequesting;
 
@@ -138,6 +165,103 @@ export default function PendingApprovalPage() {
                 Vérification en cours…
               </p>
             </div>
+          ) : checkingAdmin ? (
+            /* Admin check still loading */
+            <div
+              data-ocid="pending_approval.loading_state"
+              className="flex flex-col items-center gap-4 py-4"
+            >
+              <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">
+                Vérification du statut administrateur…
+              </p>
+            </div>
+          ) : adminCheckError ? (
+            /* Admin check failed — server may be starting */
+            <>
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-orange-500" />
+                </div>
+              </div>
+
+              <div className="text-center flex flex-col gap-2">
+                <h2 className="text-lg font-semibold text-foreground">
+                  Serveur en démarrage
+                </h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Impossible de vérifier le statut (serveur en démarrage). Si
+                  vous êtes le premier utilisateur, vous pouvez vous définir
+                  comme administrateur.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <Button
+                  onClick={() => refetchAdminCheck()}
+                  variant="outline"
+                  className="w-full"
+                  size="lg"
+                  data-ocid="pending_approval.secondary_button"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Réessayer
+                </Button>
+
+                <div className="border-t border-border pt-3">
+                  <p className="text-xs text-muted-foreground mb-3 text-center">
+                    Si vous êtes le premier utilisateur, vous pouvez vous
+                    définir comme administrateur :
+                  </p>
+
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="admin-name-error">
+                      Votre prénom et nom
+                    </Label>
+                    <Input
+                      id="admin-name-error"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Ex: Jean Dupont"
+                      data-ocid="pending_approval.input"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && name.trim() && !isSubmitting)
+                          handleClaimAdmin();
+                      }}
+                    />
+                    <Button
+                      onClick={handleClaimAdmin}
+                      disabled={isSubmitting || !name.trim()}
+                      className="w-full"
+                      data-ocid="pending_approval.primary_button"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Activation…
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-4 h-4 mr-2" />
+                          Je suis l&apos;administrateur
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleLogout}
+                  variant="ghost"
+                  className="w-full text-muted-foreground hover:text-destructive"
+                  size="sm"
+                  data-ocid="pending_approval.button"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Se déconnecter
+                </Button>
+              </div>
+            </>
           ) : noAdminYet ? (
             /* No admin registered yet — show "claim admin" flow */
             <>
@@ -288,6 +412,46 @@ export default function PendingApprovalPage() {
                     )}
                   </Button>
                 )}
+
+                {/* Admin recovery section — always visible when admin registered */}
+                <div className="border-t border-border pt-3">
+                  {!showAdminRecovery ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminRecovery(true)}
+                      className="w-full text-xs text-muted-foreground hover:text-primary transition-colors text-center py-1"
+                    >
+                      Vous êtes l&apos;administrateur ?
+                    </button>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-xs text-muted-foreground text-center">
+                        Si vous êtes l&apos;administrateur et que votre accès
+                        n&apos;est pas reconnu, cliquez pour le restaurer :
+                      </p>
+                      <Button
+                        onClick={handleRecoverAdmin}
+                        disabled={isRecovering}
+                        variant="outline"
+                        className="w-full border-primary/50 text-primary hover:bg-primary/10"
+                        size="sm"
+                        data-ocid="pending_approval.recover_admin_button"
+                      >
+                        {isRecovering ? (
+                          <>
+                            <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                            Restauration en cours…
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="w-3 h-3 mr-2" />
+                            Récupérer mon accès administrateur
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
 
                 <Button
                   onClick={handleLogout}

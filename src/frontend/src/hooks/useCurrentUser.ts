@@ -11,7 +11,11 @@ export function useGetCallerUserProfile() {
     queryKey: ["currentUserProfile"],
     queryFn: async () => {
       if (!actor) throw new Error("Actor non disponible");
-      return actor.getCallerUserProfile();
+      try {
+        return await actor.getCallerUserProfile();
+      } catch {
+        return null;
+      }
     },
     enabled: !!actor && !actorFetching,
     retry: false,
@@ -31,16 +35,31 @@ export function useUserProfilesByPrincipals(principals: Principal[]) {
     queryKey: ["userProfiles", principals.map((p) => p.toString()).join(",")],
     queryFn: async () => {
       if (!actor) return new Map();
-      const results = await actor.getUserProfilesByPrincipals(principals);
-      const map = new Map<string, string>();
-      for (const [principal, profile] of results) {
-        map.set(principal.toString(), profile.name);
+      try {
+        const results = await actor.getUserProfilesByPrincipals(principals);
+        const map = new Map<string, string>();
+        for (const [principal, profile] of results) {
+          map.set(principal.toString(), profile.name);
+        }
+        return map;
+      } catch {
+        return new Map();
       }
-      return map;
     },
     enabled: !!actor && !actorFetching && principals.length > 0,
     staleTime: 5 * 60 * 1000,
   });
+}
+
+function isCanisterStoppedError(err: unknown): boolean {
+  const str = JSON.stringify(err) + String((err as Error)?.message ?? "");
+  return (
+    str.includes("IC0508") ||
+    str.includes("stopped") ||
+    str.includes('reject_code":"5') ||
+    str.includes("reject_code: 5") ||
+    str.includes('"reject_code":5')
+  );
 }
 
 export function useSaveCallerUserProfile() {
@@ -50,11 +69,25 @@ export function useSaveCallerUserProfile() {
   return useMutation({
     mutationFn: async (profile: UserProfile) => {
       if (!actor) throw new Error("Actor non disponible");
-      await actor.saveCallerUserProfile(profile);
+      let lastError: unknown;
+      for (let i = 0; i < 5; i++) {
+        try {
+          await actor.saveCallerUserProfile(profile);
+          return;
+        } catch (err: unknown) {
+          lastError = err;
+          if (isCanisterStoppedError(err)) {
+            // Canister is starting up, wait and retry with exponential backoff
+            await new Promise((r) => setTimeout(r, 2000 * (i + 1)));
+            continue;
+          }
+          throw err;
+        }
+      }
+      throw lastError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["currentUserProfile"] });
-      toast.success("Profil enregistré avec succès");
     },
     onError: (error: Error) => {
       toast.error(

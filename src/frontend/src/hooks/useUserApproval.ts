@@ -39,8 +39,9 @@ export function useIsCallerApproved() {
       }
     },
     enabled: !!actor && !isFetching,
-    // No stale time — always re-check on focus/mount for security
     staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -51,16 +52,24 @@ export function useIsCallerAdmin() {
     queryKey: ["isCallerAdmin"],
     queryFn: async () => {
       if (!actor) return false;
-      try {
-        // syncAdminRole restores the admin role from stable storage if needed (self-healing)
-        return await getApprovalActor(actor).syncAdminRole();
-      } catch {
-        return false;
+      // Try up to 3 times with delay, in case canister is just starting
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const result = await getApprovalActor(actor).syncAdminRole();
+          return result;
+        } catch (_err) {
+          if (attempt < 2) {
+            // Wait before retrying (1s, then 2s)
+            await new Promise((r) => setTimeout(r, (attempt + 1) * 1000));
+          }
+        }
       }
+      return false;
     },
     enabled: !!actor && !isFetching,
-    // No stale time — always re-check for admin status to prevent stale-cache lockout
     staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -73,8 +82,8 @@ export function useRequestApproval() {
       if (!actor) throw new Error("Actor non disponible");
       try {
         await getApprovalActor(actor).requestApproval();
-      } catch (err) {
-        console.warn("requestApproval call failed:", err);
+      } catch (_err) {
+        console.warn("requestApproval call failed:", _err);
       }
     },
     onSuccess: () => {
@@ -128,16 +137,14 @@ export function useHasAdminRegistered() {
   return useQuery<boolean>({
     queryKey: ["hasAdminRegistered"],
     queryFn: async () => {
-      if (!actor) return false;
-      try {
-        return await getApprovalActor(actor).hasAdminRegistered();
-      } catch {
-        return false;
-      }
+      if (!actor) throw new Error("Actor non disponible");
+      // Do NOT catch here — let errors propagate so isError works
+      return await getApprovalActor(actor).hasAdminRegistered();
     },
     enabled: !!actor && !isFetching,
-    // No stale time — critical for first-connection flow
     staleTime: 0,
+    retry: 2,
+    retryDelay: 2000,
   });
 }
 
@@ -157,6 +164,49 @@ export function useClaimAdminIfNoneExists() {
     },
     onError: (error: Error) => {
       toast.error(`Erreur: ${error.message}`);
+    },
+  });
+}
+
+// Tries to recover admin access by calling syncAdminRole.
+// Only works if caller's principal matches the stored adminPrincipal in stable storage.
+export function useRecoverAdminAccess() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!actor) throw new Error("Actor non disponible");
+      // Retry up to 5 times with delay in case canister is starting
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          const isAdmin = await getApprovalActor(actor).syncAdminRole();
+          if (isAdmin) {
+            return true;
+          }
+          if (attempt < 4) {
+            await new Promise((r) => setTimeout(r, 1500));
+          }
+        } catch {
+          if (attempt < 4) {
+            await new Promise((r) => setTimeout(r, 1500));
+          }
+        }
+      }
+      return false;
+    },
+    onSuccess: (isAdmin) => {
+      if (isAdmin) {
+        queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
+        queryClient.invalidateQueries({ queryKey: ["isCallerApproved"] });
+        toast.success("Accès administrateur restauré");
+      } else {
+        toast.error(
+          "Votre compte n'est pas reconnu comme administrateur. Vérifiez que vous utilisez le bon compte Internet Identity.",
+        );
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(`Erreur lors de la récupération: ${error.message}`);
     },
   });
 }
