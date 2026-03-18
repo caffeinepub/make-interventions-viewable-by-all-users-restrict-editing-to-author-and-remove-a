@@ -110,8 +110,8 @@ actor {
   let approvalState = UserApproval.initState(accessControlState);
 
   // Stable admin principal - persists across upgrades and redeployments
-  var adminPrincipal : ?Principal = null;
-  var adminAssigned : Bool = false;
+  stable var adminPrincipal : ?Principal = null;
+  stable var adminAssigned : Bool = false;
 
   include MixinStorage();
   include MixinAuthorization(accessControlState);

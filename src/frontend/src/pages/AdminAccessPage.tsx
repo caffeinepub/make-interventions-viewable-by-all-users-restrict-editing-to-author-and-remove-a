@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Principal } from "@icp-sdk/core/principal";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -9,9 +10,11 @@ import {
   Loader2,
   RefreshCw,
   ShieldCheck,
+  User,
   Users,
   XCircle,
 } from "lucide-react";
+import { useActor } from "../hooks/useActor";
 import {
   type ApprovalEntry,
   useListApprovals,
@@ -24,9 +27,38 @@ function truncatePrincipal(principal: Principal): string {
   return `${str.slice(0, 8)}...${str.slice(-6)}`;
 }
 
+function useProfileNames(principals: Principal[]) {
+  const { actor, isFetching } = useActor();
+  const key = principals.map((p) => p.toString()).join(",");
+
+  return useQuery<Map<string, string>>({
+    queryKey: ["profileNames", key],
+    queryFn: async () => {
+      const map = new Map<string, string>();
+      if (!actor || principals.length === 0) return map;
+      try {
+        const results = await (actor as any).getUserProfilesByPrincipals(
+          principals,
+        );
+        for (const [p, profile] of results as Array<
+          [Principal, { name: string }]
+        >) {
+          map.set(p.toString(), profile.name);
+        }
+      } catch (err) {
+        console.warn("getUserProfilesByPrincipals failed:", err);
+      }
+      return map;
+    },
+    enabled: !!actor && !isFetching && principals.length > 0,
+    staleTime: 1000 * 60,
+  });
+}
+
 interface UserRowProps {
   entry: ApprovalEntry;
   index: number;
+  displayName: string;
   onApprove?: () => void;
   onReject?: () => void;
   onRevoke?: () => void;
@@ -36,28 +68,35 @@ interface UserRowProps {
 function UserRow({
   entry,
   index,
+  displayName,
   onApprove,
   onReject,
   onRevoke,
   isPending,
 }: UserRowProps) {
-  const ocidBase = `admin_access.item.${index}`;
-
   return (
     <div
-      data-ocid={ocidBase}
+      data-ocid={`admin_access.item.${index}`}
       className="flex flex-col gap-3 bg-card border border-border rounded-xl p-4"
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-mono text-muted-foreground truncate">
-            {truncatePrincipal(entry.principal)}
-          </span>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <User className="w-4 h-4 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground truncate">
+              {displayName}
+            </p>
+            <p className="text-xs font-mono text-muted-foreground truncate">
+              {truncatePrincipal(entry.principal)}
+            </p>
+          </div>
         </div>
         {entry.status === "approved" && (
           <Badge
             variant="secondary"
-            className="bg-success/15 text-success-foreground border-success/30 shrink-0 text-xs"
+            className="shrink-0 text-xs bg-[#99CC33]/15 text-[#99CC33] border-[#99CC33]/30"
           >
             <CheckCircle2 className="w-3 h-3 mr-1" />
             Approuvé
@@ -66,7 +105,7 @@ function UserRow({
         {entry.status === "pending" && (
           <Badge
             variant="secondary"
-            className="bg-accent/15 text-accent-foreground border-accent/30 shrink-0 text-xs"
+            className="shrink-0 text-xs bg-[#FF9933]/15 text-[#FF9933] border-[#FF9933]/30"
           >
             <Clock className="w-3 h-3 mr-1" />
             En attente
@@ -75,10 +114,10 @@ function UserRow({
         {entry.status === "rejected" && (
           <Badge
             variant="secondary"
-            className="bg-destructive/15 text-destructive border-destructive/30 shrink-0 text-xs"
+            className="shrink-0 text-xs bg-destructive/15 text-destructive border-destructive/30"
           >
             <XCircle className="w-3 h-3 mr-1" />
-            Rejeté
+            Supprimé
           </Badge>
         )}
       </div>
@@ -90,7 +129,7 @@ function UserRow({
               size="sm"
               onClick={onApprove}
               disabled={isPending}
-              className="flex-1 min-w-0 bg-success hover:bg-success/90 text-success-foreground"
+              className="flex-1 min-w-0 bg-[#99CC33] hover:bg-[#99CC33]/90 text-white"
               data-ocid={`admin_access.approve_button.${index}`}
             >
               {isPending ? (
@@ -106,14 +145,14 @@ function UserRow({
               onClick={onReject}
               disabled={isPending}
               className="flex-1 min-w-0"
-              data-ocid={`admin_access.reject_button.${index}`}
+              data-ocid={`admin_access.delete_button.${index}`}
             >
               {isPending ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
               ) : (
                 <XCircle className="w-3 h-3 mr-1" />
               )}
-              Rejeter
+              Supprimer
             </Button>
           </>
         )}
@@ -124,7 +163,7 @@ function UserRow({
             onClick={onRevoke}
             disabled={isPending}
             className="flex-1 min-w-0"
-            data-ocid={`admin_access.revoke_button.${index}`}
+            data-ocid={`admin_access.delete_button.${index}`}
           >
             {isPending ? (
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -162,38 +201,36 @@ export default function AdminAccessPage() {
   const { mutate: setApproval, isPending: isSettingApproval } =
     useSetApproval();
 
+  const principals = approvals?.map((a) => a.principal) ?? [];
+  const { data: profileNames } = useProfileNames(principals);
+
   const pending = approvals?.filter((a) => a.status === "pending") ?? [];
   const approved = approvals?.filter((a) => a.status === "approved") ?? [];
   const rejected = approvals?.filter((a) => a.status === "rejected") ?? [];
 
-  // Flat list with original index for deterministic data-ocid
   const allEntriesIndexed =
     approvals?.map((entry, i) => ({ entry, displayIndex: i + 1 })) ?? [];
 
-  const handleApprove = (principal: Principal) => {
+  const getDisplayName = (principal: Principal) =>
+    profileNames?.get(principal.toString()) || truncatePrincipal(principal);
+
+  const handleApprove = (principal: Principal) =>
     setApproval({ user: principal, status: "approved" });
-  };
-
-  const handleReject = (principal: Principal) => {
+  const handleReject = (principal: Principal) =>
     setApproval({ user: principal, status: "rejected" });
-  };
-
-  const handleRevoke = (principal: Principal) => {
+  const handleRevoke = (principal: Principal) =>
     setApproval({ user: principal, status: "pending" });
-  };
 
   return (
     <div
       data-ocid="admin_access.page"
       className="flex flex-col gap-6 px-4 py-4"
     >
-      {/* Header */}
       <div className="flex items-center gap-2">
         <ShieldCheck className="w-5 h-5 text-primary" />
         <h1 className="text-xl font-bold text-foreground">Gestion des accès</h1>
       </div>
 
-      {/* Back button */}
       <Button
         variant="outline"
         size="sm"
@@ -204,7 +241,6 @@ export default function AdminAccessPage() {
         ← Retour au tableau de bord
       </Button>
 
-      {/* Loading */}
       {isLoading && (
         <div
           className="flex items-center justify-center py-12"
@@ -219,7 +255,6 @@ export default function AdminAccessPage() {
         </div>
       )}
 
-      {/* Error */}
       {error && (
         <div
           className="flex flex-col items-center gap-3 py-6"
@@ -241,10 +276,8 @@ export default function AdminAccessPage() {
         </div>
       )}
 
-      {/* Content */}
       {!isLoading && !error && approvals !== undefined && (
         <>
-          {/* Empty state */}
           {approvals.length === 0 && (
             <div
               className="flex flex-col items-center gap-3 py-12"
@@ -252,30 +285,30 @@ export default function AdminAccessPage() {
             >
               <Users className="w-10 h-10 text-muted-foreground" />
               <p className="text-sm text-muted-foreground text-center">
-                Aucun utilisateur en attente d'accès
+                Aucune demande d'accès pour le moment
               </p>
             </div>
           )}
 
-          {/* Pending section */}
           {pending.length > 0 && (
             <section className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-accent" />
+                <Clock className="w-4 h-4" style={{ color: "#FF9933" }} />
                 <h2 className="font-semibold text-foreground">
                   En attente ({pending.length})
                 </h2>
               </div>
               <div className="flex flex-col gap-2">
                 {pending.map((entry) => {
-                  const indexed = allEntriesIndexed.find(
-                    (a) => a.entry === entry,
-                  );
+                  const idx =
+                    allEntriesIndexed.find((a) => a.entry === entry)
+                      ?.displayIndex ?? 1;
                   return (
                     <UserRow
                       key={entry.principal.toString()}
                       entry={entry}
-                      index={indexed?.displayIndex ?? 1}
+                      index={idx}
+                      displayName={getDisplayName(entry.principal)}
                       onApprove={() => handleApprove(entry.principal)}
                       onReject={() => handleReject(entry.principal)}
                       isPending={isSettingApproval}
@@ -286,25 +319,28 @@ export default function AdminAccessPage() {
             </section>
           )}
 
-          {/* Approved section */}
           {approved.length > 0 && (
             <section className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-success" />
+                <CheckCircle2
+                  className="w-4 h-4"
+                  style={{ color: "#99CC33" }}
+                />
                 <h2 className="font-semibold text-foreground">
                   Approuvés ({approved.length})
                 </h2>
               </div>
               <div className="flex flex-col gap-2">
                 {approved.map((entry) => {
-                  const indexed = allEntriesIndexed.find(
-                    (a) => a.entry === entry,
-                  );
+                  const idx =
+                    allEntriesIndexed.find((a) => a.entry === entry)
+                      ?.displayIndex ?? 1;
                   return (
                     <UserRow
                       key={entry.principal.toString()}
                       entry={entry}
-                      index={indexed?.displayIndex ?? 1}
+                      index={idx}
+                      displayName={getDisplayName(entry.principal)}
                       onRevoke={() => handleRevoke(entry.principal)}
                       isPending={isSettingApproval}
                     />
@@ -314,25 +350,25 @@ export default function AdminAccessPage() {
             </section>
           )}
 
-          {/* Rejected section */}
           {rejected.length > 0 && (
             <section className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <XCircle className="w-4 h-4 text-destructive" />
                 <h2 className="font-semibold text-foreground">
-                  Refusés ({rejected.length})
+                  Supprimés ({rejected.length})
                 </h2>
               </div>
               <div className="flex flex-col gap-2">
                 {rejected.map((entry) => {
-                  const indexed = allEntriesIndexed.find(
-                    (a) => a.entry === entry,
-                  );
+                  const idx =
+                    allEntriesIndexed.find((a) => a.entry === entry)
+                      ?.displayIndex ?? 1;
                   return (
                     <UserRow
                       key={entry.principal.toString()}
                       entry={entry}
-                      index={indexed?.displayIndex ?? 1}
+                      index={idx}
+                      displayName={getDisplayName(entry.principal)}
                       onApprove={() => handleApprove(entry.principal)}
                       isPending={isSettingApproval}
                     />
