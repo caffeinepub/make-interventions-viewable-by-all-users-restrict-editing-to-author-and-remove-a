@@ -66,26 +66,27 @@ export function useIsCallerAdmin() {
     queryKey: ["isCallerAdmin"],
     queryFn: async () => {
       if (!actor) return false;
-      // Try up to 3 times with delay — if IC0508 on all attempts, THROW so isError is true
+      // Try up to 4 times with increasing delay
+      // If IC0508 on all attempts, THROW so App shows "starting" screen
       let lastError: unknown;
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 4; attempt++) {
         try {
-          return await getApprovalActor(actor).syncAdminRole();
+          const result = await getApprovalActor(actor).syncAdminRole();
+          return result;
         } catch (err) {
           lastError = err;
           if (isCanisterStoppedError(err)) {
-            if (attempt < 2) {
-              await new Promise((r) => setTimeout(r, (attempt + 1) * 2000));
+            if (attempt < 3) {
+              await new Promise((r) => setTimeout(r, (attempt + 1) * 2500));
               continue;
             }
             // All retries exhausted with IC0508 — throw so App shows "starting" screen
             throw new Error("CANISTER_STOPPED");
           }
-          // Non-IC0508 error → return false (admin not recognized, but canister is up)
+          // Non-IC0508 error — admin not recognized, return false (don't block)
           return false;
         }
       }
-      // Shouldn't reach here, but just in case
       throw lastError;
     },
     enabled: !!actor && !isFetching,
@@ -185,7 +186,15 @@ export function useClaimAdminIfNoneExists() {
       toast.success("Accès administrateur activé");
     },
     onError: (error: Error) => {
-      toast.error(`Erreur: ${error.message}`);
+      // If admin already registered, show a helpful message
+      const msg = error.message || "";
+      if (msg.includes("déjà enregistré") || msg.includes("already")) {
+        toast.error(
+          "Un administrateur est déjà enregistré. Utilisez 'Récupérer mon accès'.",
+        );
+      } else {
+        toast.error(`Erreur: ${error.message}`);
+      }
     },
   });
 }
@@ -197,15 +206,15 @@ export function useRecoverAdminAccess() {
   return useMutation({
     mutationFn: async () => {
       if (!actor) throw new Error("Actor non disponible");
-      // Retry up to 6 times with increasing delay
-      for (let attempt = 0; attempt < 6; attempt++) {
+      // Retry up to 5 times with increasing delay
+      for (let attempt = 0; attempt < 5; attempt++) {
         try {
           const isAdmin = await getApprovalActor(actor).syncAdminRole();
           if (isAdmin) return true;
-          if (attempt < 5)
+          if (attempt < 4)
             await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
         } catch {
-          if (attempt < 5)
+          if (attempt < 4)
             await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
         }
       }
