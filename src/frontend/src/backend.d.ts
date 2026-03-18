@@ -37,19 +37,8 @@ export interface ScheduledIntervention {
     assignedEmployee: Principal;
     reason: string;
 }
-export interface WorkHours {
-    id: string;
-    employee: Principal;
-    date: {
-        day: bigint;
-        month: bigint;
-        year: bigint;
-    };
-    morningStart: string;
-    morningEnd: string;
-    afternoonStart: string;
-    afternoonEnd: string;
-    updatedAt: Time;
+export interface UserProfile {
+    name: string;
 }
 export interface Address {
     zip: string;
@@ -63,6 +52,20 @@ export interface MediaItem {
     owner: Principal;
     file: ExternalBlob;
     createdAt: Time;
+}
+export interface WorkHours {
+    id: string;
+    date: {
+        day: bigint;
+        month: bigint;
+        year: bigint;
+    };
+    morningEnd: string;
+    afternoonStart: string;
+    updatedAt: Time;
+    employee: Principal;
+    afternoonEnd: string;
+    morningStart: string;
 }
 export interface UserApprovalInfo {
     status: ApprovalStatus;
@@ -97,9 +100,6 @@ export interface Intervention {
     comments: string;
     interventionTimestamp: Time;
 }
-export interface UserProfile {
-    name: string;
-}
 export enum ApprovalStatus {
     pending = "pending",
     approved = "approved",
@@ -122,6 +122,7 @@ export interface backendInterface {
     deleteScheduledIntervention(id: string): Promise<void>;
     deleteTechnicalFileWithPath(path: string): Promise<void>;
     downloadTechnicalFileWithPath(path: string): Promise<ExternalBlob | null>;
+    getAllEmployeesWorkHoursForMonth(month: bigint, year: bigint): Promise<Array<WorkHours>>;
     getApprovedEmployees(): Promise<Array<[Principal, UserProfile]>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
@@ -135,6 +136,7 @@ export interface backendInterface {
     getScheduledInterventionsByWeek(weekNumber: bigint, weekYear: bigint): Promise<Array<ScheduledIntervention>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     getUserProfilesByPrincipals(principals: Array<Principal>): Promise<Array<[Principal, UserProfile]>>;
+    getWorkHoursForMonth(employee: Principal, month: bigint, year: bigint): Promise<Array<WorkHours>>;
     hasAdminRegistered(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     isCallerApproved(): Promise<boolean>;
@@ -147,8 +149,6 @@ export interface backendInterface {
     requestApproval(): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     saveWorkHours(day: bigint, month: bigint, year: bigint, morningStart: string, morningEnd: string, afternoonStart: string, afternoonEnd: string): Promise<void>;
-    getWorkHoursForMonth(employee: Principal, month: bigint, year: bigint): Promise<Array<WorkHours>>;
-    getAllEmployeesWorkHoursForMonth(month: bigint, year: bigint): Promise<Array<WorkHours>>;
     searchClients(searchString: string): Promise<Array<Client>>;
     setApproval(user: Principal, status: ApprovalStatus): Promise<void>;
     unmarkAsBlacklisted(clientId: string): Promise<void>;

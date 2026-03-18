@@ -31,11 +31,65 @@ import TimesheetPage from "./pages/TimesheetPage";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
+      retry: 1,
       staleTime: 1000 * 60 * 5,
     },
   },
 });
+
+function LoadingScreen({ message }: { message: string }) {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-muted-foreground text-sm">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+function ActorFailedScreen() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background px-6">
+      <div className="flex flex-col items-center gap-4 text-center max-w-sm">
+        <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+          <span className="text-2xl">⚠️</span>
+        </div>
+        <h2 className="text-lg font-semibold text-foreground">
+          Connexion impossible
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Impossible de se connecter au serveur. Veuillez recharger la page.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+        >
+          Recharger la page
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TimesheetErrorComponent({ error }: { error: Error }) {
+  return (
+    <div className="p-8 text-center">
+      <p className="text-destructive font-medium">
+        Erreur dans la feuille d&apos;heures
+      </p>
+      <p className="text-sm text-muted-foreground mt-2">{error?.message}</p>
+      <button
+        type="button"
+        onClick={() => window.location.reload()}
+        className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded text-sm"
+      >
+        Recharger
+      </button>
+    </div>
+  );
+}
 
 function AuthenticatedLayout() {
   const { identity, isInitializing } = useInternetIdentity();
@@ -48,14 +102,7 @@ function AuthenticatedLayout() {
   }, [identity, isInitializing, navigate]);
 
   if (isInitializing) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-muted-foreground text-sm">Chargement...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Initialisation..." />;
   }
 
   if (!identity) return null;
@@ -64,53 +111,57 @@ function AuthenticatedLayout() {
 }
 
 function AuthenticatedLayoutInner() {
-  const {
-    data: userProfile,
-    isLoading: profileLoading,
-    isFetched,
-  } = useGetCallerUserProfile();
-  const { identity } = useInternetIdentity();
   const { actor, isFetching: actorFetching } = useActor();
   const { data: isAdmin, isLoading: adminLoading } = useIsCallerAdmin();
   const { data: isApproved, isLoading: approvalLoading } =
     useIsCallerApproved();
+  const {
+    data: userProfile,
+    isLoading: profileLoading,
+    isFetched: profileFetched,
+  } = useGetCallerUserProfile();
 
-  const isAuthenticated = !!identity;
-  const showProfileSetup =
-    isAuthenticated && !profileLoading && isFetched && userProfile === null;
+  // Step 1: Wait for actor to initialize
+  if (actorFetching) {
+    return <LoadingScreen message="Chargement..." />;
+  }
 
-  const statusLoading =
-    actorFetching || !actor || adminLoading || approvalLoading;
+  // Step 2: If actor failed to load, show error (prevents infinite spinner)
+  if (!actor) {
+    return <ActorFailedScreen />;
+  }
 
-  if (isAuthenticated && statusLoading) {
+  // Step 3: Wait for admin/approval checks
+  if (adminLoading || approvalLoading) {
+    return <LoadingScreen message="Vérification des accès..." />;
+  }
+
+  // Step 4: Admin gets immediate, unconditional access
+  if (isAdmin === true) {
+    const needsProfileSetup =
+      !profileLoading && profileFetched && userProfile === null;
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-muted-foreground text-sm">
-            Vérification des accès...
-          </p>
-        </div>
-      </div>
+      <MobileLayout>
+        {needsProfileSetup && <ProfileSetupDialog />}
+        <Outlet />
+      </MobileLayout>
     );
   }
 
-  const showPendingApproval =
-    isAuthenticated &&
-    !statusLoading &&
-    isAdmin !== true &&
-    isApproved !== true;
-
-  if (showPendingApproval) {
-    return <PendingApprovalPage />;
+  // Step 5: Approved users get access
+  if (isApproved === true) {
+    const needsProfileSetup =
+      !profileLoading && profileFetched && userProfile === null;
+    return (
+      <MobileLayout>
+        {needsProfileSetup && <ProfileSetupDialog />}
+        <Outlet />
+      </MobileLayout>
+    );
   }
 
-  return (
-    <MobileLayout>
-      {showProfileSetup && <ProfileSetupDialog />}
-      <Outlet />
-    </MobileLayout>
-  );
+  // Step 6: Not approved — show access request page
+  return <PendingApprovalPage />;
 }
 
 const rootRoute = createRootRoute({
@@ -132,7 +183,7 @@ const authenticatedRoute = createRoute({
 const indexRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/",
-  component: ClientsPage,
+  component: DashboardPage,
 });
 
 const clientsRoute = createRoute({
@@ -181,6 +232,7 @@ const timesheetRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/timesheet",
   component: TimesheetPage,
+  errorComponent: TimesheetErrorComponent,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -210,7 +262,11 @@ export default function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+        >
           <RouterProvider router={router} />
           <Toaster richColors position="top-center" />
         </ThemeProvider>

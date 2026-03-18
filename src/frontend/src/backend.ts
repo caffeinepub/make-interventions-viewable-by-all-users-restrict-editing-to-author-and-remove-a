@@ -112,9 +112,8 @@ export interface ScheduledIntervention {
     assignedEmployee: Principal;
     reason: string;
 }
-export interface _CaffeineStorageRefillResult {
-    success?: boolean;
-    topped_up_amount?: bigint;
+export interface UserProfile {
+    name: string;
 }
 export interface Address {
     zip: string;
@@ -136,6 +135,20 @@ export interface MediaItem {
     file: ExternalBlob;
     createdAt: Time;
 }
+export interface WorkHours {
+    id: string;
+    date: {
+        day: bigint;
+        month: bigint;
+        year: bigint;
+    };
+    morningEnd: string;
+    afternoonStart: string;
+    updatedAt: Time;
+    employee: Principal;
+    afternoonEnd: string;
+    morningStart: string;
+}
 export interface UserApprovalInfo {
     status: ApprovalStatus;
     principal: Principal;
@@ -153,6 +166,10 @@ export interface ContactInfo {
     address: Address;
     phone: string;
 }
+export interface _CaffeineStorageRefillResult {
+    success?: boolean;
+    topped_up_amount?: bigint;
+}
 export interface Intervention {
     id: string;
     media: Array<ExternalBlob>;
@@ -168,9 +185,6 @@ export interface Intervention {
     canDelete: boolean;
     comments: string;
     interventionTimestamp: Time;
-}
-export interface UserProfile {
-    name: string;
 }
 export enum ApprovalStatus {
     pending = "pending",
@@ -201,6 +215,7 @@ export interface backendInterface {
     deleteScheduledIntervention(id: string): Promise<void>;
     deleteTechnicalFileWithPath(path: string): Promise<void>;
     downloadTechnicalFileWithPath(path: string): Promise<ExternalBlob | null>;
+    getAllEmployeesWorkHoursForMonth(month: bigint, year: bigint): Promise<Array<WorkHours>>;
     getApprovedEmployees(): Promise<Array<[Principal, UserProfile]>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
@@ -214,6 +229,7 @@ export interface backendInterface {
     getScheduledInterventionsByWeek(weekNumber: bigint, weekYear: bigint): Promise<Array<ScheduledIntervention>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     getUserProfilesByPrincipals(principals: Array<Principal>): Promise<Array<[Principal, UserProfile]>>;
+    getWorkHoursForMonth(employee: Principal, month: bigint, year: bigint): Promise<Array<WorkHours>>;
     hasAdminRegistered(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     isCallerApproved(): Promise<boolean>;
@@ -225,6 +241,7 @@ export interface backendInterface {
     renameFolder(oldPath: string, newName: string): Promise<void>;
     requestApproval(): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    saveWorkHours(day: bigint, month: bigint, year: bigint, morningStart: string, morningEnd: string, afternoonStart: string, afternoonEnd: string): Promise<void>;
     searchClients(searchString: string): Promise<Array<Client>>;
     setApproval(user: Principal, status: ApprovalStatus): Promise<void>;
     unmarkAsBlacklisted(clientId: string): Promise<void>;
@@ -490,6 +507,20 @@ export class Backend implements backendInterface {
             return from_candid_opt_n12(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getAllEmployeesWorkHoursForMonth(arg0: bigint, arg1: bigint): Promise<Array<WorkHours>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllEmployeesWorkHoursForMonth(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllEmployeesWorkHoursForMonth(arg0, arg1);
+            return result;
+        }
+    }
     async getApprovedEmployees(): Promise<Array<[Principal, UserProfile]>> {
         if (this.processError) {
             try {
@@ -672,6 +703,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getWorkHoursForMonth(arg0: Principal, arg1: bigint, arg2: bigint): Promise<Array<WorkHours>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getWorkHoursForMonth(arg0, arg1, arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getWorkHoursForMonth(arg0, arg1, arg2);
+            return result;
+        }
+    }
     async hasAdminRegistered(): Promise<boolean> {
         if (this.processError) {
             try {
@@ -823,6 +868,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.saveCallerUserProfile(arg0);
+            return result;
+        }
+    }
+    async saveWorkHours(arg0: bigint, arg1: bigint, arg2: bigint, arg3: string, arg4: string, arg5: string, arg6: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.saveWorkHours(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.saveWorkHours(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
             return result;
         }
     }

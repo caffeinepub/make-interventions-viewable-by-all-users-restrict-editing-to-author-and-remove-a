@@ -40,13 +40,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background px-6">
+    <div
+      data-ocid="login.page"
+      className="flex flex-col items-center justify-center min-h-screen bg-background px-6"
+    >
       <div className="w-full max-w-sm flex flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-4">
           <img
-            src="/assets/generated/vial-traite-logo.dim_400x200.png"
+            src="/assets/generated/vial-traite-logo-transparent.dim_400x200.png"
             alt="Vial Traite Service"
-            className="w-48 h-auto"
+            className="w-52 h-auto"
           />
           <div className="text-center">
             <h1 className="text-2xl font-bold text-foreground">
@@ -67,6 +70,7 @@ export default function LoginPage() {
           </div>
 
           <Button
+            data-ocid="login.primary_button"
             onClick={handleLogin}
             disabled={isLoggingIn}
             className="w-full"

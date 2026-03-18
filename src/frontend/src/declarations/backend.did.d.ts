@@ -79,6 +79,16 @@ export interface UserProfile { 'name' : string }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
+export interface WorkHours {
+  'id' : string,
+  'date' : { 'day' : bigint, 'month' : bigint, 'year' : bigint },
+  'morningEnd' : string,
+  'afternoonStart' : string,
+  'updatedAt' : Time,
+  'employee' : Principal,
+  'afternoonEnd' : string,
+  'morningStart' : string,
+}
 export interface _CaffeineStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
@@ -141,6 +151,10 @@ export interface _SERVICE {
   'deleteScheduledIntervention' : ActorMethod<[string], undefined>,
   'deleteTechnicalFileWithPath' : ActorMethod<[string], undefined>,
   'downloadTechnicalFileWithPath' : ActorMethod<[string], [] | [ExternalBlob]>,
+  'getAllEmployeesWorkHoursForMonth' : ActorMethod<
+    [bigint, bigint],
+    Array<WorkHours>
+  >,
   'getApprovedEmployees' : ActorMethod<[], Array<[Principal, UserProfile]>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
@@ -166,6 +180,10 @@ export interface _SERVICE {
     [Array<Principal>],
     Array<[Principal, UserProfile]>
   >,
+  'getWorkHoursForMonth' : ActorMethod<
+    [Principal, bigint, bigint],
+    Array<WorkHours>
+  >,
   'hasAdminRegistered' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'isCallerApproved' : ActorMethod<[], boolean>,
@@ -180,6 +198,10 @@ export interface _SERVICE {
   'renameFolder' : ActorMethod<[string, string], undefined>,
   'requestApproval' : ActorMethod<[], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'saveWorkHours' : ActorMethod<
+    [bigint, bigint, bigint, string, string, string, string],
+    undefined
+  >,
   'searchClients' : ActorMethod<[string], Array<Client>>,
   'setApproval' : ActorMethod<[Principal, ApprovalStatus], undefined>,
   'unmarkAsBlacklisted' : ActorMethod<[string], undefined>,

@@ -80,6 +80,8 @@ export default function PendingApprovalPage() {
         onSuccess: () => {
           claimAdmin(undefined, {
             onSuccess: () => {
+              queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
+              queryClient.invalidateQueries({ queryKey: ["isCallerApproved"] });
               navigate({ to: "/" });
             },
           });
@@ -118,9 +120,9 @@ export default function PendingApprovalPage() {
         {/* Logo */}
         <div className="flex flex-col items-center gap-4">
           <img
-            src="/assets/generated/vial-traite-logo.dim_400x200.png"
+            src="/assets/generated/vial-traite-logo-transparent.dim_400x200.png"
             alt="Vial Traite Service"
-            className="w-48 h-auto"
+            className="w-52 h-auto"
           />
         </div>
 
@@ -147,11 +149,11 @@ export default function PendingApprovalPage() {
 
               <div className="text-center flex flex-col gap-2">
                 <h2 className="text-lg font-semibold text-foreground">
-                  Aucun administrateur enregistré
+                  Première connexion
                 </h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Entrez votre nom puis cliquez pour vous définir comme
-                  administrateur.
+                  Entrez votre nom puis définissez-vous comme administrateur
+                  pour accéder à l'application.
                 </p>
               </div>
 
@@ -164,6 +166,10 @@ export default function PendingApprovalPage() {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Ex: Jean Dupont"
                     data-ocid="pending_approval.input"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && name.trim() && !isSubmitting)
+                        handleClaimAdmin();
+                    }}
                   />
                 </div>
 
@@ -182,7 +188,7 @@ export default function PendingApprovalPage() {
                   ) : (
                     <>
                       <ShieldCheck className="w-4 h-4 mr-2" />
-                      Je suis l'administrateur
+                      Je suis l&apos;administrateur
                     </>
                   )}
                 </Button>
@@ -221,7 +227,7 @@ export default function PendingApprovalPage() {
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {alreadyRequested
                     ? "Votre demande d'accès est en attente d'approbation par l'administrateur."
-                    : "Entrez votre nom et demandez l'accès. Un administrateur examinera votre demande."}
+                    : "Entrez votre nom et demandez l'accès à l'administrateur."}
                 </p>
               </div>
 
@@ -236,6 +242,10 @@ export default function PendingApprovalPage() {
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Ex: Jean Dupont"
                         data-ocid="pending_approval.input"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && name.trim() && !isSubmitting)
+                            handleRequest();
+                        }}
                       />
                     </div>
 

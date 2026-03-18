@@ -19,6 +19,10 @@ import {
   getWeekStart,
 } from "../utils/dateUtils";
 
+function isInterventionCompleted(inv: ScheduledIntervention): boolean {
+  return !!(inv.employeeSignature && inv.employeeSignature.length > 0);
+}
+
 export default function PlanningPage() {
   const navigate = useNavigate();
   const today = new Date();
@@ -208,36 +212,63 @@ export default function PlanningPage() {
                                   openNewIntervention(dayDate, principal)
                                 }
                               >
-                                {cellInterventions.map((inv) => (
-                                  <button
-                                    key={inv.id}
-                                    type="button"
-                                    className="text-left w-full rounded-md p-1.5 bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate({
-                                        to: "/planning/$interventionId",
-                                        params: { interventionId: inv.id },
-                                      });
-                                    }}
-                                    data-ocid="planning.card"
-                                  >
-                                    <p className="text-xs font-semibold text-primary truncate">
-                                      {inv.clientName}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {inv.startTime} – {inv.endTime}
-                                    </p>
-                                    {inv.reason && (
-                                      <Badge
-                                        variant="secondary"
-                                        className="text-[10px] px-1 py-0 mt-0.5"
+                                {cellInterventions.map((inv) => {
+                                  const completed =
+                                    isInterventionCompleted(inv);
+                                  return (
+                                    <button
+                                      key={inv.id}
+                                      type="button"
+                                      className={`text-left w-full rounded-md p-1.5 border transition-colors ${
+                                        completed
+                                          ? "bg-green-50 border-green-200 hover:bg-green-100"
+                                          : "bg-primary/10 border-primary/20 hover:bg-primary/20"
+                                      }`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate({
+                                          to: "/planning/$interventionId",
+                                          params: { interventionId: inv.id },
+                                        });
+                                      }}
+                                      data-ocid="planning.card"
+                                    >
+                                      <p
+                                        className={`text-xs font-semibold truncate ${
+                                          completed
+                                            ? "text-green-700"
+                                            : "text-primary"
+                                        }`}
                                       >
-                                        {inv.reason}
-                                      </Badge>
-                                    )}
-                                  </button>
-                                ))}
+                                        {inv.clientName}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {inv.startTime} – {inv.endTime}
+                                      </p>
+                                      <div className="flex flex-wrap gap-1 mt-0.5">
+                                        {inv.reason && (
+                                          <Badge
+                                            variant="secondary"
+                                            className="text-[10px] px-1 py-0"
+                                          >
+                                            {inv.reason}
+                                          </Badge>
+                                        )}
+                                        <Badge
+                                          className={`text-[10px] px-1 py-0 border-0 ${
+                                            completed
+                                              ? "bg-green-500 text-white"
+                                              : "bg-orange-500 text-white"
+                                          }`}
+                                        >
+                                          {completed
+                                            ? "Réalisé"
+                                            : "Non réalisé"}
+                                        </Badge>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
                               </button>
                             </td>
                           );

@@ -4,8 +4,7 @@ import Runtime "mo:core/Runtime";
 import List "mo:core/List";
 import Order "mo:core/Order";
 import Map "mo:core/Map";
-import Iter "mo:core/Iter";
-import Array "mo:core/Array"; 
+import Array "mo:core/Array";
 import Nat "mo:core/Nat";
 import Text "mo:core/Text";
 import Time "mo:core/Time";
@@ -183,6 +182,7 @@ actor {
   };
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
+    checkAccess(caller);
     userProfiles.get(caller);
   };
 
@@ -201,6 +201,7 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
+    // No access check — profile can be saved before approval (needed for first-time admin claim)
     userProfiles.add(caller, profile);
   };
 
@@ -629,7 +630,7 @@ actor {
   public shared ({ caller }) func moveTechnicalFile(oldPath : Text, newPath : Text) : async () {
     checkAccess(caller);
     let parts = oldPath.split(#char('/')).toArray();
-    if (parts.size() == 0) { Runtime.trap("Chemin invalide"); };
+    if (parts.size() == 0) { Runtime.trap("Chemin invalide") };
     let topLevelFolderName = parts[0];
     let remainingPath = parts.sliceToArray(1, parts.size() : Nat);
     switch (technicalFolder.get(topLevelFolderName)) {
@@ -649,7 +650,7 @@ actor {
   public shared ({ caller }) func createFolder(path : Text) : async () {
     checkAccess(caller);
     let parts = path.split(#char('/')).toArray();
-    if (parts.size() == 0) { Runtime.trap("Chemin invalide. Vous devez spécifier le nom du dossier"); };
+    if (parts.size() == 0) { Runtime.trap("Chemin invalide. Vous devez spécifier le nom du dossier") };
     let topLevelFolderName = parts[0];
     let remainingPath = parts.sliceToArray(1, parts.size());
     var topLevelFolder = switch (technicalFolder.get(topLevelFolderName)) {
@@ -663,7 +664,7 @@ actor {
   };
 
   func createSubfolders(folder : Folder, subfolders : [Text]) : Folder {
-    if (subfolders.size() == 0) { return folder; };
+    if (subfolders.size() == 0) { return folder };
     let currentFolderName = subfolders[0];
     let remainingSubfolders = subfolders.sliceToArray(1, subfolders.size() : Nat);
     var currentFolder = switch (folder.subfolders.get(currentFolderName)) {
@@ -681,7 +682,7 @@ actor {
   public shared ({ caller }) func renameFolder(oldPath : Text, newName : Text) : async () {
     checkAccess(caller);
     let parts = oldPath.split(#char('/')).toArray();
-    if (parts.size() == 0) { Runtime.trap("Chemin invalide. Vous devez spécifier le nom du dossier"); };
+    if (parts.size() == 0) { Runtime.trap("Chemin invalide. Vous devez spécifier le nom du dossier") };
     let topLevelFolderName = parts[0];
     let remainingPath = parts.sliceToArray(1, parts.size());
     switch (technicalFolder.get(topLevelFolderName)) {
@@ -693,7 +694,7 @@ actor {
           technicalFolder.add(newName, renamedFolder);
         } else {
           let (renamed, updatedRootFolder) = renameSubfolderInPath(rootFolder, remainingPath, newName);
-          if (not renamed) { Runtime.trap("Échec du renommage du dossier dans le chemin spécifié"); };
+          if (not renamed) { Runtime.trap("Échec du renommage du dossier dans le chemin spécifié") };
           technicalFolder.add(topLevelFolderName, updatedRootFolder);
         };
       };
@@ -721,7 +722,7 @@ actor {
         case (null) { (false, folder) };
         case (?subfolder) {
           let (renamed, updatedSubfolder) = renameSubfolderInPath(subfolder, remainingParts, newName);
-          if (renamed) { folder.subfolders.add(currentFolderName, updatedSubfolder); };
+          if (renamed) { folder.subfolders.add(currentFolderName, updatedSubfolder) };
           (renamed, folder);
         };
       };
@@ -852,7 +853,6 @@ actor {
     approvedEmployees.toArray();
   };
 
-  // Work Hours (Feuille d'heures)
   public shared ({ caller }) func saveWorkHours(
     day : Nat,
     month : Nat,

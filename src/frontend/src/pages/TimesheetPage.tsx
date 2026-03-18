@@ -1,20 +1,17 @@
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
+} from "@/components/ui/select";
+import type { Principal } from "@icp-sdk/core/principal";
+import { ChevronLeft, ChevronRight, Clock, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { UserProfile } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetApprovedEmployees } from "../hooks/useScheduledInterventions";
 import type { WorkHours } from "../hooks/useWorkHours";
@@ -23,14 +20,24 @@ import {
   useSaveWorkHours,
 } from "../hooks/useWorkHours";
 
+const MINE_SENTINEL = "__mine__";
+
+// Stable empty arrays to prevent infinite re-render loops (React error #185)
+const EMPTY_WORK_HOURS: WorkHours[] = [];
+const EMPTY_EMPLOYEES: Array<[Principal, UserProfile]> = [];
+
 function timeToMinutes(time: string): number {
-  if (!time) return 0;
-  const [h, m] = time.split(":").map(Number);
+  if (!time || typeof time !== "string") return 0;
+  const parts = time.split(":");
+  if (parts.length < 2) return 0;
+  const h = Number.parseInt(parts[0], 10);
+  const m = Number.parseInt(parts[1], 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return 0;
   return h * 60 + m;
 }
 
 function minutesToHoursStr(minutes: number): string {
-  if (minutes <= 0) return "\u2014";
+  if (!minutes || minutes <= 0) return "—";
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return `${h}h${m > 0 ? m.toString().padStart(2, "0") : ""}`;
@@ -70,17 +77,17 @@ function getWeekDates(weekOffset: number): Date[] {
 const DAYS_FR = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
 const MONTHS_FR = [
   "Janvier",
-  "F\u00e9vrier",
+  "Février",
   "Mars",
   "Avril",
   "Mai",
   "Juin",
   "Juillet",
-  "Ao\u00fbt",
+  "Août",
   "Septembre",
   "Octobre",
   "Novembre",
-  "D\u00e9cembre",
+  "Décembre",
 ];
 
 interface DayHours {
@@ -99,6 +106,15 @@ const emptyDay = (): DayHours => ({
 
 function dateKey(date: Date): string {
   return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+}
+
+function safeWorkHoursToDay(wh: WorkHours): DayHours {
+  return {
+    morningStart: wh.morningStart ?? "",
+    morningEnd: wh.morningEnd ?? "",
+    afternoonStart: wh.afternoonStart ?? "",
+    afternoonEnd: wh.afternoonEnd ?? "",
+  };
 }
 
 interface TimeInputProps {
@@ -126,7 +142,7 @@ function TimeInput({
       <input
         id={id}
         type="time"
-        data-ocid="timesheet.day.input"
+        data-ocid="timesheet.input"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
@@ -139,17 +155,20 @@ function TimeInput({
 
 export default function TimesheetPage() {
   const { identity } = useInternetIdentity();
-
   const myPrincipal = identity?.getPrincipal();
   const myPrincipalStr = myPrincipal?.toString() ?? "";
 
-  const { data: approvedEmployees = [] } = useGetApprovedEmployees();
+  // No default `= []` in destructuring — use stable EMPTY_EMPLOYEES constant to avoid infinite loops
+  const { data: approvedEmployees, isLoading: loadingEmployees } =
+    useGetApprovedEmployees();
   const { mutateAsync: saveWorkHours, isPending: isSaving } =
     useSaveWorkHours();
 
   const today = new Date();
   const [weekOffset, setWeekOffset] = useState(0);
-  const [selectedEmployeeStr, setSelectedEmployeeStr] = useState<string>("");
+  // Use sentinel value to avoid empty string crashing Radix Select
+  const [selectedEmployeeStr, setSelectedEmployeeStr] =
+    useState<string>(MINE_SENTINEL);
 
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
   const weekMonth = weekDates[0].getMonth() + 1;
@@ -157,41 +176,49 @@ export default function TimesheetPage() {
   const weekMonthEnd = weekDates[4].getMonth() + 1;
   const weekYearEnd = weekDates[4].getFullYear();
 
-  useEffect(() => {
-    if (myPrincipalStr && !selectedEmployeeStr) {
-      setSelectedEmployeeStr(myPrincipalStr);
-    }
-  }, [myPrincipalStr, selectedEmployeeStr]);
+  const isOwnSheet =
+    selectedEmployeeStr === MINE_SENTINEL ||
+    (!!myPrincipalStr && selectedEmployeeStr === myPrincipalStr);
+
+  const safeApprovedEmployees = approvedEmployees ?? EMPTY_EMPLOYEES;
 
   const selectedEmployee = useMemo(() => {
-    if (!selectedEmployeeStr) return null;
-    const found = approvedEmployees.find(
+    if (selectedEmployeeStr === MINE_SENTINEL || !selectedEmployeeStr) {
+      return myPrincipal ?? null;
+    }
+    const found = safeApprovedEmployees.find(
       ([p]) => p.toString() === selectedEmployeeStr,
     );
     return found ? found[0] : (myPrincipal ?? null);
-  }, [selectedEmployeeStr, approvedEmployees, myPrincipal]);
+  }, [selectedEmployeeStr, safeApprovedEmployees, myPrincipal]);
 
-  const isOwnSheet = selectedEmployeeStr === myPrincipalStr;
-
-  const { data: workHoursData = [] } = useGetWorkHoursForMonth(
+  // No default `= []` in destructuring — prevents new array reference on every render
+  const { data: workHoursData } = useGetWorkHoursForMonth(
     selectedEmployee,
     weekMonth,
     weekYear,
   );
-  const { data: workHoursDataNext = [] } = useGetWorkHoursForMonth(
-    weekMonthEnd !== weekMonth ? selectedEmployee : null,
+
+  // Fetch next month only if week spans two months
+  const needsNextMonth = weekMonthEnd !== weekMonth;
+  const { data: workHoursDataNext } = useGetWorkHoursForMonth(
+    needsNextMonth ? selectedEmployee : null,
     weekMonthEnd,
     weekYearEnd,
   );
 
   const allWorkHours = useMemo(
-    () => [...workHoursData, ...workHoursDataNext],
+    () => [
+      ...(workHoursData ?? EMPTY_WORK_HOURS),
+      ...(workHoursDataNext ?? EMPTY_WORK_HOURS),
+    ],
     [workHoursData, workHoursDataNext],
   );
 
   const workHoursMap = useMemo(() => {
     const map: Record<string, WorkHours> = {};
     for (const wh of allWorkHours) {
+      if (!wh?.date) continue;
       const k = `${Number(wh.date.year)}-${Number(wh.date.month)}-${Number(wh.date.day)}`;
       map[k] = wh;
     }
@@ -200,22 +227,27 @@ export default function TimesheetPage() {
 
   const [localHours, setLocalHours] = useState<Record<string, DayHours>>({});
 
+  // Sync local hours when fetched data or week changes
+  const weekKey = weekDates.map(dateKey).join(",");
+  const prevWeekKey = useRef("");
+  const prevWorkHoursMap = useRef(workHoursMap);
+
   useEffect(() => {
+    const weekChanged = weekKey !== prevWeekKey.current;
+    const dataChanged = workHoursMap !== prevWorkHoursMap.current;
+    if (!weekChanged && !dataChanged) return;
+
+    prevWeekKey.current = weekKey;
+    prevWorkHoursMap.current = workHoursMap;
+
     const next: Record<string, DayHours> = {};
-    for (const date of weekDates) {
+    for (const date of getWeekDates(weekOffset)) {
       const k = dateKey(date);
       const wh = workHoursMap[k];
-      next[k] = wh
-        ? {
-            morningStart: wh.morningStart,
-            morningEnd: wh.morningEnd,
-            afternoonStart: wh.afternoonStart,
-            afternoonEnd: wh.afternoonEnd,
-          }
-        : emptyDay();
+      next[k] = wh ? safeWorkHoursToDay(wh) : emptyDay();
     }
     setLocalHours(next);
-  }, [workHoursMap, weekDates]);
+  }, [weekKey, workHoursMap, weekOffset]);
 
   const handleTimeChange = useCallback(
     (dateK: string, field: keyof DayHours, value: string) => {
@@ -237,21 +269,26 @@ export default function TimesheetPage() {
         hours.afternoonStart ||
         hours.afternoonEnd;
       if (!hasAny) return;
-      await saveWorkHours({
-        day: date.getDate(),
-        month: date.getMonth() + 1,
-        year: date.getFullYear(),
-        morningStart: hours.morningStart,
-        morningEnd: hours.morningEnd,
-        afternoonStart: hours.afternoonStart,
-        afternoonEnd: hours.afternoonEnd,
-        employeePrincipal: myPrincipalStr,
-      });
+      try {
+        await saveWorkHours({
+          day: date.getDate(),
+          month: date.getMonth() + 1,
+          year: date.getFullYear(),
+          morningStart: hours.morningStart,
+          morningEnd: hours.morningEnd,
+          afternoonStart: hours.afternoonStart,
+          afternoonEnd: hours.afternoonEnd,
+          employeePrincipal: myPrincipalStr,
+        });
+      } catch (err) {
+        console.error("Erreur enregistrement heures:", err);
+      }
     },
     [isOwnSheet, localHours, saveWorkHours, myPrincipalStr],
   );
 
-  const { data: monthlyAllData = [] } = useGetWorkHoursForMonth(
+  // Monthly totals (current calendar month) — no default `= []` in destructuring
+  const { data: monthlyAllData } = useGetWorkHoursForMonth(
     selectedEmployee,
     today.getMonth() + 1,
     today.getFullYear(),
@@ -259,14 +296,14 @@ export default function TimesheetPage() {
 
   const monthlyTotal = useMemo(
     () =>
-      monthlyAllData.reduce(
+      (monthlyAllData ?? EMPTY_WORK_HOURS).reduce(
         (acc, wh) =>
           acc +
           calcDayTotal(
-            wh.morningStart,
-            wh.morningEnd,
-            wh.afternoonStart,
-            wh.afternoonEnd,
+            wh?.morningStart ?? "",
+            wh?.morningEnd ?? "",
+            wh?.afternoonStart ?? "",
+            wh?.afternoonEnd ?? "",
           ),
         0,
       ),
@@ -306,7 +343,8 @@ export default function TimesheetPage() {
   }, [weekDates]);
 
   const getEmployeeName = (principalStr: string) => {
-    const found = approvedEmployees.find(
+    if (principalStr === MINE_SENTINEL) return "Moi";
+    const found = safeApprovedEmployees.find(
       ([p]) => p.toString() === principalStr,
     );
     if (found) return found[1].name;
@@ -317,44 +355,47 @@ export default function TimesheetPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="p-4 max-w-5xl mx-auto space-y-4">
+        {/* Title */}
         <div className="flex items-center gap-2 pt-2">
           <Clock className="w-6 h-6 text-primary" />
-          <h1
-            className="text-2xl font-bold text-foreground"
-            style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
-          >
-            Feuille d'heures
+          <h1 className="text-xl font-bold text-foreground">
+            Feuille d&apos;heures
           </h1>
         </div>
 
+        {/* Controls */}
         <div className="flex flex-wrap gap-3 items-center">
           <div className="flex-1 min-w-[180px]">
-            <Select
-              value={selectedEmployeeStr}
-              onValueChange={setSelectedEmployeeStr}
-            >
-              <SelectTrigger
-                data-ocid="timesheet.employee_select"
-                className="bg-card"
+            {loadingEmployees ? (
+              <div className="flex items-center gap-2 h-10 px-3 border border-input rounded-md bg-card">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  Chargement...
+                </span>
+              </div>
+            ) : (
+              <Select
+                value={selectedEmployeeStr}
+                onValueChange={setSelectedEmployeeStr}
               >
-                <SelectValue placeholder="S\u00e9lectionner un employ\u00e9" />
-              </SelectTrigger>
-              <SelectContent>
-                {myPrincipalStr && (
-                  <SelectItem value={myPrincipalStr}>Mes heures</SelectItem>
-                )}
-                {approvedEmployees
-                  .filter(([p]) => p.toString() !== myPrincipalStr)
-                  .map(([principal, profile]) => (
-                    <SelectItem
-                      key={principal.toString()}
-                      value={principal.toString()}
-                    >
-                      {profile.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+                <SelectTrigger data-ocid="timesheet.select" className="bg-card">
+                  <SelectValue placeholder="Sélectionner un employé" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={MINE_SENTINEL}>Mes heures</SelectItem>
+                  {safeApprovedEmployees
+                    .filter(([p]) => p.toString() !== myPrincipalStr)
+                    .map(([principal, profile]) => (
+                      <SelectItem
+                        key={principal.toString()}
+                        value={principal.toString()}
+                      >
+                        {profile.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -362,7 +403,7 @@ export default function TimesheetPage() {
               variant="outline"
               size="icon"
               onClick={() => setWeekOffset((w) => w - 1)}
-              data-ocid="timesheet.prev_week_button"
+              data-ocid="timesheet.pagination_prev"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
@@ -374,29 +415,32 @@ export default function TimesheetPage() {
               size="icon"
               onClick={() => setWeekOffset((w) => w + 1)}
               disabled={weekOffset >= 0}
-              data-ocid="timesheet.next_week_button"
+              data-ocid="timesheet.pagination_next"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        {!isOwnSheet && (
-          <Badge variant="secondary" className="text-xs">
-            Consultation uniquement \u2014{" "}
-            {getEmployeeName(selectedEmployeeStr)}
-          </Badge>
-        )}
-        {isSaving && (
-          <Badge
-            variant="outline"
-            className="text-xs text-primary animate-pulse"
-            data-ocid="timesheet.loading_state"
-          >
-            Enregistrement...
-          </Badge>
-        )}
+        {/* Status badges */}
+        <div className="flex gap-2 flex-wrap">
+          {!isOwnSheet && (
+            <Badge variant="secondary" className="text-xs">
+              Consultation — {getEmployeeName(selectedEmployeeStr)}
+            </Badge>
+          )}
+          {isSaving && (
+            <Badge
+              variant="outline"
+              className="text-xs text-primary animate-pulse"
+              data-ocid="timesheet.loading_state"
+            >
+              Enregistrement...
+            </Badge>
+          )}
+        </div>
 
+        {/* Totals */}
         <div className="grid grid-cols-2 gap-3">
           <Card className="border-primary/20 bg-primary/5">
             <CardHeader className="pb-1 pt-3 px-4">
@@ -410,23 +454,24 @@ export default function TimesheetPage() {
               </p>
             </CardContent>
           </Card>
-          <Card className="border-accent/20 bg-accent/5">
+          <Card className="border-secondary/20 bg-secondary/5">
             <CardHeader className="pb-1 pt-3 px-4">
               <CardTitle className="text-xs text-muted-foreground uppercase tracking-wide">
-                Total {MONTHS_FR[today.getMonth()]}
+                Total mois
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-3">
-              <p className="text-2xl font-bold text-accent-foreground">
+              <p className="text-2xl font-bold text-secondary">
                 {minutesToHoursStr(monthlyTotal)}
               </p>
             </CardContent>
           </Card>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Week grid */}
+        <div className="overflow-x-auto -mx-4 px-4">
           <div
-            className="grid gap-3"
+            className="grid gap-3 min-w-[640px]"
             style={{ gridTemplateColumns: "repeat(5, minmax(160px, 1fr))" }}
           >
             {weekDates.map((date, i) => {
@@ -485,7 +530,7 @@ export default function TimesheetPage() {
                       <div className="grid grid-cols-2 gap-1">
                         <TimeInput
                           id={`${k}-ms`}
-                          label="D\u00e9but"
+                          label="Début"
                           value={hours.morningStart}
                           disabled={!canEdit}
                           onChange={(v) =>
@@ -506,12 +551,12 @@ export default function TimesheetPage() {
 
                     <div>
                       <p className="text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wide">
-                        Apr\u00e8s-midi
+                        Après-midi
                       </p>
                       <div className="grid grid-cols-2 gap-1">
                         <TimeInput
                           id={`${k}-as`}
-                          label="D\u00e9but"
+                          label="Début"
                           value={hours.afternoonStart}
                           disabled={!canEdit}
                           onChange={(v) =>

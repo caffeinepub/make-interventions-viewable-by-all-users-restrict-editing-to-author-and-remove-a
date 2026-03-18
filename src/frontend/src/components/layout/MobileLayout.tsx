@@ -11,28 +11,25 @@ import { useLocation, useNavigate } from "@tanstack/react-router";
 import {
   CalendarRange,
   Clock,
-  Download,
   FolderOpen,
   LayoutDashboard,
   LogOut,
   Users,
 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { useGetCallerUserProfile } from "../../hooks/useCurrentUser";
 import { useInternetIdentity } from "../../hooks/useInternetIdentity";
-import ExportDataDialog from "../export/ExportDataDialog";
-import ConnectivityStatusBar from "../sync/ConnectivityStatusBar";
 
 interface MobileLayoutProps {
   children: ReactNode;
 }
 
 const navItems = [
+  { path: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { path: "/clients", label: "Clients", icon: Users },
   { path: "/planning", label: "Planning", icon: CalendarRange },
   { path: "/timesheet", label: "Heures", icon: Clock },
-  { path: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { path: "/technical-folder", label: "Dossier Technique", icon: FolderOpen },
+  { path: "/technical-folder", label: "Technique", icon: FolderOpen },
 ];
 
 export default function MobileLayout({ children }: MobileLayoutProps) {
@@ -41,7 +38,6 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: userProfile } = useGetCallerUserProfile();
-  const [exportOpen, setExportOpen] = useState(false);
 
   const handleLogout = async () => {
     await clear();
@@ -53,9 +49,11 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
     if (path === "/clients") {
       return (
         location.pathname === "/clients" ||
-        location.pathname === "/" ||
         location.pathname.startsWith("/clients/")
       );
+    }
+    if (path === "/dashboard") {
+      return location.pathname === "/dashboard" || location.pathname === "/";
     }
     return (
       location.pathname === path || location.pathname.startsWith(`${path}/`)
@@ -69,7 +67,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
             <img
-              src="/assets/generated/vial-traite-logo.dim_400x200.png"
+              src="/assets/generated/vial-traite-logo-transparent.dim_400x200.png"
               alt="Vial Traite Service"
               className="h-8 w-auto"
             />
@@ -87,27 +85,9 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setExportOpen(true)}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <Download className="w-5 h-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Exporter les données</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            {identity && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
                       onClick={handleLogout}
                       className="text-muted-foreground hover:text-destructive"
+                      data-ocid="nav.logout_button"
                     >
                       <LogOut className="w-5 h-5" />
                     </Button>
@@ -120,7 +100,6 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
             )}
           </div>
         </div>
-        <ConnectivityStatusBar />
       </header>
 
       {/* Main content */}
@@ -150,9 +129,6 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
           ))}
         </div>
       </nav>
-
-      {/* Export dialog */}
-      <ExportDataDialog open={exportOpen} onOpenChange={setExportOpen} />
     </div>
   );
 }

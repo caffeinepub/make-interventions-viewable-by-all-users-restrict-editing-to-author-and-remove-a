@@ -31,6 +31,17 @@ export const Address = IDL.Record({
   'city' : IDL.Text,
   'state' : IDL.Text,
 });
+export const Time = IDL.Int;
+export const WorkHours = IDL.Record({
+  'id' : IDL.Text,
+  'date' : IDL.Record({ 'day' : IDL.Nat, 'month' : IDL.Nat, 'year' : IDL.Nat }),
+  'morningEnd' : IDL.Text,
+  'afternoonStart' : IDL.Text,
+  'updatedAt' : Time,
+  'employee' : IDL.Principal,
+  'afternoonEnd' : IDL.Text,
+  'morningStart' : IDL.Text,
+});
 export const UserProfile = IDL.Record({ 'name' : IDL.Text });
 export const ContactInfo = IDL.Record({
   'name' : IDL.Text,
@@ -38,7 +49,6 @@ export const ContactInfo = IDL.Record({
   'address' : Address,
   'phone' : IDL.Text,
 });
-export const Time = IDL.Int;
 export const Client = IDL.Record({
   'blacklistMedia' : IDL.Vec(ExternalBlob),
   'blacklistComments' : IDL.Text,
@@ -162,6 +172,11 @@ export const idlService = IDL.Service({
       [IDL.Opt(ExternalBlob)],
       ['query'],
     ),
+  'getAllEmployeesWorkHoursForMonth' : IDL.Func(
+      [IDL.Nat, IDL.Nat],
+      [IDL.Vec(WorkHours)],
+      ['query'],
+    ),
   'getApprovedEmployees' : IDL.Func(
       [],
       [IDL.Vec(IDL.Tuple(IDL.Principal, UserProfile))],
@@ -207,6 +222,11 @@ export const idlService = IDL.Service({
       [IDL.Vec(IDL.Tuple(IDL.Principal, UserProfile))],
       ['query'],
     ),
+  'getWorkHoursForMonth' : IDL.Func(
+      [IDL.Principal, IDL.Nat, IDL.Nat],
+      [IDL.Vec(WorkHours)],
+      ['query'],
+    ),
   'hasAdminRegistered' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
@@ -226,6 +246,11 @@ export const idlService = IDL.Service({
   'renameFolder' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'requestApproval' : IDL.Func([], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'saveWorkHours' : IDL.Func(
+      [IDL.Nat, IDL.Nat, IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [],
+      [],
+    ),
   'searchClients' : IDL.Func([IDL.Text], [IDL.Vec(Client)], ['query']),
   'setApproval' : IDL.Func([IDL.Principal, ApprovalStatus], [], []),
   'unmarkAsBlacklisted' : IDL.Func([IDL.Text], [], []),
@@ -302,6 +327,21 @@ export const idlFactory = ({ IDL }) => {
     'city' : IDL.Text,
     'state' : IDL.Text,
   });
+  const Time = IDL.Int;
+  const WorkHours = IDL.Record({
+    'id' : IDL.Text,
+    'date' : IDL.Record({
+      'day' : IDL.Nat,
+      'month' : IDL.Nat,
+      'year' : IDL.Nat,
+    }),
+    'morningEnd' : IDL.Text,
+    'afternoonStart' : IDL.Text,
+    'updatedAt' : Time,
+    'employee' : IDL.Principal,
+    'afternoonEnd' : IDL.Text,
+    'morningStart' : IDL.Text,
+  });
   const UserProfile = IDL.Record({ 'name' : IDL.Text });
   const ContactInfo = IDL.Record({
     'name' : IDL.Text,
@@ -309,7 +349,6 @@ export const idlFactory = ({ IDL }) => {
     'address' : Address,
     'phone' : IDL.Text,
   });
-  const Time = IDL.Int;
   const Client = IDL.Record({
     'blacklistMedia' : IDL.Vec(ExternalBlob),
     'blacklistComments' : IDL.Text,
@@ -441,6 +480,11 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(ExternalBlob)],
         ['query'],
       ),
+    'getAllEmployeesWorkHoursForMonth' : IDL.Func(
+        [IDL.Nat, IDL.Nat],
+        [IDL.Vec(WorkHours)],
+        ['query'],
+      ),
     'getApprovedEmployees' : IDL.Func(
         [],
         [IDL.Vec(IDL.Tuple(IDL.Principal, UserProfile))],
@@ -486,6 +530,11 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(IDL.Tuple(IDL.Principal, UserProfile))],
         ['query'],
       ),
+    'getWorkHoursForMonth' : IDL.Func(
+        [IDL.Principal, IDL.Nat, IDL.Nat],
+        [IDL.Vec(WorkHours)],
+        ['query'],
+      ),
     'hasAdminRegistered' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
@@ -505,6 +554,11 @@ export const idlFactory = ({ IDL }) => {
     'renameFolder' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'requestApproval' : IDL.Func([], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'saveWorkHours' : IDL.Func(
+        [IDL.Nat, IDL.Nat, IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [],
+        [],
+      ),
     'searchClients' : IDL.Func([IDL.Text], [IDL.Vec(Client)], ['query']),
     'setApproval' : IDL.Func([IDL.Principal, ApprovalStatus], [], []),
     'unmarkAsBlacklisted' : IDL.Func([IDL.Text], [], []),
