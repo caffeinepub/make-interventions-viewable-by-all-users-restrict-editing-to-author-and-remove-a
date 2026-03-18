@@ -19,7 +19,6 @@ function getApprovalActor(actor: unknown) {
       Array<{ principal: Principal; status: ApprovalStatus }>
     >;
     setApproval: (user: Principal, status: ApprovalStatus) => Promise<void>;
-    // syncAdminRole: restores admin role from stable storage and returns admin status
     syncAdminRole: () => Promise<boolean>;
     hasAdminRegistered: () => Promise<boolean>;
     claimAdminIfNoneExists: () => Promise<void>;
@@ -40,7 +39,8 @@ export function useIsCallerApproved() {
       }
     },
     enabled: !!actor && !isFetching,
-    staleTime: 1000 * 30,
+    // No stale time — always re-check on focus/mount for security
+    staleTime: 0,
   });
 }
 
@@ -59,7 +59,8 @@ export function useIsCallerAdmin() {
       }
     },
     enabled: !!actor && !isFetching,
-    staleTime: 1000 * 60,
+    // No stale time — always re-check for admin status to prevent stale-cache lockout
+    staleTime: 0,
   });
 }
 
@@ -135,7 +136,8 @@ export function useHasAdminRegistered() {
       }
     },
     enabled: !!actor && !isFetching,
-    staleTime: 1000 * 30,
+    // No stale time — critical for first-connection flow
+    staleTime: 0,
   });
 }
 

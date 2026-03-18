@@ -4,10 +4,14 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
   CalendarDays,
+  CalendarRange,
   ChevronRight,
+  Clock,
+  FolderOpen,
   Loader2,
   RefreshCw,
   ShieldCheck,
+  Users,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Intervention } from "../backend";
@@ -26,6 +30,41 @@ function formatDate(date: {
   const y = Number(date.year);
   return `${d}/${m}/${y}`;
 }
+
+const quickLinks = [
+  {
+    path: "/clients",
+    label: "Clients",
+    description: "Dossiers et interventions",
+    icon: Users,
+    color: "bg-[#0066CC]/10",
+    iconColor: "text-[#0066CC]",
+  },
+  {
+    path: "/planning",
+    label: "Planning",
+    description: "Interventions de la semaine",
+    icon: CalendarRange,
+    color: "bg-[#99CC33]/10",
+    iconColor: "text-[#99CC33]",
+  },
+  {
+    path: "/timesheet",
+    label: "Feuille d'heures",
+    description: "Saisie et suivi des heures",
+    icon: Clock,
+    color: "bg-[#FF9933]/10",
+    iconColor: "text-[#FF9933]",
+  },
+  {
+    path: "/technical-folder",
+    label: "Dossier technique",
+    description: "Documents et fichiers",
+    icon: FolderOpen,
+    color: "bg-primary/10",
+    iconColor: "text-primary",
+  },
+];
 
 export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -59,6 +98,40 @@ export default function DashboardPage() {
       <div className="flex items-center gap-2">
         <CalendarDays className="w-5 h-5 text-primary" />
         <h1 className="text-xl font-bold text-foreground">Tableau de bord</h1>
+      </div>
+
+      {/* Quick access links */}
+      <div className="flex flex-col gap-3">
+        <h2 className="font-semibold text-foreground text-sm text-muted-foreground uppercase tracking-wide">
+          Accès rapide
+        </h2>
+        <div className="grid grid-cols-2 gap-3">
+          {quickLinks.map(
+            ({ path, label, description, icon: Icon, color, iconColor }) => (
+              <button
+                key={path}
+                type="button"
+                onClick={() => navigate({ to: path })}
+                className="flex flex-col gap-2 bg-card border border-border rounded-xl p-4 text-left hover:bg-muted/50 transition-colors active:scale-95"
+                data-ocid={`dashboard.quicklink.${path.replace("/", "")}`}
+              >
+                <div
+                  className={`w-9 h-9 rounded-lg ${color} flex items-center justify-center`}
+                >
+                  <Icon className={`w-5 h-5 ${iconColor}`} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground leading-tight">
+                    {label}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
+                    {description}
+                  </p>
+                </div>
+              </button>
+            ),
+          )}
+        </div>
       </div>
 
       {/* Calendar */}
