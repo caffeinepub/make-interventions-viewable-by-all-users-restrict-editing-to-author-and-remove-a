@@ -244,6 +244,7 @@ export interface backendInterface {
     saveWorkHours(day: bigint, month: bigint, year: bigint, morningStart: string, morningEnd: string, afternoonStart: string, afternoonEnd: string): Promise<void>;
     searchClients(searchString: string): Promise<Array<Client>>;
     setApproval(user: Principal, status: ApprovalStatus): Promise<void>;
+    syncAdminRole(): Promise<boolean>;
     unmarkAsBlacklisted(clientId: string): Promise<void>;
     updateIntervention(interventionId: string, clientId: string, comments: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint): Promise<void>;
     updateScheduledIntervention(id: string, clientId: string, clientName: string, assignedEmployee: Principal, reason: string, startTime: string, endTime: string, description: string, media: Array<ExternalBlob>, employeeSignature: string | null, clientSignature: string | null, day: bigint, month: bigint, year: bigint, weekNumber: bigint, weekYear: bigint): Promise<void>;
@@ -910,6 +911,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.setApproval(arg0, to_candid_ApprovalStatus_n42(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async syncAdminRole(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.syncAdminRole();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.syncAdminRole();
             return result;
         }
     }

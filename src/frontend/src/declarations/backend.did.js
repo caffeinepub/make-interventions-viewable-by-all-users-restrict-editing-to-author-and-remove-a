@@ -253,6 +253,7 @@ export const idlService = IDL.Service({
     ),
   'searchClients' : IDL.Func([IDL.Text], [IDL.Vec(Client)], ['query']),
   'setApproval' : IDL.Func([IDL.Principal, ApprovalStatus], [], []),
+  'syncAdminRole' : IDL.Func([], [IDL.Bool], []),
   'unmarkAsBlacklisted' : IDL.Func([IDL.Text], [], []),
   'updateIntervention' : IDL.Func(
       [
@@ -561,6 +562,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'searchClients' : IDL.Func([IDL.Text], [IDL.Vec(Client)], ['query']),
     'setApproval' : IDL.Func([IDL.Principal, ApprovalStatus], [], []),
+    'syncAdminRole' : IDL.Func([], [IDL.Bool], []),
     'unmarkAsBlacklisted' : IDL.Func([IDL.Text], [], []),
     'updateIntervention' : IDL.Func(
         [

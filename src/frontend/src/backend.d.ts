@@ -151,6 +151,7 @@ export interface backendInterface {
     saveWorkHours(day: bigint, month: bigint, year: bigint, morningStart: string, morningEnd: string, afternoonStart: string, afternoonEnd: string): Promise<void>;
     searchClients(searchString: string): Promise<Array<Client>>;
     setApproval(user: Principal, status: ApprovalStatus): Promise<void>;
+    syncAdminRole(): Promise<boolean>;
     unmarkAsBlacklisted(clientId: string): Promise<void>;
     updateIntervention(interventionId: string, clientId: string, comments: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint): Promise<void>;
     updateScheduledIntervention(id: string, clientId: string, clientName: string, assignedEmployee: Principal, reason: string, startTime: string, endTime: string, description: string, media: Array<ExternalBlob>, employeeSignature: string | null, clientSignature: string | null, day: bigint, month: bigint, year: bigint, weekNumber: bigint, weekYear: bigint): Promise<void>;

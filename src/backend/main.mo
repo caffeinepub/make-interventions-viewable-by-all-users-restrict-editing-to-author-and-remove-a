@@ -122,13 +122,16 @@ actor {
     };
   };
 
+  // Safe admin check: once stable admin is set, ONLY the stable principal is admin.
+  // This prevents other users from gaining admin via the role map after canister restart.
   func isAdmin(caller : Principal) : Bool {
-    let isRoleAdmin = Auth.isAdmin(accessControlState, caller);
-    let isStableAdmin = switch (adminPrincipal) {
-      case (?p) { p == caller };
-      case (null) { false };
+    switch (adminPrincipal) {
+      case (?p) { p == caller }; // Stable admin set: ONLY trust stable principal
+      case (null) {
+        // No stable admin yet (before first admin claims), fall back to role map
+        accessControlState.userRoles.get(caller) == ?#admin;
+      };
     };
-    isStableAdmin or isRoleAdmin;
   };
 
   // Restores admin role in accessControlState from stable storage if needed,
@@ -138,8 +141,10 @@ actor {
       case (?p) { p == caller };
       case (null) { false };
     };
-    if (stableAdminMatch and not Auth.isAdmin(accessControlState, caller)) {
-      // Restore role from stable storage
+    // Safe map lookup (no trap)
+    let roleInMap = accessControlState.userRoles.get(caller) == ?#admin;
+    if (stableAdminMatch and not roleInMap) {
+      // Restore role from stable storage after redeployment
       accessControlState.userRoles.add(caller, #admin);
       UserApproval.setApproval(approvalState, caller, #approved);
     };
@@ -154,6 +159,7 @@ actor {
     adminAssigned;
   };
 
+  // NO ACCESS CHECK - First admin can claim without approval
   public shared ({ caller }) func claimAdminIfNoneExists() : async () {
     if (adminAssigned) {
       Runtime.trap("Un administrateur est déjà enregistré");
@@ -165,13 +171,19 @@ actor {
   };
 
   public query ({ caller }) func isCallerApproved() : async Bool {
+    // Check stable admin first (short-circuit, no map lookup needed)
     let adminCheck = switch (adminPrincipal) {
       case (?p) { p == caller };
       case (null) { false };
     };
-    adminCheck or Auth.isAdmin(accessControlState, caller) or UserApproval.isApproved(approvalState, caller);
+    if (adminCheck) return true;
+    // Direct map lookups (safe, no trap)
+    let roleAdminCheck = accessControlState.userRoles.get(caller) == ?#admin;
+    if (roleAdminCheck) return true;
+    UserApproval.isApproved(approvalState, caller);
   };
 
+  // NO ACCESS CHECK - Anyone can request approval
   public shared ({ caller }) func requestApproval() : async () {
     if (isAdmin(caller)) {
       Runtime.trap("Administrateur est déjà approuvé");
@@ -179,16 +191,18 @@ actor {
     UserApproval.requestApproval(approvalState, caller);
   };
 
+  // ADMIN ONLY
   public shared ({ caller }) func setApproval(user : Principal, status : UserApproval.ApprovalStatus) : async () {
     if (not isAdmin(caller)) {
       Runtime.trap("Non autorisé : seuls les administrateurs peuvent approuver/désapprouver");
     };
     UserApproval.setApproval(approvalState, user, status);
     if (status == #approved) {
-      Auth.assignRole(accessControlState, caller, user, #user);
+      accessControlState.userRoles.add(user, #user);
     };
   };
 
+  // ADMIN ONLY
   public query ({ caller }) func listApprovals() : async [UserApproval.UserApprovalInfo] {
     if (not isAdmin(caller)) {
       Runtime.trap("Non autorisé : seuls les administrateurs peuvent voir les demandes d'approbation");
@@ -196,11 +210,13 @@ actor {
     UserApproval.listApprovals(approvalState);
   };
 
+  // APPROVED USER ONLY
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     checkAccess(caller);
     userProfiles.get(caller);
   };
 
+  // APPROVED USER ONLY - Can view own profile or admin can view any
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
     if (caller != user and not isAdmin(caller)) {
       Runtime.trap("Non autorisé : vous ne pouvez voir que votre propre profil");
@@ -208,6 +224,7 @@ actor {
     userProfiles.get(user);
   };
 
+  // APPROVED USER ONLY
   public query ({ caller }) func getUserProfilesByPrincipals(principals : [Principal]) : async [(Principal, UserProfile)] {
     checkAccess(caller);
     userProfiles.filter(
@@ -215,12 +232,12 @@ actor {
     ).toArray();
   };
 
+  // NO ACCESS CHECK - Profile can be saved before approval (needed for admin claim)
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    // No access check — profile can be saved before approval (needed for first-time admin claim)
     userProfiles.add(caller, profile);
   };
 
-  // Client Methods
+  // Client Methods - ALL REQUIRE APPROVED ACCESS
   public query ({ caller }) func getClients() : async [Client] {
     checkAccess(caller);
     clients.values().toArray().sort();
@@ -322,7 +339,7 @@ actor {
     };
   };
 
-  // Intervention Management
+  // Intervention Management - ALL REQUIRE APPROVED ACCESS
   public shared ({ caller }) func addIntervention(
     clientId : Text,
     comments : Text,
@@ -375,6 +392,7 @@ actor {
     };
   };
 
+  // OWNER OR ADMIN ONLY
   public shared ({ caller }) func updateIntervention(
     interventionId : Text,
     clientId : Text,
@@ -423,6 +441,7 @@ actor {
     };
   };
 
+  // OWNER OR ADMIN ONLY
   public shared ({ caller }) func deleteIntervention(interventionId : Text, clientId : Text) : async () {
     checkAccess(caller);
     switch (interventions.get(clientId)) {
@@ -467,7 +486,7 @@ actor {
     matchingInterventions.toArray();
   };
 
-  // Media Management
+  // Media Management - ALL REQUIRE APPROVED ACCESS
   public query ({ caller }) func getMediaItem(mediaId : Text) : async ?MediaItem {
     checkAccess(caller);
     mediaStorage.get(mediaId);
@@ -493,6 +512,7 @@ actor {
     mediaId;
   };
 
+  // OWNER OR ADMIN ONLY
   public shared ({ caller }) func deleteMediaItem(mediaId : Text) : async () {
     checkAccess(caller);
     switch (mediaStorage.get(mediaId)) {
@@ -506,7 +526,7 @@ actor {
     };
   };
 
-  // Technical Folder Management
+  // Technical Folder Management - ALL REQUIRE APPROVED ACCESS
   public query ({ caller }) func listTechnicalFiles() : async [(Text, Storage.ExternalBlob)] {
     checkAccess(caller);
     let result = List.empty<(Text, Storage.ExternalBlob)>();
@@ -744,7 +764,7 @@ actor {
     };
   };
 
-  // Weekly Planning Functionality
+  // Weekly Planning Functionality - ALL REQUIRE APPROVED ACCESS
   public shared ({ caller }) func createScheduledIntervention(
     clientId : Text,
     clientName : Text,
@@ -785,6 +805,7 @@ actor {
     id;
   };
 
+  // CREATOR OR ADMIN ONLY
   public shared ({ caller }) func updateScheduledIntervention(
     id : Text,
     clientId : Text,
@@ -824,6 +845,7 @@ actor {
     };
   };
 
+  // CREATOR OR ADMIN ONLY
   public shared ({ caller }) func deleteScheduledIntervention(id : Text) : async () {
     checkAccess(caller);
     switch (scheduledInterventions.get(id)) {
@@ -868,6 +890,7 @@ actor {
     approvedEmployees.toArray();
   };
 
+  // Work Hours - ALL REQUIRE APPROVED ACCESS
   public shared ({ caller }) func saveWorkHours(
     day : Nat,
     month : Nat,
@@ -918,7 +941,7 @@ actor {
     result.toArray();
   };
 
-  // Internal access check
+  // Internal access check - Requires admin OR approved user
   func checkAccess(caller : Principal) {
     if (not (isAdmin(caller) or UserApproval.isApproved(approvalState, caller))) {
       Runtime.trap("Non autorisé");

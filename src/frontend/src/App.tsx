@@ -1,5 +1,9 @@
 import { Toaster } from "@/components/ui/sonner";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   Outlet,
   RouterProvider,
@@ -40,9 +44,52 @@ const queryClient = new QueryClient({
 function LoadingScreen({ message }: { message: string }) {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-muted-foreground text-sm">{message}</p>
+      <div className="flex flex-col items-center gap-4">
+        <img
+          src="/assets/generated/vial-traite-logo-transparent.dim_400x200.png"
+          alt="Vial Traite Service"
+          className="w-40 h-auto opacity-80"
+        />
+        <div className="flex items-center gap-3">
+          <div className="w-6 h-6 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground text-sm">{message}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ServerStartingScreen({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background px-6">
+      <div className="flex flex-col items-center gap-6 text-center max-w-sm">
+        <img
+          src="/assets/generated/vial-traite-logo-transparent.dim_400x200.png"
+          alt="Vial Traite Service"
+          className="w-44 h-auto"
+        />
+        <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center">
+          <span className="text-2xl">⏳</span>
+        </div>
+        <div className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold text-foreground">
+            Service en démarrage
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Le serveur redémarre après une mise à jour. Cela prend généralement
+            quelques secondes.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
+        >
+          Réessayer la connexion
+        </button>
+        <p className="text-xs text-muted-foreground">
+          Si le problème persiste, revenez dans quelques minutes.
+        </p>
       </div>
     </div>
   );
@@ -51,20 +98,28 @@ function LoadingScreen({ message }: { message: string }) {
 function ActorFailedScreen() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background px-6">
-      <div className="flex flex-col items-center gap-4 text-center max-w-sm">
+      <div className="flex flex-col items-center gap-5 text-center max-w-sm">
+        <img
+          src="/assets/generated/vial-traite-logo-transparent.dim_400x200.png"
+          alt="Vial Traite Service"
+          className="w-40 h-auto opacity-80"
+        />
         <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
           <span className="text-2xl">⚠️</span>
         </div>
-        <h2 className="text-lg font-semibold text-foreground">
-          Connexion impossible
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Impossible de se connecter au serveur. Veuillez recharger la page.
-        </p>
+        <div className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold text-foreground">
+            Connexion impossible
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Impossible de se connecter au serveur. Vérifiez votre connexion et
+            réessayez.
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
         >
           Recharger la page
         </button>
@@ -112,34 +167,56 @@ function AuthenticatedLayout() {
 
 function AuthenticatedLayoutInner() {
   const { actor, isFetching: actorFetching } = useActor();
-  const { data: isAdmin, isLoading: adminLoading } = useIsCallerAdmin();
-  const { data: isApproved, isLoading: approvalLoading } =
-    useIsCallerApproved();
+  const queryClient = useQueryClient();
+  const adminQuery = useIsCallerAdmin();
+  const approvalQuery = useIsCallerApproved();
   const {
     data: userProfile,
     isLoading: profileLoading,
     isFetched: profileFetched,
   } = useGetCallerUserProfile();
 
-  // Step 1: Wait for actor to initialize
+  // Step 1: Wait for actor
   if (actorFetching) {
     return <LoadingScreen message="Chargement..." />;
   }
 
-  // Step 2: If actor failed to load, show error (prevents infinite spinner)
+  // Step 2: Actor failed
   if (!actor) {
     return <ActorFailedScreen />;
   }
 
   // Step 3: Wait for admin/approval checks
-  if (adminLoading || approvalLoading) {
+  if (adminQuery.isLoading || approvalQuery.isLoading) {
     return <LoadingScreen message="Vérification des accès..." />;
   }
 
-  // Step 4: Admin gets immediate, unconditional access
-  if (isAdmin === true) {
-    const needsProfileSetup =
-      !profileLoading && profileFetched && userProfile === null;
+  // Step 4: If admin check errored with canister stopped → show starting screen
+  if (adminQuery.isError) {
+    const msg = (adminQuery.error as Error)?.message ?? "";
+    const isCanisterStopped =
+      msg.includes("CANISTER_STOPPED") ||
+      msg.includes("IC0508") ||
+      msg.includes("stopped");
+    if (isCanisterStopped) {
+      return (
+        <ServerStartingScreen
+          onRetry={() => {
+            queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
+            queryClient.invalidateQueries({ queryKey: ["isCallerApproved"] });
+            adminQuery.refetch();
+          }}
+        />
+      );
+    }
+    // Non-canister error → continue to access page
+  }
+
+  const needsProfileSetup =
+    !profileLoading && profileFetched && userProfile === null;
+
+  // Step 5: Admin gets immediate access
+  if (adminQuery.data === true) {
     return (
       <MobileLayout>
         {needsProfileSetup && <ProfileSetupDialog />}
@@ -148,10 +225,8 @@ function AuthenticatedLayoutInner() {
     );
   }
 
-  // Step 5: Approved users get access
-  if (isApproved === true) {
-    const needsProfileSetup =
-      !profileLoading && profileFetched && userProfile === null;
+  // Step 6: Approved users
+  if (approvalQuery.data === true) {
     return (
       <MobileLayout>
         {needsProfileSetup && <ProfileSetupDialog />}
@@ -160,7 +235,7 @@ function AuthenticatedLayoutInner() {
     );
   }
 
-  // Step 6: Not approved — show access request page
+  // Step 7: Not approved → access request page
   return <PendingApprovalPage />;
 }
 

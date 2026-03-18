@@ -204,6 +204,7 @@ export interface _SERVICE {
   >,
   'searchClients' : ActorMethod<[string], Array<Client>>,
   'setApproval' : ActorMethod<[Principal, ApprovalStatus], undefined>,
+  'syncAdminRole' : ActorMethod<[], boolean>,
   'unmarkAsBlacklisted' : ActorMethod<[string], undefined>,
   'updateIntervention' : ActorMethod<
     [string, string, string, Array<ExternalBlob>, bigint, bigint, bigint],
