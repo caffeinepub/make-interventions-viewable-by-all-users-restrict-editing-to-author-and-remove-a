@@ -17,6 +17,7 @@ import { useEffect } from "react";
 import ProfileSetupDialog from "./components/auth/ProfileSetupDialog";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import MobileLayout from "./components/layout/MobileLayout";
+import { UserAccessProvider } from "./contexts/UserAccessContext";
 import { useActor } from "./hooks/useActor";
 import { useGetCallerUserProfile } from "./hooks/useCurrentUser";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
@@ -215,23 +216,29 @@ function AuthenticatedLayoutInner() {
   const needsProfileSetup =
     !profileLoading && profileFetched && userProfile === null;
 
-  // Step 5: Admin gets immediate access
-  if (adminQuery.data === true) {
+  const isAdmin = adminQuery.data === true;
+
+  // Step 5: Admin gets immediate access — pass isAdmin=true via context
+  if (isAdmin) {
     return (
-      <MobileLayout>
-        {needsProfileSetup && <ProfileSetupDialog />}
-        <Outlet />
-      </MobileLayout>
+      <UserAccessProvider isAdmin={true}>
+        <MobileLayout>
+          {needsProfileSetup && <ProfileSetupDialog />}
+          <Outlet />
+        </MobileLayout>
+      </UserAccessProvider>
     );
   }
 
-  // Step 6: Approved users
+  // Step 6: Approved users — isAdmin=false
   if (approvalQuery.data === true) {
     return (
-      <MobileLayout>
-        {needsProfileSetup && <ProfileSetupDialog />}
-        <Outlet />
-      </MobileLayout>
+      <UserAccessProvider isAdmin={false}>
+        <MobileLayout>
+          {needsProfileSetup && <ProfileSetupDialog />}
+          <Outlet />
+        </MobileLayout>
+      </UserAccessProvider>
     );
   }
 

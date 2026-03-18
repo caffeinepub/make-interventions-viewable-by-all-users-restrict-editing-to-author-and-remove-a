@@ -10,7 +10,6 @@ import {
   CalendarDays,
   CalendarRange,
   CheckCircle2,
-  ChevronRight,
   Clock,
   FolderOpen,
   Loader2,
@@ -23,12 +22,12 @@ import {
 import { useMemo, useState } from "react";
 import type { Intervention } from "../backend";
 import InterventionDetailsDialog from "../components/interventions/InterventionDetailsDialog";
+import { useUserAccess } from "../contexts/UserAccessContext";
 import { useActor } from "../hooks/useActor";
 import { useUserProfilesByPrincipals } from "../hooks/useCurrentUser";
 import { useGetInterventionsByDate } from "../hooks/useInterventions";
 import {
   type ApprovalEntry,
-  useIsCallerAdmin,
   useListApprovals,
   useSetApproval,
 } from "../hooks/useUserApproval";
@@ -229,7 +228,7 @@ function UserRow({
             ) : (
               <XCircle className="w-3 h-3 mr-1" />
             )}
-            Révoquer l'accès
+            Révoquer l&apos;accès
           </Button>
         )}
         {entry.status === "rejected" && (
@@ -318,7 +317,7 @@ function AccessManagementTab() {
         <div className="flex flex-col items-center gap-3 py-12">
           <Users className="w-10 h-10 text-muted-foreground" />
           <p className="text-sm text-muted-foreground text-center">
-            Aucune demande d'accès pour le moment
+            Aucune demande d&apos;accès pour le moment
           </p>
         </div>
       )}
@@ -416,7 +415,8 @@ function AccessManagementTab() {
 export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const navigate = useNavigate();
-  const { data: isAdmin } = useIsCallerAdmin();
+  // Use context value set at auth level — guaranteed stable, no re-fetch
+  const { isAdmin } = useUserAccess();
 
   const day = selectedDate.getDate();
   const month = selectedDate.getMonth() + 1;
@@ -440,13 +440,6 @@ export default function DashboardPage() {
   );
   const { data: profileMap } = useUserProfilesByPrincipals(employeePrincipals);
 
-  const tabs = isAdmin
-    ? [
-        { value: "home", label: "Accueil", icon: CalendarDays },
-        { value: "access", label: "Accès", icon: ShieldCheck },
-      ]
-    : [{ value: "home", label: "Accueil", icon: CalendarDays }];
-
   return (
     <div className="flex flex-col gap-4 px-4 py-4">
       <div className="flex items-center gap-2">
@@ -457,12 +450,14 @@ export default function DashboardPage() {
       {isAdmin ? (
         <Tabs defaultValue="home">
           <TabsList className="w-full">
-            {tabs.map(({ value, label, icon: Icon }) => (
-              <TabsTrigger key={value} value={value} className="flex-1 gap-1.5">
-                <Icon className="w-4 h-4" />
-                {label}
-              </TabsTrigger>
-            ))}
+            <TabsTrigger value="home" className="flex-1 gap-1.5">
+              <CalendarDays className="w-4 h-4" />
+              Accueil
+            </TabsTrigger>
+            <TabsTrigger value="access" className="flex-1 gap-1.5">
+              <ShieldCheck className="w-4 h-4" />
+              Accès
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="home" className="mt-4">
