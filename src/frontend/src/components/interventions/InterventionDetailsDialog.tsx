@@ -40,7 +40,9 @@ export default function InterventionDetailsDialog({
   );
   const { data: profileMap } = useUserProfilesByPrincipals(principals);
   const employeeName =
-    profileMap?.get(intervention.employee.toString()) ?? "Inconnu";
+    profileMap?.get(intervention.employee.toString()) ??
+    intervention.comments?.match(/^\[([^\]]+)\]/)?.[1] ??
+    "Inconnu";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

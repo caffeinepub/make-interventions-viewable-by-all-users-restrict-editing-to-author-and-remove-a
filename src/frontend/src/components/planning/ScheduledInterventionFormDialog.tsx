@@ -29,7 +29,6 @@ import {
   useUpdateScheduledIntervention,
 } from "../../hooks/useScheduledInterventions";
 import { getISOWeek, getISOWeekYear } from "../../utils/dateUtils";
-import SignatureCanvas from "./SignatureCanvas";
 
 interface Props {
   open: boolean;
@@ -60,12 +59,8 @@ export default function ScheduledInterventionFormDialog({
   const [clientName, setClientName] = useState("");
   const [reason, setReason] = useState("");
   const [date, setDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
   const [description, setDescription] = useState("");
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
-  const [employeeSig, setEmployeeSig] = useState<string | null>(null);
-  const [clientSig, setClientSig] = useState<string | null>(null);
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,11 +81,7 @@ export default function ScheduledInterventionFormDialog({
         const m = String(Number(d.month)).padStart(2, "0");
         const day = String(Number(d.day)).padStart(2, "0");
         setDate(`${y}-${m}-${day}`);
-        setStartTime(existing.startTime);
-        setEndTime(existing.endTime);
         setDescription(existing.description);
-        setEmployeeSig(existing.employeeSignature ?? null);
-        setClientSig(existing.clientSignature ?? null);
         setMediaFiles([]);
       } else {
         setAssignedEmployee(initialEmployee?.toString() ?? "");
@@ -102,12 +93,8 @@ export default function ScheduledInterventionFormDialog({
         setDate(
           `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
         );
-        setStartTime("08:00");
-        setEndTime("10:00");
         setDescription("");
         setMediaFiles([]);
-        setEmployeeSig(null);
-        setClientSig(null);
       }
       setShowClientDropdown(false);
     }
@@ -168,7 +155,6 @@ export default function ScheduledInterventionFormDialog({
       const buf = await file.arrayBuffer();
       mediaBlobs.push(ExternalBlob.fromBytes(new Uint8Array(buf)));
     }
-    // Keep existing media if editing
     if (isEditing && existing) {
       mediaBlobs.unshift(...existing.media);
     }
@@ -178,8 +164,8 @@ export default function ScheduledInterventionFormDialog({
       clientName: clientName.trim(),
       assignedEmployee: employeePrincipal,
       reason,
-      startTime,
-      endTime,
+      startTime: "",
+      endTime: "",
       description,
       media: mediaBlobs,
       day,
@@ -193,8 +179,8 @@ export default function ScheduledInterventionFormDialog({
       await updateMutation.mutateAsync({
         ...params,
         id: existing.id,
-        employeeSignature: employeeSig,
-        clientSignature: clientSig,
+        employeeSignature: existing.employeeSignature ?? null,
+        clientSignature: existing.clientSignature ?? null,
       });
     } else {
       await createMutation.mutateAsync(params);
@@ -291,28 +277,6 @@ export default function ScheduledInterventionFormDialog({
             />
           </div>
 
-          {/* Time range */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="start-time">Heure début</Label>
-              <Input
-                id="start-time"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="end-time">Heure fin</Label>
-              <Input
-                id="end-time"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            </div>
-          </div>
-
           {/* Description */}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="description">Description</Label>
@@ -321,14 +285,14 @@ export default function ScheduledInterventionFormDialog({
               data-ocid="planning.textarea"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description de l'intervention réalisée..."
+              placeholder="Description de l'intervention..."
               rows={3}
             />
           </div>
 
           {/* Media */}
           <div className="flex flex-col gap-1.5">
-            <Label>Photos / Vidéos</Label>
+            <Label>Photos</Label>
             <div className="flex flex-wrap gap-2">
               {mediaFiles.map((file, i) => (
                 <div
@@ -358,7 +322,7 @@ export default function ScheduledInterventionFormDialog({
               className="w-fit"
             >
               <Upload className="w-4 h-4 mr-2" />
-              Ajouter des médias
+              Ajouter des photos
             </Button>
             <input
               ref={fileInputRef}
@@ -369,18 +333,6 @@ export default function ScheduledInterventionFormDialog({
               onChange={handleFileChange}
             />
           </div>
-
-          {/* Signatures */}
-          <SignatureCanvas
-            label="Signature de l'employé"
-            value={employeeSig}
-            onChange={setEmployeeSig}
-          />
-          <SignatureCanvas
-            label="Signature du client"
-            value={clientSig}
-            onChange={setClientSig}
-          />
 
           <DialogFooter className="flex gap-2 pt-2">
             <Button

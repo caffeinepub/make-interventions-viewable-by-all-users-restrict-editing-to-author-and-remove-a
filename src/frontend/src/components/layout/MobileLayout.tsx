@@ -11,6 +11,7 @@ import { useLocation, useNavigate } from "@tanstack/react-router";
 import {
   CalendarRange,
   Clock,
+  FileText,
   FolderOpen,
   LayoutDashboard,
   LogOut,
@@ -29,6 +30,7 @@ const navItems = [
   { path: "/clients", label: "Clients", icon: Users },
   { path: "/planning", label: "Planning", icon: CalendarRange },
   { path: "/timesheet", label: "Heures", icon: Clock },
+  { path: "/facturation", label: "Facturation", icon: FileText },
   { path: "/technical-folder", label: "Technique", icon: FolderOpen },
 ];
 
@@ -62,7 +64,6 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-40 bg-card border-b border-border shadow-sm">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
@@ -102,12 +103,10 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
         </div>
       </header>
 
-      {/* Main content */}
       <main className="flex-1 overflow-auto pb-20">{children}</main>
 
-      {/* Bottom navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border">
-        <div className="flex items-center justify-around h-16 px-1">
+        <div className="flex items-center justify-around h-16 px-1 overflow-x-auto">
           {navItems.map(({ path, label, icon: Icon }) => (
             <button
               type="button"
@@ -115,14 +114,14 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
               data-ocid="nav.link"
               onClick={() => navigate({ to: path })}
               className={cn(
-                "flex flex-col items-center gap-1 px-1 py-2 rounded-xl transition-colors flex-1",
+                "flex flex-col items-center gap-1 px-1 py-2 rounded-xl transition-colors flex-shrink-0 min-w-0",
                 isActive(path)
                   ? "text-primary bg-primary/10"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted",
               )}
             >
               <Icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium leading-tight text-center">
+              <span className="text-[9px] font-medium leading-tight text-center whitespace-nowrap">
                 {label}
               </span>
             </button>

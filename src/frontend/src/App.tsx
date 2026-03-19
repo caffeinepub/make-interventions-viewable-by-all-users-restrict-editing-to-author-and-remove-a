@@ -24,6 +24,7 @@ import AdminAccessPage from "./pages/AdminAccessPage";
 import ClientDossierPage from "./pages/ClientDossierPage";
 import ClientsPage from "./pages/ClientsPage";
 import DashboardPage from "./pages/DashboardPage";
+import FacturationPage from "./pages/FacturationPage";
 import LoginPage from "./pages/LoginPage";
 import PendingApprovalPage from "./pages/PendingApprovalPage";
 import PlanningPage from "./pages/PlanningPage";
@@ -137,10 +138,6 @@ function AuthenticatedLayoutInner() {
   const adminQuery = useIsCallerAdmin();
   const approvalQuery = useIsCallerApproved();
 
-  /**
-   * CRITICAL: isAdmin is a one-way latch — once true, it NEVER goes back to false.
-   * This prevents the admin tab from disappearing on query refetch or window focus.
-   */
   const isAdminLatchRef = useRef(false);
   const [isAdminLatch, setIsAdminLatch] = useState(false);
 
@@ -151,12 +148,10 @@ function AuthenticatedLayoutInner() {
     }
   }, [adminQuery.data]);
 
-  // Step 1: Wait for actor
   if (actorFetching) {
     return <LoadingScreen message="Chargement..." />;
   }
 
-  // Step 2: Actor failed
   if (!actor) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background px-6">
@@ -187,12 +182,10 @@ function AuthenticatedLayoutInner() {
     );
   }
 
-  // Step 3: Wait for admin/approval checks
   if (adminQuery.isLoading || (approvalQuery.isLoading && !isAdminLatch)) {
     return <LoadingScreen message="Vérification des accès..." />;
   }
 
-  // Step 4: Canister stopped error
   if (adminQuery.isError && !isAdminLatch) {
     const msg = (adminQuery.error as Error)?.message ?? "";
     const isCanisterStopped =
@@ -210,13 +203,10 @@ function AuthenticatedLayoutInner() {
         />
       );
     }
-    // Non-canister error → continue to access page (treat as non-admin)
   }
 
-  // Use latched value — once admin, always admin in this session
   const isAdmin = isAdminLatch;
 
-  // Step 5: Admin gets immediate access
   if (isAdmin) {
     return (
       <UserAccessProvider isAdmin={true}>
@@ -227,7 +217,6 @@ function AuthenticatedLayoutInner() {
     );
   }
 
-  // Step 6: Approved users
   if (approvalQuery.data === true) {
     return (
       <UserAccessProvider isAdmin={false}>
@@ -238,13 +227,10 @@ function AuthenticatedLayoutInner() {
     );
   }
 
-  // Step 7: Not approved → access request page (shows claim admin option if no admin exists)
   return <PendingApprovalPage />;
 }
 
-const rootRoute = createRootRoute({
-  component: () => <Outlet />,
-});
+const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -263,54 +249,51 @@ const indexRoute = createRoute({
   path: "/",
   component: DashboardPage,
 });
-
 const clientsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/clients",
   component: ClientsPage,
 });
-
 const clientDossierRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/clients/$clientId",
   component: ClientDossierPage,
 });
-
 const dashboardRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/dashboard",
   component: DashboardPage,
 });
-
 const technicalFolderRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/technical-folder",
   component: TechnicalFolderPage,
 });
-
 const adminAccessRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/admin/access",
   component: AdminAccessPage,
 });
-
 const planningRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/planning",
   component: PlanningPage,
 });
-
 const scheduledInterventionDetailRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/planning/$interventionId",
   component: ScheduledInterventionDetailPage,
 });
-
 const timesheetRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/timesheet",
   component: TimesheetPage,
   errorComponent: TimesheetErrorComponent,
+});
+const facturationRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: "/facturation",
+  component: FacturationPage,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -325,6 +308,7 @@ const routeTree = rootRoute.addChildren([
     planningRoute,
     scheduledInterventionDetailRoute,
     timesheetRoute,
+    facturationRoute,
   ]),
 ]);
 

@@ -98,6 +98,26 @@ actor {
     updatedAt : Time.Time;
   };
 
+
+  public type BillingPart = {
+    reference : Text;
+    quantity : Text;
+  };
+
+  public type BillingRecord = {
+    id : Text;
+    interventionId : Text;
+    clientId : Text;
+    clientName : Text;
+    employeeName : Text;
+    reason : Text;
+    date : { day : Nat; month : Nat; year : Nat };
+    parts : [BillingPart];
+    comment : Text;
+    status : Text;
+    createdAt : Time.Time;
+  };
+
   // State
   let clients = Map.empty<Text, Client>();
   let technicalFolder = Map.empty<Text, Folder>();
@@ -106,6 +126,7 @@ actor {
   let mediaStorage = Map.empty<Text, MediaItem>();
   let scheduledInterventions = Map.empty<Text, ScheduledIntervention>();
   let workHoursStore = Map.empty<Text, WorkHours>();
+  stable var billingStore = Map.empty<Text, BillingRecord>();
   let accessControlState = Auth.initState();
   let approvalState = UserApproval.initState(accessControlState);
 
@@ -842,7 +863,7 @@ actor {
     switch (scheduledInterventions.get(id)) {
       case (null) { Runtime.trap("Intervention programmée non trouvée") };
       case (?existingIntervention) {
-        if (existingIntervention.createdBy != caller and not isAdmin(caller)) {
+        if (existingIntervention.createdBy != caller and existingIntervention.assignedEmployee != caller and not isAdmin(caller)) {
           Runtime.trap("Non autorisé : vous ne pouvez supprimer que vos propres interventions programmées");
         };
         scheduledInterventions.remove(id);
@@ -873,7 +894,8 @@ actor {
     let approvedEmployees = List.empty<(Principal, UserProfile)>();
     userProfiles.forEach(
       func(principal, profile) {
-        if (UserApproval.isApproved(approvalState, principal)) {
+        // Include approved employees AND the admin (who bypasses approval)
+        if (UserApproval.isApproved(approvalState, principal) or isAdmin(principal)) {
           approvedEmployees.add((principal, profile));
         };
       }
@@ -939,10 +961,82 @@ actor {
     result.toArray();
   };
 
-  // Internal access check - Requires admin OR approved user
+  // Billing records
+  public shared ({ caller }) func createBillingRecord(
+    interventionId : Text,
+    clientId : Text,
+    clientName : Text,
+    employeeName : Text,
+    reason : Text,
+    day : Nat,
+    month : Nat,
+    year : Nat,
+    parts : [BillingPart],
+    comment : Text,
+  ) : async Text {
+    checkAccess(caller);
+    let id = "bill-" # interventionId # caller.toText();
+    let record : BillingRecord = {
+      id;
+      interventionId;
+      clientId;
+      clientName;
+      employeeName;
+      reason;
+      date = { day; month; year };
+      parts;
+      comment;
+      status = "pending";
+      createdAt = Time.now();
+    };
+    billingStore.add(id, record);
+    id;
+  };
+
+  public query ({ caller }) func getBillingRecords() : async [BillingRecord] {
+    checkAccess(caller);
+    let result = List.empty<BillingRecord>();
+    billingStore.forEach(func(_id, rec) { result.add(rec) });
+    result.toArray();
+  };
+
+  public shared ({ caller }) func updateBillingRecordStatus(id : Text, status : Text) : async () {
+    checkAccess(caller);
+    switch (billingStore.get(id)) {
+      case null { Runtime.trap("Enregistrement de facturation introuvable") };
+      case (?rec) {
+        let updated : BillingRecord = {
+          id = rec.id;
+          interventionId = rec.interventionId;
+          clientId = rec.clientId;
+          clientName = rec.clientName;
+          employeeName = rec.employeeName;
+          reason = rec.reason;
+          date = rec.date;
+          parts = rec.parts;
+          comment = rec.comment;
+          status;
+          createdAt = rec.createdAt;
+        };
+        billingStore.add(id, updated);
+      };
+    };
+  };
+
+  public shared ({ caller }) func deleteBillingRecord(id : Text) : async () {
+    checkAccess(caller);
+    ignore billingStore.remove(id);
+  };
+
+  // Internal access check - Requires admin OR approved user OR registered profile
   func checkAccess(caller : Principal) {
-    if (not (isAdmin(caller) or UserApproval.isApproved(approvalState, caller))) {
-      Runtime.trap("Non autorisé");
+    if (isAdmin(caller)) return;
+    if (UserApproval.isApproved(approvalState, caller)) return;
+    // Fallback: allow users with a registered profile
+    // (approval state may be lost after canister restart, but profile persists)
+    switch (userProfiles.get(caller)) {
+      case (?_) { return; };
+      case null { Runtime.trap("Non autorisé"); };
     };
   };
 };

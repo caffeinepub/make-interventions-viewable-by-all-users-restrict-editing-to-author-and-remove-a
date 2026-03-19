@@ -196,6 +196,27 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
+export interface BillingPart {
+    reference: string;
+    quantity: string;
+}
+export interface BillingRecord {
+    id: string;
+    interventionId: string;
+    clientId: string;
+    clientName: string;
+    employeeName: string;
+    reason: string;
+    date: {
+        day: bigint;
+        month: bigint;
+        year: bigint;
+    };
+    parts: Array<BillingPart>;
+    comment: string;
+    status: string;
+    createdAt: bigint;
+}
 export interface backendInterface {
     _caffeineStorageBlobIsLive(hash: Uint8Array): Promise<boolean>;
     _caffeineStorageBlobsToDelete(): Promise<Array<Uint8Array>>;
@@ -252,6 +273,10 @@ export interface backendInterface {
         file: ExternalBlob;
     }): Promise<string>;
     uploadTechnicalFileWithFolderPath(path: string, blob: ExternalBlob): Promise<void>;
+    createBillingRecord(interventionId: string, clientId: string, clientName: string, employeeName: string, reason: string, day: bigint, month: bigint, year: bigint, parts: Array<BillingPart>, comment: string): Promise<string>;
+    getBillingRecords(): Promise<Array<BillingRecord>>;
+    updateBillingRecordStatus(id: string, status: string): Promise<void>;
+    deleteBillingRecord(id: string): Promise<void>;
 }
 import type { ApprovalStatus as _ApprovalStatus, Client as _Client, ContactInfo as _ContactInfo, ExternalBlob as _ExternalBlob, Intervention as _Intervention, MediaItem as _MediaItem, ScheduledIntervention as _ScheduledIntervention, Time as _Time, UserApprovalInfo as _UserApprovalInfo, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -999,6 +1024,23 @@ export class Backend implements backendInterface {
             const result = await this.actor.uploadTechnicalFileWithFolderPath(arg0, await to_candid_ExternalBlob_n9(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
+    }
+
+    async createBillingRecord(interventionId, clientId, clientName, employeeName, reason, day, month, year, parts, comment) {
+        const result = await this.actor.createBillingRecord(interventionId, clientId, clientName, employeeName, reason, day, month, year, parts, comment);
+        return result;
+    }
+    async getBillingRecords() {
+        const result = await this.actor.getBillingRecords();
+        return result;
+    }
+    async updateBillingRecordStatus(id, status) {
+        const result = await this.actor.updateBillingRecordStatus(id, status);
+        return result;
+    }
+    async deleteBillingRecord(id) {
+        const result = await this.actor.deleteBillingRecord(id);
+        return result;
     }
 }
 function from_candid_ApprovalStatus_n38(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ApprovalStatus): ApprovalStatus {

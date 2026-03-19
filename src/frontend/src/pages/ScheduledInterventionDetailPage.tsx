@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +24,7 @@ import {
   FileText,
   Loader2,
   Pencil,
+  Plus,
   Trash2,
   User,
   X,
@@ -33,10 +35,13 @@ import { ExternalBlob } from "../backend";
 import FilePicker from "../components/media/FilePicker";
 import ScheduledInterventionFormDialog from "../components/planning/ScheduledInterventionFormDialog";
 import SignatureCanvas from "../components/planning/SignatureCanvas";
+import { useGetCallerUserProfile } from "../hooks/useCurrentUser";
+import { useCreateBillingRecord } from "../hooks/useFacturation";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useAddIntervention } from "../hooks/useInterventions";
 import {
   useDeleteScheduledIntervention,
+  useGetApprovedEmployees,
   useGetScheduledInterventionById,
   useUpdateScheduledIntervention,
 } from "../hooks/useScheduledInterventions";
@@ -49,6 +54,11 @@ interface CompletionHours {
   morningEnd: string;
   afternoonStart: string;
   afternoonEnd: string;
+}
+
+interface PartRow {
+  reference: string;
+  quantity: string;
 }
 
 function TimeInput({
@@ -83,6 +93,8 @@ export default function ScheduledInterventionDetailPage() {
   const navigate = useNavigate();
   const { identity } = useInternetIdentity();
   const { data: isAdmin } = useIsCallerAdmin();
+  const { data: userProfile } = useGetCallerUserProfile();
+  const { data: employees = [] } = useGetApprovedEmployees();
 
   const { data: intervention, isLoading } = useGetScheduledInterventionById(
     params.interventionId ?? "",
@@ -91,10 +103,10 @@ export default function ScheduledInterventionDetailPage() {
   const updateMutation = useUpdateScheduledIntervention();
   const addInterventionMutation = useAddIntervention();
   const { mutateAsync: saveWorkHours } = useSaveWorkHours();
+  const createBillingRecord = useCreateBillingRecord();
 
   const [editOpen, setEditOpen] = useState(false);
 
-  // Completion form state
   const [completionHours, setCompletionHours] = useState<CompletionHours>({
     morningStart: "",
     morningEnd: "",
@@ -105,6 +117,9 @@ export default function ScheduledInterventionDetailPage() {
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [employeeSig, setEmployeeSig] = useState<string | null>(null);
   const [clientSig, setClientSig] = useState<string | null>(null);
+  const [parts, setParts] = useState<PartRow[]>([
+    { reference: "", quantity: "" },
+  ]);
   const [isValidating, setIsValidating] = useState(false);
 
   const callerPrincipal = identity?.getPrincipal().toString();
@@ -133,6 +148,16 @@ export default function ScheduledInterventionDetailPage() {
     navigate({ to: "/planning" });
   };
 
+  const addPart = () =>
+    setParts((prev) => [...prev, { reference: "", quantity: "" }]);
+  const removePart = (i: number) =>
+    setParts((prev) => prev.filter((_, idx) => idx !== i));
+  const updatePart = (i: number, field: keyof PartRow, value: string) => {
+    setParts((prev) =>
+      prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)),
+    );
+  };
+
   const handleValidate = async () => {
     if (!intervention) return;
     if (!employeeSig) {
@@ -150,16 +175,23 @@ export default function ScheduledInterventionDetailPage() {
       const weekNumber = getISOWeek(dateObj);
       const weekYear = getISOWeekYear(dateObj);
 
-      // Upload new media files
+      // Find the assigned employee's name from the employees list (includes admin)
+      const assignedEmpEntry = employees.find(
+        ([p]) =>
+          p.toString() ===
+          (intervention.assignedEmployee as { toString(): string }).toString(),
+      );
+      const employeeName =
+        assignedEmpEntry?.[1]?.name || userProfile?.name || "Employé";
+
       const newMediaBlobs: ExternalBlob[] = [];
       for (const file of mediaFiles) {
         const buf = await file.arrayBuffer();
         newMediaBlobs.push(ExternalBlob.fromBytes(new Uint8Array(buf)));
       }
-      // Keep existing media + add new ones
       const allMedia = [...(intervention.media ?? []), ...newMediaBlobs];
 
-      // 1. Update scheduled intervention with completion data
+      // 1. Update scheduled intervention with signatures (mark as completed)
       await updateMutation.mutateAsync({
         id: intervention.id,
         clientId: intervention.clientId,
@@ -179,41 +211,76 @@ export default function ScheduledInterventionDetailPage() {
         weekYear,
       });
 
-      // 2. Add intervention to client dossier (only if client is linked)
+      // 2. Add to client dossier (nominatif: include employee name)
+      // Wrapped in try/catch so it doesn't block billing if client not found
       if (intervention.clientId && !intervention.clientId.startsWith("new-")) {
-        await addInterventionMutation.mutateAsync({
-          clientId: intervention.clientId,
-          comments:
-            actualDescription.trim() ||
-            intervention.description ||
-            `Intervention planifiée : ${intervention.reason || intervention.clientName}`,
-          media: newMediaBlobs,
-          day,
-          month,
-          year,
-        });
+        const nominativeComment = `[${employeeName}] ${actualDescription.trim() || intervention.description || `Intervention : ${intervention.reason || intervention.clientName}`}`;
+        try {
+          await addInterventionMutation.mutateAsync(
+            {
+              clientId: intervention.clientId,
+              comments: nominativeComment,
+              media: newMediaBlobs,
+              day,
+              month,
+              year,
+            },
+            { onSuccess: () => {} },
+          );
+        } catch (clientErr) {
+          console.warn("Could not add to client dossier:", clientErr);
+          // continue anyway – billing must still be created
+        }
       }
 
-      // 3. Save work hours if any entered
+      // 3. Save work hours (non-blocking)
       const hasHours =
         completionHours.morningStart ||
         completionHours.morningEnd ||
         completionHours.afternoonStart ||
         completionHours.afternoonEnd;
       if (hasHours) {
-        await saveWorkHours({
+        try {
+          await saveWorkHours({
+            day,
+            month,
+            year,
+            morningStart: completionHours.morningStart,
+            morningEnd: completionHours.morningEnd,
+            afternoonStart: completionHours.afternoonStart,
+            afternoonEnd: completionHours.afternoonEnd,
+          });
+        } catch (hoursErr) {
+          console.warn("Could not save work hours:", hoursErr);
+        }
+      }
+
+      // 4. Create billing record (nominatif, obligatoire)
+      const validParts = parts.filter((p) => p.reference.trim());
+      await createBillingRecord.mutateAsync(
+        {
+          interventionId: intervention.id,
+          clientId: intervention.clientId,
+          clientName: intervention.clientName,
+          employeeName,
+          reason: intervention.reason,
           day,
           month,
           year,
-          morningStart: completionHours.morningStart,
-          morningEnd: completionHours.morningEnd,
-          afternoonStart: completionHours.afternoonStart,
-          afternoonEnd: completionHours.afternoonEnd,
-        });
-      }
+          parts: validParts,
+          comment: actualDescription.trim(),
+        },
+        { onSuccess: () => {} },
+      );
 
-      // 4. Success & navigate
-      toast.success("Intervention validée");
+      // 5. Delete from planning LAST (only after billing is created successfully)
+      await deleteMutation.mutateAsync({
+        id: intervention.id,
+        weekNumber,
+        weekYear,
+      });
+
+      toast.success("Intervention validée et transférée en facturation");
       navigate({ to: "/planning" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erreur inconnue";
@@ -321,7 +388,6 @@ export default function ScheduledInterventionDetailPage() {
         )}
       </div>
 
-      {/* Title */}
       <h1 className="text-2xl font-bold text-foreground mb-1">
         {intervention.clientName}
       </h1>
@@ -330,9 +396,7 @@ export default function ScheduledInterventionDetailPage() {
           <Badge variant="secondary">{intervention.reason}</Badge>
         )}
         <Badge
-          className={`border-0 ${
-            isCompleted ? "bg-green-500 text-white" : "bg-orange-500 text-white"
-          }`}
+          className={`border-0 ${isCompleted ? "bg-green-500 text-white" : "bg-orange-500 text-white"}`}
         >
           {isCompleted ? "Réalisé" : "Non réalisé"}
         </Badge>
@@ -340,7 +404,6 @@ export default function ScheduledInterventionDetailPage() {
 
       <Separator className="mb-4" />
 
-      {/* Meta info */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div className="flex items-start gap-3">
           <Calendar className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
@@ -350,22 +413,13 @@ export default function ScheduledInterventionDetailPage() {
           </div>
         </div>
         <div className="flex items-start gap-3">
-          <Clock className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-xs text-muted-foreground">Horaire prévu</p>
-            <p className="text-sm font-medium">
-              {intervention.startTime} – {intervention.endTime}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3">
           <User className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
           <div>
             <p className="text-xs text-muted-foreground">Client</p>
             <p className="text-sm font-medium">{intervention.clientName}</p>
           </div>
         </div>
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 col-span-full">
           <FileText className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
           <div>
             <p className="text-xs text-muted-foreground">Description prévue</p>
@@ -376,7 +430,6 @@ export default function ScheduledInterventionDetailPage() {
         </div>
       </div>
 
-      {/* Media */}
       {intervention.media.length > 0 && (
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-foreground mb-3">
@@ -386,9 +439,9 @@ export default function ScheduledInterventionDetailPage() {
             {intervention.media.map((blob, i) => {
               const url = blob.getDirectURL();
               const type = getMediaType(url);
-              const mediaKey = `media-${i}`;
+              const mediaKey = `media-${url}-${i}`;
               return type === "video" ? (
-                // biome-ignore lint/a11y/useMediaCaption: captions not applicable for user uploads
+                // biome-ignore lint/a11y/useMediaCaption: user uploads
                 <video
                   key={mediaKey}
                   src={url}
@@ -408,7 +461,6 @@ export default function ScheduledInterventionDetailPage() {
         </div>
       )}
 
-      {/* Completed view: show existing signatures */}
       {isCompleted && (
         <div className="flex flex-col gap-4 mb-6">
           <div className="flex items-center gap-2">
@@ -435,7 +487,6 @@ export default function ScheduledInterventionDetailPage() {
         </div>
       )}
 
-      {/* Realisation form: shown to assigned employee if not completed */}
       {!isCompleted && isAssigned && (
         <div className="flex flex-col gap-5 mt-2">
           <Separator />
@@ -464,10 +515,7 @@ export default function ScheduledInterventionDetailPage() {
                     label="Début"
                     value={completionHours.morningStart}
                     onChange={(v) =>
-                      setCompletionHours((prev) => ({
-                        ...prev,
-                        morningStart: v,
-                      }))
+                      setCompletionHours((p) => ({ ...p, morningStart: v }))
                     }
                   />
                   <TimeInput
@@ -475,10 +523,7 @@ export default function ScheduledInterventionDetailPage() {
                     label="Fin"
                     value={completionHours.morningEnd}
                     onChange={(v) =>
-                      setCompletionHours((prev) => ({
-                        ...prev,
-                        morningEnd: v,
-                      }))
+                      setCompletionHours((p) => ({ ...p, morningEnd: v }))
                     }
                   />
                 </div>
@@ -493,10 +538,7 @@ export default function ScheduledInterventionDetailPage() {
                     label="Début"
                     value={completionHours.afternoonStart}
                     onChange={(v) =>
-                      setCompletionHours((prev) => ({
-                        ...prev,
-                        afternoonStart: v,
-                      }))
+                      setCompletionHours((p) => ({ ...p, afternoonStart: v }))
                     }
                   />
                   <TimeInput
@@ -504,10 +546,7 @@ export default function ScheduledInterventionDetailPage() {
                     label="Fin"
                     value={completionHours.afternoonEnd}
                     onChange={(v) =>
-                      setCompletionHours((prev) => ({
-                        ...prev,
-                        afternoonEnd: v,
-                      }))
+                      setCompletionHours((p) => ({ ...p, afternoonEnd: v }))
                     }
                   />
                 </div>
@@ -515,7 +554,7 @@ export default function ScheduledInterventionDetailPage() {
             </div>
           </div>
 
-          {/* Actual description */}
+          {/* Description */}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="actual-desc">
               Description de l&apos;intervention réalisée
@@ -530,7 +569,50 @@ export default function ScheduledInterventionDetailPage() {
             />
           </div>
 
-          {/* Media picker */}
+          {/* Parts cartouche */}
+          <div className="flex flex-col gap-2">
+            <Label>Pièces / Références</Label>
+            <div className="flex flex-col gap-2">
+              {parts.map((part, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: parts have no stable id
+                <div key={`part-${i}`} className="flex items-center gap-2">
+                  <Input
+                    placeholder="Référence"
+                    value={part.reference}
+                    onChange={(e) => updatePart(i, "reference", e.target.value)}
+                    className="flex-1"
+                  />
+                  <Input
+                    placeholder="Qté"
+                    value={part.quantity}
+                    onChange={(e) => updatePart(i, "quantity", e.target.value)}
+                    className="w-20"
+                  />
+                  {parts.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removePart(i)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addPart}
+              className="w-fit"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Ajouter une pièce
+            </Button>
+          </div>
+
+          {/* Media */}
           <div className="flex flex-col gap-2">
             <Label>Photos / Vidéos</Label>
             {mediaFiles.length > 0 && (
@@ -563,21 +645,17 @@ export default function ScheduledInterventionDetailPage() {
             />
           </div>
 
-          {/* Employee signature */}
           <SignatureCanvas
             label="Signature de l'employé *"
             value={employeeSig}
             onChange={setEmployeeSig}
           />
-
-          {/* Client signature */}
           <SignatureCanvas
             label="Signature du client"
             value={clientSig}
             onChange={setClientSig}
           />
 
-          {/* Validate button */}
           <Button
             onClick={handleValidate}
             disabled={isValidating}
@@ -595,7 +673,6 @@ export default function ScheduledInterventionDetailPage() {
         </div>
       )}
 
-      {/* Edit dialog */}
       <ScheduledInterventionFormDialog
         open={editOpen}
         onOpenChange={setEditOpen}

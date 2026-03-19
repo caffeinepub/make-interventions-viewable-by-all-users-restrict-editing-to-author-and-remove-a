@@ -622,6 +622,9 @@ function HomeTabContent({
                         <span className="text-xs text-primary font-medium">
                           Par :{" "}
                           {profileMap?.get(intervention.employee.toString()) ??
+                            intervention.comments?.match(
+                              /^\[([^\]]+)\]/,
+                            )?.[1] ??
                             "Inconnu"}
                         </span>
                         {intervention.comments && (

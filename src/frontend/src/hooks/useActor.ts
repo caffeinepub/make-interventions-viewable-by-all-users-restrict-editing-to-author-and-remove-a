@@ -25,19 +25,28 @@ export function useActor() {
         },
       };
 
+      // Always create the actor first — this must succeed
       const actor = await createActorWithConfig(actorOptions);
-      // CRITICAL: wrap initialization in try/catch — never block actor creation
+
+      // Initialize access control separately — failure here must NEVER block the actor
       try {
         const adminToken = getSecretParameter("caffeineAdminToken") || "";
         await actor._initializeAccessControlWithSecret(adminToken);
-      } catch (err) {
-        // Initialization failure is non-fatal — actor is still usable
-        console.warn("Actor initialization warning (non-fatal):", err);
+      } catch (_initErr) {
+        // Canister may still be starting — ignore silently, actor is still usable
+        console.warn(
+          "[useActor] _initializeAccessControlWithSecret failed (non-fatal):",
+          _initErr,
+        );
       }
+
       return actor;
     },
     // Only refetch when identity changes
     staleTime: Number.POSITIVE_INFINITY,
+    // Never let query errors propagate — always return the last good actor
+    retry: 2,
+    retryDelay: 1500,
     enabled: true,
   });
 

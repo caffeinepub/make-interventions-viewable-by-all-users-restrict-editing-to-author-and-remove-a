@@ -100,6 +100,27 @@ export interface Intervention {
     comments: string;
     interventionTimestamp: Time;
 }
+export interface BillingPart {
+    reference: string;
+    quantity: string;
+}
+export interface BillingRecord {
+    id: string;
+    interventionId: string;
+    clientId: string;
+    clientName: string;
+    employeeName: string;
+    reason: string;
+    date: {
+        day: bigint;
+        month: bigint;
+        year: bigint;
+    };
+    parts: Array<BillingPart>;
+    comment: string;
+    status: string;
+    createdAt: Time;
+}
 export enum ApprovalStatus {
     pending = "pending",
     approved = "approved",
@@ -155,8 +176,10 @@ export interface backendInterface {
     unmarkAsBlacklisted(clientId: string): Promise<void>;
     updateIntervention(interventionId: string, clientId: string, comments: string, media: Array<ExternalBlob>, day: bigint, month: bigint, year: bigint): Promise<void>;
     updateScheduledIntervention(id: string, clientId: string, clientName: string, assignedEmployee: Principal, reason: string, startTime: string, endTime: string, description: string, media: Array<ExternalBlob>, employeeSignature: string | null, clientSignature: string | null, day: bigint, month: bigint, year: bigint, weekNumber: bigint, weekYear: bigint): Promise<void>;
-    uploadMediaItem(arg0: {
-        file: ExternalBlob;
-    }): Promise<string>;
+    uploadMediaItem(arg0: { file: ExternalBlob }): Promise<string>;
     uploadTechnicalFileWithFolderPath(path: string, blob: ExternalBlob): Promise<void>;
+    createBillingRecord(interventionId: string, clientId: string, clientName: string, employeeName: string, reason: string, day: bigint, month: bigint, year: bigint, parts: Array<BillingPart>, comment: string): Promise<string>;
+    getBillingRecords(): Promise<Array<BillingRecord>>;
+    updateBillingRecordStatus(id: string, status: string): Promise<void>;
+    deleteBillingRecord(id: string): Promise<void>;
 }

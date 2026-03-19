@@ -103,6 +103,23 @@ export const UserApprovalInfo = IDL.Record({
   'principal' : IDL.Principal,
 });
 
+export const BillingPart = IDL.Record({
+  'reference' : IDL.Text,
+  'quantity' : IDL.Text,
+});
+export const BillingRecord = IDL.Record({
+  'id' : IDL.Text,
+  'interventionId' : IDL.Text,
+  'clientId' : IDL.Text,
+  'clientName' : IDL.Text,
+  'employeeName' : IDL.Text,
+  'reason' : IDL.Text,
+  'date' : IDL.Record({ 'day' : IDL.Nat, 'month' : IDL.Nat, 'year' : IDL.Nat }),
+  'parts' : IDL.Vec(IDL.Record({ 'reference' : IDL.Text, 'quantity' : IDL.Text })),
+  'comment' : IDL.Text,
+  'status' : IDL.Text,
+  'createdAt' : Time,
+});
 export const idlService = IDL.Service({
   '_caffeineStorageBlobIsLive' : IDL.Func(
       [IDL.Vec(IDL.Nat8)],
@@ -290,6 +307,14 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'createBillingRecord' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Record({ 'reference' : IDL.Text, 'quantity' : IDL.Text })), IDL.Text],
+      [IDL.Text],
+      [],
+    ),
+  'getBillingRecords' : IDL.Func([], [IDL.Vec(BillingRecord)], ['query']),
+  'updateBillingRecordStatus' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'deleteBillingRecord' : IDL.Func([IDL.Text], [], []),
   'uploadMediaItem' : IDL.Func(
       [IDL.Record({ 'file' : ExternalBlob })],
       [IDL.Text],
@@ -599,6 +624,14 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'createBillingRecord' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Record({ 'reference' : IDL.Text, 'quantity' : IDL.Text })), IDL.Text],
+        [IDL.Text],
+        [],
+      ),
+    'getBillingRecords' : IDL.Func([], [IDL.Vec(BillingRecord)], ['query']),
+    'updateBillingRecordStatus' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'deleteBillingRecord' : IDL.Func([IDL.Text], [], []),
     'uploadMediaItem' : IDL.Func(
         [IDL.Record({ 'file' : ExternalBlob })],
         [IDL.Text],

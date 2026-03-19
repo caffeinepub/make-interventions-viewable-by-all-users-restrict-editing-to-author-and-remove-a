@@ -100,6 +100,23 @@ export interface _CaffeineStorageRefillResult {
   'success' : [] | [boolean],
   'topped_up_amount' : [] | [bigint],
 }
+export interface BillingPart {
+  'reference' : string,
+  'quantity' : string,
+}
+export interface BillingRecord {
+  'id' : string,
+  'interventionId' : string,
+  'clientId' : string,
+  'clientName' : string,
+  'employeeName' : string,
+  'reason' : string,
+  'date' : { 'day' : bigint, 'month' : bigint, 'year' : bigint },
+  'parts' : Array<BillingPart>,
+  'comment' : string,
+  'status' : string,
+  'createdAt' : bigint,
+}
 export interface _SERVICE {
   '_caffeineStorageBlobIsLive' : ActorMethod<[Uint8Array], boolean>,
   '_caffeineStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
@@ -231,6 +248,13 @@ export interface _SERVICE {
     ],
     undefined
   >,
+  'createBillingRecord' : ActorMethod<
+    [string, string, string, string, string, bigint, bigint, bigint, Array<BillingPart>, string],
+    string
+  >,
+  'getBillingRecords' : ActorMethod<[], Array<BillingRecord>>,
+  'updateBillingRecordStatus' : ActorMethod<[string, string], undefined>,
+  'deleteBillingRecord' : ActorMethod<[string], undefined>,
   'uploadMediaItem' : ActorMethod<[{ 'file' : ExternalBlob }], string>,
   'uploadTechnicalFileWithFolderPath' : ActorMethod<
     [string, ExternalBlob],
