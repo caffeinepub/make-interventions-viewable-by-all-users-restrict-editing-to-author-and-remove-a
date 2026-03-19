@@ -42,9 +42,6 @@ const queryClient = new QueryClient({
 });
 
 // ── Admin persistence helpers ─────────────────────────────────────────────────
-// Stores admin status per principal in localStorage so it survives page
-// refreshes and canister restarts.  Once a principal is confirmed admin,
-// the flag stays set until the user explicitly logs out.
 const ADMIN_STORAGE_KEY = "vts_admin_principals";
 
 function loadStoredAdminPrincipals(): Set<string> {
@@ -183,14 +180,62 @@ function AuthenticatedLayoutInner() {
   );
   const [isAdminLatch, setIsAdminLatch] = useState(isAdminLatchRef.current);
 
+  // Track whether we've attempted backend re-registration this session
+  const adminReRegisterAttempted = useRef(false);
+
   useEffect(() => {
     if (adminQuery.data === true && !isAdminLatchRef.current) {
       isAdminLatchRef.current = true;
       setIsAdminLatch(true);
-      // Persist to localStorage so next page load is instant
       if (principalStr) storeAdminPrincipal(principalStr);
     }
   }, [adminQuery.data, principalStr]);
+
+  // KEY FIX: If localStorage says we're admin but the backend doesn't confirm it,
+  // silently re-register admin role in the backend (happens after each redeploy).
+  useEffect(() => {
+    if (
+      isAdminLatchRef.current &&
+      actor &&
+      !actorFetching &&
+      !adminQuery.isLoading &&
+      adminQuery.data === false &&
+      !adminReRegisterAttempted.current
+    ) {
+      adminReRegisterAttempted.current = true;
+      const a = actor as any;
+      // Try to re-claim admin if no admin is registered yet (fresh deploy)
+      Promise.resolve()
+        .then(async () => {
+          try {
+            // First try syncAdminRole (works if adminPrincipal is already set in stable storage)
+            const synced = await a.syncAdminRole?.();
+            if (synced) {
+              queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
+              return;
+            }
+          } catch {
+            // ignore
+          }
+          try {
+            // If syncAdminRole didn't work, claim admin (works if no admin registered yet)
+            await a.claimAdminIfNoneExists?.();
+            queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
+          } catch {
+            // If another admin is already registered, this will fail silently — that's OK
+          }
+        })
+        .catch(() => {
+          // Non-blocking — never crash the app
+        });
+    }
+  }, [
+    actor,
+    actorFetching,
+    adminQuery.isLoading,
+    adminQuery.data,
+    queryClient,
+  ]);
 
   if (actorFetching) {
     return <LoadingScreen message="Chargement..." />;
