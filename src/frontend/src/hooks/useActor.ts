@@ -15,7 +15,6 @@ export function useActor() {
       const isAuthenticated = !!identity;
 
       if (!isAuthenticated) {
-        // Return anonymous actor if not authenticated
         return await createActorWithConfig();
       }
 
@@ -25,43 +24,31 @@ export function useActor() {
         },
       };
 
-      // Always create the actor first — this must succeed
       const actor = await createActorWithConfig(actorOptions);
-
-      // Initialize access control separately — failure here must NEVER block the actor
+      // CRITICAL: wrap init call in try/catch so a slow/stopped canister
+      // never prevents the actor from being returned.
       try {
         const adminToken = getSecretParameter("caffeineAdminToken") || "";
         await actor._initializeAccessControlWithSecret(adminToken);
-      } catch (_initErr) {
-        // Canister may still be starting — ignore silently, actor is still usable
+      } catch (initErr) {
         console.warn(
-          "[useActor] _initializeAccessControlWithSecret failed (non-fatal):",
-          _initErr,
+          "_initializeAccessControlWithSecret failed (non-blocking):",
+          initErr,
         );
       }
-
       return actor;
     },
-    // Only refetch when identity changes
     staleTime: Number.POSITIVE_INFINITY,
-    // Never let query errors propagate — always return the last good actor
-    retry: 2,
-    retryDelay: 1500,
     enabled: true,
   });
 
-  // When the actor changes, invalidate dependent queries
   useEffect(() => {
     if (actorQuery.data) {
       queryClient.invalidateQueries({
-        predicate: (query) => {
-          return !query.queryKey.includes(ACTOR_QUERY_KEY);
-        },
+        predicate: (query) => !query.queryKey.includes(ACTOR_QUERY_KEY),
       });
       queryClient.refetchQueries({
-        predicate: (query) => {
-          return !query.queryKey.includes(ACTOR_QUERY_KEY);
-        },
+        predicate: (query) => !query.queryKey.includes(ACTOR_QUERY_KEY),
       });
     }
   }, [actorQuery.data, queryClient]);

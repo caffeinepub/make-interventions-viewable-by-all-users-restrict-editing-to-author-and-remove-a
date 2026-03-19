@@ -41,6 +41,39 @@ const queryClient = new QueryClient({
   },
 });
 
+// ── Admin persistence helpers ─────────────────────────────────────────────────
+// Stores admin status per principal in localStorage so it survives page
+// refreshes and canister restarts.  Once a principal is confirmed admin,
+// the flag stays set until the user explicitly logs out.
+const ADMIN_STORAGE_KEY = "vts_admin_principals";
+
+function loadStoredAdminPrincipals(): Set<string> {
+  try {
+    const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function storeAdminPrincipal(principal: string) {
+  try {
+    const set = loadStoredAdminPrincipals();
+    set.add(principal);
+    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(Array.from(set)));
+  } catch {
+    // localStorage unavailable — non-blocking
+  }
+}
+
+function isStoredAdmin(principal: string): boolean {
+  return loadStoredAdminPrincipals().has(principal);
+}
+
+// ── Screens ───────────────────────────────────────────────────────────────────
+
 function LoadingScreen({ message }: { message: string }) {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
@@ -113,6 +146,8 @@ function TimesheetErrorComponent({ error }: { error: Error }) {
   );
 }
 
+// ── Auth layout ───────────────────────────────────────────────────────────────
+
 function AuthenticatedLayout() {
   const { identity, isInitializing } = useInternetIdentity();
   const navigate = useNavigate();
@@ -133,20 +168,29 @@ function AuthenticatedLayout() {
 }
 
 function AuthenticatedLayoutInner() {
+  const { identity } = useInternetIdentity();
   const { actor, isFetching: actorFetching } = useActor();
   const queryClient = useQueryClient();
   const adminQuery = useIsCallerAdmin();
   const approvalQuery = useIsCallerApproved();
 
-  const isAdminLatchRef = useRef(false);
-  const [isAdminLatch, setIsAdminLatch] = useState(false);
+  const principalStr = identity?.getPrincipal().toString() ?? "";
+
+  // Latch: once admin is confirmed (by query OR by localStorage), it stays true
+  // for this session — never reverts to false.
+  const isAdminLatchRef = useRef(
+    principalStr ? isStoredAdmin(principalStr) : false,
+  );
+  const [isAdminLatch, setIsAdminLatch] = useState(isAdminLatchRef.current);
 
   useEffect(() => {
     if (adminQuery.data === true && !isAdminLatchRef.current) {
       isAdminLatchRef.current = true;
       setIsAdminLatch(true);
+      // Persist to localStorage so next page load is instant
+      if (principalStr) storeAdminPrincipal(principalStr);
     }
-  }, [adminQuery.data]);
+  }, [adminQuery.data, principalStr]);
 
   if (actorFetching) {
     return <LoadingScreen message="Chargement..." />;
@@ -182,7 +226,8 @@ function AuthenticatedLayoutInner() {
     );
   }
 
-  if (adminQuery.isLoading || (approvalQuery.isLoading && !isAdminLatch)) {
+  // If admin is latched (from localStorage or confirmed query), skip loading
+  if (!isAdminLatch && (adminQuery.isLoading || approvalQuery.isLoading)) {
     return <LoadingScreen message="Vérification des accès..." />;
   }
 
@@ -229,6 +274,8 @@ function AuthenticatedLayoutInner() {
 
   return <PendingApprovalPage />;
 }
+
+// ── Router ────────────────────────────────────────────────────────────────────
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
