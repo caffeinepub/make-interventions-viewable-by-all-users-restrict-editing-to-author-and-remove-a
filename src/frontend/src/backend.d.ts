@@ -144,6 +144,7 @@ export interface backendInterface {
     deleteTechnicalFileWithPath(path: string): Promise<void>;
     downloadTechnicalFileWithPath(path: string): Promise<ExternalBlob | null>;
     getAllEmployeesWorkHoursForMonth(month: bigint, year: bigint): Promise<Array<WorkHours>>;
+    getAllUserProfiles(): Promise<Array<[Principal, UserProfile]>>;
     getApprovedEmployees(): Promise<Array<[Principal, UserProfile]>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;

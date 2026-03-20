@@ -238,6 +238,7 @@ export interface backendInterface {
     downloadTechnicalFileWithPath(path: string): Promise<ExternalBlob | null>;
     getAllEmployeesWorkHoursForMonth(month: bigint, year: bigint): Promise<Array<WorkHours>>;
     getApprovedEmployees(): Promise<Array<[Principal, UserProfile]>>;
+    getAllUserProfiles(): Promise<Array<[Principal, UserProfile]>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getClient(clientId: string): Promise<Client>;
@@ -558,6 +559,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.getApprovedEmployees();
+            return result;
+        }
+    }
+    async getAllUserProfiles(): Promise<Array<[Principal, UserProfile]>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllUserProfiles();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllUserProfiles();
             return result;
         }
     }

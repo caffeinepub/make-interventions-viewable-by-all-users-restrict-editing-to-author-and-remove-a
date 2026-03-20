@@ -16,7 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { Intervention } from "../backend";
+import type { Intervention, UserProfile } from "../backend";
 import InterventionDetailsDialog from "../components/interventions/InterventionDetailsDialog";
 import { useUserAccess } from "../contexts/UserAccessContext";
 import { useActor } from "../hooks/useActor";
@@ -85,12 +85,12 @@ function ProfileListTab() {
     isLoading,
     error,
     refetch,
-  } = useQuery<Array<[Principal, { name: string }]>>({
+  } = useQuery<Array<[Principal, UserProfile]>>({
     queryKey: ["allUserProfiles"],
     queryFn: async () => {
       if (!actor) return [];
       try {
-        return await (actor as any).getAllUserProfiles();
+        return await actor.getAllUserProfiles();
       } catch (err) {
         console.warn("getAllUserProfiles failed:", err);
         throw err;

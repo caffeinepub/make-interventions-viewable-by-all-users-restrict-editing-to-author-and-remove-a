@@ -89,7 +89,40 @@ function LoadingScreen({ message }: { message: string }) {
   );
 }
 
+const AUTO_RETRY_INTERVAL = 5; // seconds
+const AUTO_RETRY_MAX = 10; // max auto-retries
+
 function ServerStartingScreen({ onRetry }: { onRetry: () => void }) {
+  const [countdown, setCountdown] = useState(AUTO_RETRY_INTERVAL);
+  const [retryCount, setRetryCount] = useState(0);
+  const retryCountRef = useRef(0);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: retryCount triggers effect re-run intentionally
+  useEffect(() => {
+    if (retryCountRef.current >= AUTO_RETRY_MAX) return;
+
+    setCountdown(AUTO_RETRY_INTERVAL);
+
+    const tickInterval = setInterval(() => {
+      setCountdown((prev) => (prev <= 1 ? AUTO_RETRY_INTERVAL : prev - 1));
+    }, 1000);
+
+    const retryTimeout = setTimeout(() => {
+      if (retryCountRef.current < AUTO_RETRY_MAX) {
+        retryCountRef.current += 1;
+        setRetryCount(retryCountRef.current);
+        onRetry();
+      }
+    }, AUTO_RETRY_INTERVAL * 1000);
+
+    return () => {
+      clearInterval(tickInterval);
+      clearTimeout(retryTimeout);
+    };
+  }, [onRetry, retryCount]);
+
+  const attemptsLeft = AUTO_RETRY_MAX - retryCount;
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-background px-6">
       <div className="flex flex-col items-center gap-6 text-center max-w-sm">
@@ -110,12 +143,43 @@ function ServerStartingScreen({ onRetry }: { onRetry: () => void }) {
             quelques secondes.
           </p>
         </div>
+
+        {attemptsLeft > 0 ? (
+          <div className="flex flex-col items-center gap-2 w-full">
+            <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+              <div
+                className="bg-primary h-full transition-all duration-1000 ease-linear"
+                style={{
+                  width: `${((AUTO_RETRY_INTERVAL - countdown) / AUTO_RETRY_INTERVAL) * 100}%`,
+                }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Nouvelle tentative dans{" "}
+              <span className="font-semibold text-foreground">
+                {countdown}s
+              </span>{" "}
+              — tentative{" "}
+              <span className="font-semibold">{retryCount + 1}</span>/
+              {AUTO_RETRY_MAX}
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-amber-600">
+            Nombre maximum de tentatives atteint. Revenez dans quelques minutes.
+          </p>
+        )}
+
         <button
           type="button"
-          onClick={onRetry}
+          onClick={() => {
+            retryCountRef.current = Math.max(0, retryCountRef.current - 1);
+            setRetryCount((c) => Math.max(0, c - 1));
+            onRetry();
+          }}
           className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
         >
-          Réessayer la connexion
+          Réessayer maintenant
         </button>
         <p className="text-xs text-muted-foreground">
           Si le problème persiste, revenez dans quelques minutes.

@@ -27,72 +27,6 @@ function getApprovalActor(actor: unknown) {
   };
 }
 
-function isCanisterStoppedError(err: unknown): boolean {
-  const str = JSON.stringify(err) + String((err as Error)?.message ?? "");
-  return (
-    str.includes("IC0508") ||
-    str.includes("Canister is stopped") ||
-    str.includes("canister is stopped") ||
-    str.includes('"reject_code":5') ||
-    str.includes('"reject_code": 5') ||
-    str.includes("reject_code: 5")
-  );
-}
-
-async function checkAdminWithRetry(
-  actor: ReturnType<typeof getApprovalActor>,
-): Promise<boolean | "canister_stopped"> {
-  // Try multiple methods to detect admin status robustly
-  // Method 1: syncAdminRole with retry for stopped canister
-  let lastStoppedError = false;
-  let shouldBreak = false;
-  for (let attempt = 0; attempt < 3 && !shouldBreak; attempt++) {
-    try {
-      const result = await actor.syncAdminRole();
-      return result;
-    } catch (err) {
-      if (isCanisterStoppedError(err)) {
-        lastStoppedError = true;
-        if (attempt < 2) {
-          await new Promise((r) => setTimeout(r, (attempt + 1) * 2000));
-        }
-      } else {
-        // Non-IC0508 error on syncAdminRole — try isCallerAdmin
-        shouldBreak = true;
-      }
-    }
-  }
-
-  if (lastStoppedError) {
-    // Try isCallerAdmin as alternative
-    try {
-      return await actor.isCallerAdmin();
-    } catch (err) {
-      if (isCanisterStoppedError(err)) {
-        return "canister_stopped";
-      }
-    }
-    return "canister_stopped";
-  }
-
-  // Method 2: isCallerAdmin (fallback)
-  try {
-    return await actor.isCallerAdmin();
-  } catch {
-    // ignore
-  }
-
-  // Method 3: getCallerUserRole
-  try {
-    const role = await actor.getCallerUserRole();
-    return role === "admin";
-  } catch {
-    // ignore
-  }
-
-  return false;
-}
-
 export function useIsCallerApproved() {
   const { actor, isFetching } = useActor();
 
@@ -122,18 +56,24 @@ export function useIsCallerAdmin() {
     queryKey: ["isCallerAdmin"],
     queryFn: async () => {
       if (!actor) return false;
-      const result = await checkAdminWithRetry(getApprovalActor(actor));
-      if (result === "canister_stopped") {
-        throw new Error("CANISTER_STOPPED");
+      const a = getApprovalActor(actor);
+      // Simple: try syncAdminRole first, then isCallerAdmin
+      // React Query handles retries via the retry option below
+      try {
+        const result = await a.syncAdminRole();
+        return result;
+      } catch {
+        // syncAdminRole failed — fall back to isCallerAdmin
       }
-      return result;
+      return await a.isCallerAdmin();
     },
     enabled: !!actor && !isFetching,
     staleTime: 0,
     refetchOnMount: true,
     // CRITICAL: do NOT refetch on window focus — this causes the admin tab to flicker/disappear
     refetchOnWindowFocus: false,
-    retry: 0, // Manual retry logic in checkAdminWithRetry
+    retry: 5,
+    retryDelay: (attempt) => Math.min(3000 * (attempt + 1), 15000),
   });
 }
 
@@ -242,21 +182,18 @@ export function useRecoverAdminAccess() {
     mutationFn: async (): Promise<boolean> => {
       if (!actor) throw new Error("Actor non disponible");
       const aa = getApprovalActor(actor);
-      // Try to sync admin role from stable storage
       try {
         const result = await aa.syncAdminRole();
         if (result) return true;
       } catch {
         // ignore
       }
-      // Try isCallerAdmin
       try {
         const result = await aa.isCallerAdmin();
         if (result) return true;
       } catch {
         // ignore
       }
-      // Try getCallerUserRole
       try {
         const role = await aa.getCallerUserRole();
         if (role === "admin") return true;
