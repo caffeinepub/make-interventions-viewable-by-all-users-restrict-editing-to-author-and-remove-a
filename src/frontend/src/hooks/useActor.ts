@@ -26,14 +26,28 @@ export function useActor() {
       };
 
       const actor = await createActorWithConfig(actorOptions);
-      const adminToken = getSecretParameter("caffeineAdminToken") || "";
-      await actor._initializeAccessControlWithSecret(adminToken);
+      // Initialize access control in background — never block actor creation
+      try {
+        const adminToken = getSecretParameter("caffeineAdminToken") || "";
+        await actor._initializeAccessControlWithSecret(adminToken);
+      } catch (e) {
+        // Canister may be starting up (IC0508) — actor is still usable
+        console.warn(
+          "[useActor] Initialization skipped (canister starting):",
+          e,
+        );
+      }
       return actor;
     },
     // Only refetch when identity changes
     staleTime: Number.POSITIVE_INFINITY,
-    // This will cause the actor to be recreated when the identity changes
     enabled: true,
+    retry: (failureCount, _error) => {
+      // Retry up to 5 times for server errors
+      if (failureCount < 5) return true;
+      return false;
+    },
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
   });
 
   // When the actor changes, invalidate dependent queries
