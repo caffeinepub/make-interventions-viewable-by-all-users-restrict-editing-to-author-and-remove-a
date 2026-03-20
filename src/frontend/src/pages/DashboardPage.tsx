@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,15 +8,12 @@ import {
   AlertTriangle,
   CalendarDays,
   CalendarRange,
-  CheckCircle2,
   Clock,
   FolderOpen,
   Loader2,
   RefreshCw,
-  ShieldCheck,
   User,
   Users,
-  XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Intervention } from "../backend";
@@ -26,11 +22,6 @@ import { useUserAccess } from "../contexts/UserAccessContext";
 import { useActor } from "../hooks/useActor";
 import { useUserProfilesByPrincipals } from "../hooks/useCurrentUser";
 import { useGetInterventionsByDate } from "../hooks/useInterventions";
-import {
-  type ApprovalEntry,
-  useListApprovals,
-  useSetApproval,
-} from "../hooks/useUserApproval";
 
 function formatDate(date: {
   day: bigint;
@@ -78,205 +69,36 @@ const quickLinks = [
   },
 ];
 
-// ── Access management inline ─────────────────────────────────────────────────
-
 function truncatePrincipal(principal: Principal): string {
   const str = principal.toString();
   if (str.length <= 16) return str;
   return `${str.slice(0, 8)}...${str.slice(-6)}`;
 }
 
-function useProfileNames(principals: Principal[]) {
+// ── Profile List Tab ──────────────────────────────────────────────────────────
+
+function ProfileListTab() {
   const { actor, isFetching } = useActor();
-  const key = principals.map((p) => p.toString()).join(",");
-  return useQuery<Map<string, string>>({
-    queryKey: ["profileNames", key],
+
+  const {
+    data: profiles,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<Array<[Principal, { name: string }]>>({
+    queryKey: ["allUserProfiles"],
     queryFn: async () => {
-      const map = new Map<string, string>();
-      if (!actor || principals.length === 0) return map;
+      if (!actor) return [];
       try {
-        const results = await (actor as any).getUserProfilesByPrincipals(
-          principals,
-        );
-        for (const [p, profile] of results as Array<
-          [Principal, { name: string }]
-        >) {
-          map.set(p.toString(), profile.name);
-        }
+        return await (actor as any).getAllUserProfiles();
       } catch (err) {
-        console.warn("getUserProfilesByPrincipals failed:", err);
+        console.warn("getAllUserProfiles failed:", err);
+        throw err;
       }
-      return map;
     },
-    enabled: !!actor && !isFetching && principals.length > 0,
-    staleTime: 1000 * 60,
+    enabled: !!actor && !isFetching,
+    staleTime: 1000 * 30,
   });
-}
-
-interface UserRowProps {
-  entry: ApprovalEntry;
-  index: number;
-  displayName: string;
-  onApprove?: () => void;
-  onReject?: () => void;
-  onRevoke?: () => void;
-  isPending: boolean;
-}
-
-function UserRow({
-  entry,
-  index,
-  displayName,
-  onApprove,
-  onReject,
-  onRevoke,
-  isPending,
-}: UserRowProps) {
-  return (
-    <div
-      data-ocid={`admin_access.item.${index}`}
-      className="flex flex-col gap-3 bg-card border border-border rounded-xl p-4"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <User className="w-4 h-4 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">
-              {displayName}
-            </p>
-            <p className="text-xs font-mono text-muted-foreground truncate">
-              {truncatePrincipal(entry.principal)}
-            </p>
-          </div>
-        </div>
-        {entry.status === "approved" && (
-          <Badge
-            variant="secondary"
-            className="shrink-0 text-xs bg-[#99CC33]/15 text-[#99CC33] border-[#99CC33]/30"
-          >
-            <CheckCircle2 className="w-3 h-3 mr-1" />
-            Approuvé
-          </Badge>
-        )}
-        {entry.status === "pending" && (
-          <Badge
-            variant="secondary"
-            className="shrink-0 text-xs bg-[#FF9933]/15 text-[#FF9933] border-[#FF9933]/30"
-          >
-            <Clock className="w-3 h-3 mr-1" />
-            En attente
-          </Badge>
-        )}
-        {entry.status === "rejected" && (
-          <Badge
-            variant="secondary"
-            className="shrink-0 text-xs bg-destructive/15 text-destructive border-destructive/30"
-          >
-            <XCircle className="w-3 h-3 mr-1" />
-            Supprimé
-          </Badge>
-        )}
-      </div>
-
-      <div className="flex gap-2 flex-wrap">
-        {entry.status === "pending" && (
-          <>
-            <Button
-              size="sm"
-              onClick={onApprove}
-              disabled={isPending}
-              className="flex-1 min-w-0 bg-[#99CC33] hover:bg-[#99CC33]/90 text-white"
-              data-ocid={`admin_access.approve_button.${index}`}
-            >
-              {isPending ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-              )}
-              Approuver
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={onReject}
-              disabled={isPending}
-              className="flex-1 min-w-0"
-              data-ocid={`admin_access.delete_button.${index}`}
-            >
-              {isPending ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <XCircle className="w-3 h-3 mr-1" />
-              )}
-              Supprimer
-            </Button>
-          </>
-        )}
-        {entry.status === "approved" && (
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={onRevoke}
-            disabled={isPending}
-            className="flex-1 min-w-0"
-            data-ocid={`admin_access.delete_button.${index}`}
-          >
-            {isPending ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <XCircle className="w-3 h-3 mr-1" />
-            )}
-            Révoquer l&apos;accès
-          </Button>
-        )}
-        {entry.status === "rejected" && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onApprove}
-            disabled={isPending}
-            className="flex-1 min-w-0"
-            data-ocid={`admin_access.approve_button.${index}`}
-          >
-            {isPending ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <CheckCircle2 className="w-3 h-3 mr-1" />
-            )}
-            Approuver quand même
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function AccessManagementTab() {
-  const { data: approvals, isLoading, error, refetch } = useListApprovals();
-  const { mutate: setApproval, isPending: isSettingApproval } =
-    useSetApproval();
-
-  const principals = approvals?.map((a) => a.principal) ?? [];
-  const { data: profileNames } = useProfileNames(principals);
-
-  const pending = approvals?.filter((a) => a.status === "pending") ?? [];
-  const approved = approvals?.filter((a) => a.status === "approved") ?? [];
-  const rejected = approvals?.filter((a) => a.status === "rejected") ?? [];
-
-  const allEntriesIndexed =
-    approvals?.map((entry, i) => ({ entry, displayIndex: i + 1 })) ?? [];
-
-  const getDisplayName = (principal: Principal) =>
-    profileNames?.get(principal.toString()) || truncatePrincipal(principal);
-
-  const handleApprove = (principal: Principal) =>
-    setApproval({ user: principal, status: "approved" });
-  const handleReject = (principal: Principal) =>
-    setApproval({ user: principal, status: "rejected" });
-  const handleRevoke = (principal: Principal) =>
-    setApproval({ user: principal, status: "pending" });
 
   if (isLoading) {
     return (
@@ -284,7 +106,7 @@ function AccessManagementTab() {
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">
-            Chargement des accès...
+            Chargement des profils...
           </p>
         </div>
       </div>
@@ -311,101 +133,47 @@ function AccessManagementTab() {
     );
   }
 
+  if (!profiles || profiles.length === 0) {
+    return (
+      <div
+        data-ocid="profiles.empty_state"
+        className="flex flex-col items-center gap-3 py-12"
+      >
+        <Users className="w-10 h-10 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground text-center">
+          Aucun profil enregistré pour le moment
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      {(!approvals || approvals.length === 0) && (
-        <div className="flex flex-col items-center gap-3 py-12">
-          <Users className="w-10 h-10 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground text-center">
-            Aucune demande d&apos;accès pour le moment
-          </p>
-        </div>
-      )}
-
-      {pending.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4" style={{ color: "#FF9933" }} />
-            <h2 className="font-semibold text-foreground">
-              En attente ({pending.length})
-            </h2>
+      <p className="text-sm text-muted-foreground">
+        {profiles.length} utilisateur{profiles.length > 1 ? "s" : ""} enregistré
+        {profiles.length > 1 ? "s" : ""}
+      </p>
+      <div className="flex flex-col gap-2">
+        {profiles.map(([principal, profile], index) => (
+          <div
+            key={principal.toString()}
+            data-ocid={`profiles.item.${index + 1}`}
+            className="flex items-center gap-3 bg-card border border-border rounded-xl p-4"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <User className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground truncate">
+                {profile.name}
+              </p>
+              <p className="text-xs font-mono text-muted-foreground truncate">
+                {truncatePrincipal(principal)}
+              </p>
+            </div>
           </div>
-          <div className="flex flex-col gap-2">
-            {pending.map((entry) => {
-              const idx =
-                allEntriesIndexed.find((a) => a.entry === entry)
-                  ?.displayIndex ?? 1;
-              return (
-                <UserRow
-                  key={entry.principal.toString()}
-                  entry={entry}
-                  index={idx}
-                  displayName={getDisplayName(entry.principal)}
-                  onApprove={() => handleApprove(entry.principal)}
-                  onReject={() => handleReject(entry.principal)}
-                  isPending={isSettingApproval}
-                />
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {approved.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" style={{ color: "#99CC33" }} />
-            <h2 className="font-semibold text-foreground">
-              Approuvés ({approved.length})
-            </h2>
-          </div>
-          <div className="flex flex-col gap-2">
-            {approved.map((entry) => {
-              const idx =
-                allEntriesIndexed.find((a) => a.entry === entry)
-                  ?.displayIndex ?? 1;
-              return (
-                <UserRow
-                  key={entry.principal.toString()}
-                  entry={entry}
-                  index={idx}
-                  displayName={getDisplayName(entry.principal)}
-                  onRevoke={() => handleRevoke(entry.principal)}
-                  isPending={isSettingApproval}
-                />
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {rejected.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <XCircle className="w-4 h-4 text-destructive" />
-            <h2 className="font-semibold text-foreground">
-              Supprimés ({rejected.length})
-            </h2>
-          </div>
-          <div className="flex flex-col gap-2">
-            {rejected.map((entry) => {
-              const idx =
-                allEntriesIndexed.find((a) => a.entry === entry)
-                  ?.displayIndex ?? 1;
-              return (
-                <UserRow
-                  key={entry.principal.toString()}
-                  entry={entry}
-                  index={idx}
-                  displayName={getDisplayName(entry.principal)}
-                  onApprove={() => handleApprove(entry.principal)}
-                  isPending={isSettingApproval}
-                />
-              );
-            })}
-          </div>
-        </section>
-      )}
+        ))}
+      </div>
     </div>
   );
 }
@@ -415,7 +183,6 @@ function AccessManagementTab() {
 export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const navigate = useNavigate();
-  // Use context value set at auth level — guaranteed stable, no re-fetch
   const { isAdmin } = useUserAccess();
 
   const day = selectedDate.getDate();
@@ -454,9 +221,13 @@ export default function DashboardPage() {
               <CalendarDays className="w-4 h-4" />
               Accueil
             </TabsTrigger>
-            <TabsTrigger value="access" className="flex-1 gap-1.5">
-              <ShieldCheck className="w-4 h-4" />
-              Accès
+            <TabsTrigger
+              value="profil"
+              className="flex-1 gap-1.5"
+              data-ocid="dashboard.profil.tab"
+            >
+              <Users className="w-4 h-4" />
+              Profil
             </TabsTrigger>
           </TabsList>
 
@@ -473,14 +244,14 @@ export default function DashboardPage() {
             />
           </TabsContent>
 
-          <TabsContent value="access" className="mt-4">
+          <TabsContent value="profil" className="mt-4">
             <div className="flex items-center gap-2 mb-4">
-              <ShieldCheck className="w-4 h-4 text-primary" />
+              <Users className="w-4 h-4 text-primary" />
               <h2 className="font-semibold text-foreground">
-                Gestion des accès
+                Profils enregistrés
               </h2>
             </div>
-            <AccessManagementTab />
+            <ProfileListTab />
           </TabsContent>
         </Tabs>
       ) : (

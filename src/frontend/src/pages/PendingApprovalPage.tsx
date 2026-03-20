@@ -5,7 +5,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   CheckCircle2,
-  Clock,
   Loader2,
   LogOut,
   RefreshCw,
@@ -20,7 +19,6 @@ import {
   useHasAdminRegistered,
   useIsCallerApproved,
   useRecoverAdminAccess,
-  useRequestApproval,
 } from "../hooks/useUserApproval";
 
 export default function PendingApprovalPage() {
@@ -32,12 +30,6 @@ export default function PendingApprovalPage() {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<"choose" | "admin" | "request">("choose");
 
-  const {
-    mutate: requestApproval,
-    isPending: isRequesting,
-    isSuccess: hasRequested,
-  } = useRequestApproval();
-
   const { mutate: claimAdmin, isPending: isClaiming } =
     useClaimAdminIfNoneExists();
 
@@ -47,11 +39,8 @@ export default function PendingApprovalPage() {
   const { mutate: recoverAdmin, isPending: isRecovering } =
     useRecoverAdminAccess();
 
-  const {
-    data: isApproved,
-    refetch: refetchApproval,
-    isLoading: checkingApproval,
-  } = useIsCallerApproved();
+  const { data: isApproved, isLoading: checkingApproval } =
+    useIsCallerApproved();
 
   const {
     data: hasAdminRegistered,
@@ -60,18 +49,12 @@ export default function PendingApprovalPage() {
     refetch: refetchAdminCheck,
   } = useHasAdminRegistered();
 
-  const [alreadyRequested, setAlreadyRequested] = useState(false);
-
   useEffect(() => {
     if (isApproved) {
       queryClient.invalidateQueries({ queryKey: ["isCallerApproved"] });
       navigate({ to: "/" });
     }
   }, [isApproved, navigate, queryClient]);
-
-  useEffect(() => {
-    if (hasRequested) setAlreadyRequested(true);
-  }, [hasRequested]);
 
   // If no admin registered yet, go directly to admin claim mode
   useEffect(() => {
@@ -92,7 +75,6 @@ export default function PendingApprovalPage() {
       { name: name.trim() },
       {
         onSuccess: () => {
-          // If admin is already registered, use recoverAdmin instead of claimAdmin
           if (hasAdminRegistered) {
             recoverAdmin(undefined, {
               onSuccess: (isAdmin) => {
@@ -127,7 +109,6 @@ export default function PendingApprovalPage() {
   };
 
   const handleRecoverAdmin = () => {
-    // Save name if provided, then recover
     if (name.trim()) {
       saveProfile(
         { name: name.trim() },
@@ -158,21 +139,21 @@ export default function PendingApprovalPage() {
     }
   };
 
-  const handleRequest = () => {
+  const handleAccessApp = () => {
     if (!name.trim()) return;
     saveProfile(
       { name: name.trim() },
       {
         onSuccess: () => {
-          requestApproval();
+          queryClient.invalidateQueries({ queryKey: ["isCallerApproved"] });
+          navigate({ to: "/" });
         },
       },
     );
   };
 
   const isLoadingChecks = actorFetching || !actor || checkingApproval;
-  const isSubmitting =
-    isSavingProfile || isClaiming || isRequesting || isRecovering;
+  const isSubmitting = isSavingProfile || isClaiming || isRecovering;
 
   return (
     <div
@@ -227,10 +208,7 @@ export default function PendingApprovalPage() {
               name={name}
               setName={setName}
               isSubmitting={isSubmitting}
-              alreadyRequested={alreadyRequested}
-              checkingApproval={checkingApproval}
-              onRequest={handleRequest}
-              onRefresh={refetchApproval}
+              onAccessApp={handleAccessApp}
               onSwitchToAdmin={() => setMode("admin")}
               onLogout={handleLogout}
             />
@@ -242,10 +220,6 @@ export default function PendingApprovalPage() {
             />
           )}
         </div>
-
-        <p className="text-xs text-muted-foreground text-center px-4">
-          Contactez votre administrateur si votre demande tarde à être traitée
-        </p>
       </div>
     </div>
   );
@@ -299,7 +273,7 @@ function ChooseRoleState({
         data-ocid="pending_approval.secondary_button"
       >
         <CheckCircle2 className="w-4 h-4 mr-2" />
-        Je suis un salarié — Demander l&apos;accès
+        Je suis un salarié
       </Button>
 
       <Button
@@ -369,7 +343,6 @@ function AdminClaimState({
         />
       </div>
 
-      {/* Single button: either claim (first time) or recover (already registered) */}
       <Button
         onClick={hasAdminRegistered ? onRecoverAdmin : onClaimAdmin}
         disabled={isSubmitting || (!hasAdminRegistered && !name.trim())}
@@ -400,7 +373,7 @@ function AdminClaimState({
         className="w-full text-muted-foreground"
         data-ocid="pending_approval.secondary_button"
       >
-        Je suis un salarié — Demander l&apos;accès
+        Je suis un salarié
       </Button>
 
       <Button
@@ -520,92 +493,57 @@ function RequestAccessState({
   name,
   setName,
   isSubmitting,
-  alreadyRequested,
-  checkingApproval,
-  onRequest,
-  onRefresh,
+  onAccessApp,
   onSwitchToAdmin,
   onLogout,
 }: {
   name: string;
   setName: (v: string) => void;
   isSubmitting: boolean;
-  alreadyRequested: boolean;
-  checkingApproval: boolean;
-  onRequest: () => void;
-  onRefresh: () => void;
+  onAccessApp: () => void;
   onSwitchToAdmin: () => void;
   onLogout: () => void;
 }) {
   return (
     <Section>
       <div className="flex flex-col items-center gap-3 text-center">
-        {alreadyRequested ? (
-          <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center">
-            <Clock className="w-7 h-7 text-amber-500" />
-          </div>
-        ) : (
-          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-            <CheckCircle2 className="w-7 h-7 text-primary" />
-          </div>
-        )}
-        <h2 className="text-lg font-semibold text-foreground">
-          {alreadyRequested ? "Demande envoyée" : "Accès salarié"}
-        </h2>
+        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+          <CheckCircle2 className="w-7 h-7 text-primary" />
+        </div>
+        <h2 className="text-lg font-semibold text-foreground">Accès salarié</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          {alreadyRequested
-            ? "Votre demande est en attente d'approbation par l'administrateur."
-            : "Entrez votre nom et soumettez une demande d'accès."}
+          Entrez votre prénom et nom pour accéder à l&apos;application.
         </p>
       </div>
 
-      {!alreadyRequested ? (
-        <>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="user-name">Votre prénom et nom</Label>
-            <Input
-              id="user-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Jean Dupont"
-              autoFocus
-              data-ocid="pending_approval.input"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && name.trim() && !isSubmitting)
-                  onRequest();
-              }}
-            />
-          </div>
-          <Button
-            onClick={onRequest}
-            disabled={isSubmitting || !name.trim()}
-            size="lg"
-            className="w-full"
-            data-ocid="pending_approval.primary_button"
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : null}
-            Demander l&apos;accès
-          </Button>
-        </>
-      ) : (
-        <Button
-          onClick={onRefresh}
-          disabled={checkingApproval}
-          variant="outline"
-          size="lg"
-          className="w-full"
-          data-ocid="pending_approval.secondary_button"
-        >
-          {checkingApproval ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4 mr-2" />
-          )}
-          Vérifier l&apos;approbation
-        </Button>
-      )}
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="user-name">Votre prénom et nom</Label>
+        <Input
+          id="user-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Ex: Jean Dupont"
+          autoFocus
+          data-ocid="pending_approval.input"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && name.trim() && !isSubmitting)
+              onAccessApp();
+          }}
+        />
+      </div>
+
+      <Button
+        onClick={onAccessApp}
+        disabled={isSubmitting || !name.trim()}
+        size="lg"
+        className="w-full"
+        data-ocid="pending_approval.primary_button"
+      >
+        {isSubmitting ? (
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        ) : null}
+        Accéder à l&apos;application
+      </Button>
 
       <button
         type="button"

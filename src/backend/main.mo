@@ -189,7 +189,12 @@ actor {
     if (adminCheck) return true;
     let roleAdminCheck = accessControlState.userRoles.get(caller) == ?#admin;
     if (roleAdminCheck) return true;
-    UserApproval.isApproved(approvalState, caller);
+    if (UserApproval.isApproved(approvalState, caller)) return true;
+    // Open access: anyone with a registered profile is approved
+    switch (userProfiles.get(caller)) {
+      case (?_) { true };
+      case null { false };
+    };
   };
 
   // NO ACCESS CHECK - Anyone can request approval
@@ -241,6 +246,14 @@ actor {
     userProfiles.filter(
       func(principal, _profile) { principals.find(func(p) { p == principal }) != null }
     ).toArray();
+  };
+
+  // ADMIN ONLY - Get all registered profiles
+  public query ({ caller }) func getAllUserProfiles() : async [(Principal, UserProfile)] {
+    if (not isAdmin(caller)) {
+      Runtime.trap("Non autorisé : seuls les administrateurs peuvent voir tous les profils");
+    };
+    userProfiles.toArray();
   };
 
   // NO ACCESS CHECK - Profile can be saved before approval (needed for registration flow)
