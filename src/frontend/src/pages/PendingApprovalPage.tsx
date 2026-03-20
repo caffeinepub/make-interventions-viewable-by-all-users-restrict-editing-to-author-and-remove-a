@@ -92,30 +92,70 @@ export default function PendingApprovalPage() {
       { name: name.trim() },
       {
         onSuccess: () => {
-          claimAdmin(undefined, {
-            onSuccess: () => {
-              queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
-              queryClient.invalidateQueries({ queryKey: ["isCallerApproved"] });
-              queryClient.invalidateQueries({
-                queryKey: ["hasAdminRegistered"],
-              });
-              navigate({ to: "/" });
-            },
-          });
+          // If admin is already registered, use recoverAdmin instead of claimAdmin
+          if (hasAdminRegistered) {
+            recoverAdmin(undefined, {
+              onSuccess: (isAdmin) => {
+                if (isAdmin) {
+                  queryClient.invalidateQueries({
+                    queryKey: ["isCallerAdmin"],
+                  });
+                  queryClient.invalidateQueries({
+                    queryKey: ["isCallerApproved"],
+                  });
+                  navigate({ to: "/" });
+                }
+              },
+            });
+          } else {
+            claimAdmin(undefined, {
+              onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
+                queryClient.invalidateQueries({
+                  queryKey: ["isCallerApproved"],
+                });
+                queryClient.invalidateQueries({
+                  queryKey: ["hasAdminRegistered"],
+                });
+                navigate({ to: "/" });
+              },
+            });
+          }
         },
       },
     );
   };
 
   const handleRecoverAdmin = () => {
-    recoverAdmin(undefined, {
-      onSuccess: (isAdmin) => {
-        if (isAdmin) {
-          queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
-          navigate({ to: "/" });
-        }
-      },
-    });
+    // Save name if provided, then recover
+    if (name.trim()) {
+      saveProfile(
+        { name: name.trim() },
+        {
+          onSuccess: () => {
+            recoverAdmin(undefined, {
+              onSuccess: (isAdmin) => {
+                if (isAdmin) {
+                  queryClient.invalidateQueries({
+                    queryKey: ["isCallerAdmin"],
+                  });
+                  navigate({ to: "/" });
+                }
+              },
+            });
+          },
+        },
+      );
+    } else {
+      recoverAdmin(undefined, {
+        onSuccess: (isAdmin) => {
+          if (isAdmin) {
+            queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
+            navigate({ to: "/" });
+          }
+        },
+      });
+    }
   };
 
   const handleRequest = () => {
@@ -131,7 +171,8 @@ export default function PendingApprovalPage() {
   };
 
   const isLoadingChecks = actorFetching || !actor || checkingApproval;
-  const isSubmitting = isSavingProfile || isClaiming || isRequesting;
+  const isSubmitting =
+    isSavingProfile || isClaiming || isRequesting || isRecovering;
 
   return (
     <div
@@ -279,7 +320,7 @@ function AdminClaimState({
   name,
   setName,
   isSubmitting,
-  isRecovering,
+  isRecovering: _isRecovering,
   hasAdminRegistered,
   onClaimAdmin,
   onRecoverAdmin,
@@ -307,7 +348,7 @@ function AdminClaimState({
         </h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
           {hasAdminRegistered
-            ? "Entrez votre nom et cliquez sur le bouton pour accéder à votre espace administrateur."
+            ? "Entrez votre nom et cliquez sur le bouton pour récupérer votre accès administrateur."
             : "Première connexion : entrez votre nom pour créer le compte administrateur."}
         </p>
       </div>
@@ -328,9 +369,10 @@ function AdminClaimState({
         />
       </div>
 
+      {/* Single button: either claim (first time) or recover (already registered) */}
       <Button
-        onClick={onClaimAdmin}
-        disabled={isSubmitting || !name.trim()}
+        onClick={hasAdminRegistered ? onRecoverAdmin : onClaimAdmin}
+        disabled={isSubmitting || (!hasAdminRegistered && !name.trim())}
         size="lg"
         className="w-full"
         data-ocid="pending_approval.primary_button"
@@ -340,25 +382,10 @@ function AdminClaimState({
         ) : (
           <ShieldCheck className="w-4 h-4 mr-2" />
         )}
-        Je suis l&apos;administrateur
+        {hasAdminRegistered
+          ? "Récupérer mon accès administrateur"
+          : "Je suis l'administrateur"}
       </Button>
-
-      {hasAdminRegistered && (
-        <Button
-          onClick={onRecoverAdmin}
-          disabled={isRecovering}
-          variant="outline"
-          className="w-full"
-          data-ocid="pending_approval.confirm_button"
-        >
-          {isRecovering ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4 mr-2" />
-          )}
-          Récupérer mon accès administrateur
-        </Button>
-      )}
 
       <div className="flex items-center gap-3">
         <div className="flex-1 border-t border-border" />
@@ -419,7 +446,7 @@ function ServerErrorState({
           Serveur en démarrage
         </h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Le serveur démarre. Réessayez ou définissez-vous comme administrateur.
+          Le serveur démarre. Réessayez ou récupérez votre accès administrateur.
         </p>
       </div>
 
@@ -436,20 +463,19 @@ function ServerErrorState({
       <Button
         onClick={onRecoverAdmin}
         disabled={isRecovering}
-        variant="outline"
         className="w-full"
-        data-ocid="pending_approval.confirm_button"
+        data-ocid="pending_approval.primary_button"
       >
         {isRecovering ? (
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
         ) : (
-          <RefreshCw className="w-4 h-4 mr-2" />
+          <ShieldCheck className="w-4 h-4 mr-2" />
         )}
-        Récupérer mon accès administrateur
+        Je suis l&apos;administrateur
       </Button>
 
       <div className="border-t border-border pt-2 flex flex-col gap-3">
-        <Label htmlFor="admin-name-err">Votre prénom et nom</Label>
+        <Label htmlFor="admin-name-err">Votre prénom et nom (optionnel)</Label>
         <Input
           id="admin-name-err"
           value={name}
@@ -457,22 +483,22 @@ function ServerErrorState({
           placeholder="Ex: Jean Dupont"
           data-ocid="pending_approval.input"
           onKeyDown={(e) => {
-            if (e.key === "Enter" && name.trim() && !isSubmitting)
-              onClaimAdmin();
+            if (e.key === "Enter" && !isSubmitting) onClaimAdmin();
           }}
         />
         <Button
           onClick={onClaimAdmin}
-          disabled={isSubmitting || !name.trim()}
+          disabled={isSubmitting}
+          variant="outline"
           className="w-full"
-          data-ocid="pending_approval.primary_button"
+          data-ocid="pending_approval.confirm_button"
         >
           {isSubmitting ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           ) : (
             <ShieldCheck className="w-4 h-4 mr-2" />
           )}
-          Je suis l&apos;administrateur
+          Première connexion (nouvel admin)
         </Button>
       </div>
 

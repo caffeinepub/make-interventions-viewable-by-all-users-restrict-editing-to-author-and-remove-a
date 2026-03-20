@@ -182,6 +182,8 @@ function AuthenticatedLayoutInner() {
 
   // Track whether we've attempted backend re-registration this session
   const adminReRegisterAttempted = useRef(false);
+  // Track whether we've attempted auto-sync for approved-but-not-admin users
+  const approvedAdminSyncAttempted = useRef(false);
 
   useEffect(() => {
     if (adminQuery.data === true && !isAdminLatchRef.current) {
@@ -211,6 +213,9 @@ function AuthenticatedLayoutInner() {
             // First try syncAdminRole (works if adminPrincipal is already set in stable storage)
             const synced = await a.syncAdminRole?.();
             if (synced) {
+              isAdminLatchRef.current = true;
+              setIsAdminLatch(true);
+              if (principalStr) storeAdminPrincipal(principalStr);
               queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
               return;
             }
@@ -234,6 +239,44 @@ function AuthenticatedLayoutInner() {
     actorFetching,
     adminQuery.isLoading,
     adminQuery.data,
+    principalStr,
+    queryClient,
+  ]);
+
+  // CRITICAL FIX: If user is "approved" but NOT recognized as admin,
+  // try syncAdminRole silently — the real admin will be auto-restored.
+  // This fixes the case where admin is in approval list as regular user.
+  useEffect(() => {
+    if (
+      !isAdminLatch &&
+      !adminQuery.isLoading &&
+      adminQuery.data === false &&
+      approvalQuery.data === true &&
+      actor &&
+      !actorFetching &&
+      !approvedAdminSyncAttempted.current
+    ) {
+      approvedAdminSyncAttempted.current = true;
+      (actor as any)
+        .syncAdminRole?.()
+        .then((result: boolean) => {
+          if (result) {
+            isAdminLatchRef.current = true;
+            setIsAdminLatch(true);
+            if (principalStr) storeAdminPrincipal(principalStr);
+            queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [
+    isAdminLatch,
+    adminQuery.isLoading,
+    adminQuery.data,
+    approvalQuery.data,
+    actor,
+    actorFetching,
+    principalStr,
     queryClient,
   ]);
 
