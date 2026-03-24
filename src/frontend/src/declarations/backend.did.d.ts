@@ -117,6 +117,16 @@ export interface BillingRecord {
   'status' : string,
   'createdAt' : bigint,
 }
+export interface Memo {
+  'id' : string,
+  'authorPrincipal' : Principal,
+  'authorName' : string,
+  'title' : string,
+  'content' : string,
+  'media' : Array<ExternalBlob>,
+  'voiceNote' : [] | [ExternalBlob],
+  'createdAt' : Time,
+}
 export interface _SERVICE {
   '_caffeineStorageBlobIsLive' : ActorMethod<[Uint8Array], boolean>,
   '_caffeineStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
@@ -260,6 +270,10 @@ export interface _SERVICE {
     [string, ExternalBlob],
     undefined
   >,
+  'getAllUserProfiles' : ActorMethod<[], Array<[Principal, UserProfile]>>,
+  'getMemos' : ActorMethod<[], Array<Memo>>,
+  'createMemo' : ActorMethod<[string, string, string, Array<ExternalBlob>, [] | [ExternalBlob]], string>,
+  'deleteMemo' : ActorMethod<[string], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

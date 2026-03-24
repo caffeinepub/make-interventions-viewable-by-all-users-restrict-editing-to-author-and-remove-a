@@ -40,14 +40,24 @@ export function useGetScheduledInterventionById(id: string) {
   });
 }
 
+// Retourne tous les profils enregistrés (accès libre)
 export function useGetApprovedEmployees() {
   const { actor, isFetching } = useActor();
 
   return useQuery<Array<[Principal, UserProfile]>>({
-    queryKey: ["approvedEmployees"],
+    queryKey: ["allUserProfiles"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getApprovedEmployees();
+      try {
+        return await actor.getAllUserProfiles();
+      } catch {
+        // Fallback vers getApprovedEmployees si getAllUserProfiles échoue
+        try {
+          return await actor.getApprovedEmployees();
+        } catch {
+          return [];
+        }
+      }
     },
     enabled: !!actor && !isFetching,
   });

@@ -98,7 +98,6 @@ actor {
     updatedAt : Time.Time;
   };
 
-
   public type BillingPart = {
     reference : Text;
     quantity : Text;
@@ -118,6 +117,17 @@ actor {
     createdAt : Time.Time;
   };
 
+  public type Memo = {
+    id : Text;
+    authorPrincipal : Principal;
+    authorName : Text;
+    title : Text;
+    content : Text;
+    media : [Storage.ExternalBlob];
+    voiceNote : ?Storage.ExternalBlob;
+    createdAt : Time.Time;
+  };
+
   // State
   let clients = Map.empty<Text, Client>();
   let technicalFolder = Map.empty<Text, Folder>();
@@ -127,6 +137,7 @@ actor {
   let scheduledInterventions = Map.empty<Text, ScheduledIntervention>();
   let workHoursStore = Map.empty<Text, WorkHours>();
   stable var billingStore = Map.empty<Text, BillingRecord>();
+  stable var memoStore = Map.empty<Text, Memo>();
   let accessControlState = Auth.initState();
   let approvalState = UserApproval.initState(accessControlState);
 
@@ -904,16 +915,7 @@ actor {
 
   public query ({ caller }) func getApprovedEmployees() : async [(Principal, UserProfile)] {
     checkAccess(caller);
-    let approvedEmployees = List.empty<(Principal, UserProfile)>();
-    userProfiles.forEach(
-      func(principal, profile) {
-        // Include approved employees AND the admin (who bypasses approval)
-        if (UserApproval.isApproved(approvalState, principal) or isAdmin(principal)) {
-          approvedEmployees.add((principal, profile));
-        };
-      }
-    );
-    approvedEmployees.toArray();
+    userProfiles.toArray();
   };
 
   // Work Hours - OWNER OR ADMIN ONLY for viewing
@@ -1039,6 +1041,50 @@ actor {
   public shared ({ caller }) func deleteBillingRecord(id : Text) : async () {
     checkAccess(caller);
     ignore billingStore.remove(id);
+  };
+
+  // Memo Management - ALL REGISTERED USERS
+  public shared ({ caller }) func createMemo(
+    title : Text,
+    authorName : Text,
+    content : Text,
+    media : [Storage.ExternalBlob],
+    voiceNote : ?Storage.ExternalBlob,
+  ) : async Text {
+    checkAccess(caller);
+    let id = "memo-" # caller.toText() # Time.now().toText();
+    let memo : Memo = {
+      id;
+      authorPrincipal = caller;
+      authorName;
+      title;
+      content;
+      media;
+      voiceNote;
+      createdAt = Time.now();
+    };
+    memoStore.add(id, memo);
+    id;
+  };
+
+  public query ({ caller }) func getMemos() : async [Memo] {
+    checkAccess(caller);
+    let result = List.empty<Memo>();
+    memoStore.forEach(func(_id, memo) { result.add(memo) });
+    result.toArray();
+  };
+
+  public shared ({ caller }) func deleteMemo(id : Text) : async () {
+    checkAccess(caller);
+    switch (memoStore.get(id)) {
+      case null { Runtime.trap("Mémo introuvable") };
+      case (?memo) {
+        if (memo.authorPrincipal != caller and not isAdmin(caller)) {
+          Runtime.trap("Non autorisé : vous ne pouvez supprimer que vos propres mémos");
+        };
+        ignore memoStore.remove(id);
+      };
+    };
   };
 
   // Internal access check - Requires admin OR approved user OR registered profile

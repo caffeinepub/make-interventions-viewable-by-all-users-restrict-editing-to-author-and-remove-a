@@ -1,4 +1,15 @@
-/* eslint-disable */
+/*
+    const Memo = IDL.Record({
+      'id' : IDL.Text,
+      'authorPrincipal' : IDL.Principal,
+      'authorName' : IDL.Text,
+      'title' : IDL.Text,
+      'content' : IDL.Text,
+      'media' : IDL.Vec(ExternalBlob),
+      'voiceNote' : IDL.Opt(ExternalBlob),
+      'createdAt' : IDL.Int,
+    });
+ eslint-disable */
 
 // @ts-nocheck
 
@@ -642,6 +653,14 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'getAllUserProfiles' : IDL.Func([], [IDL.Vec(IDL.Tuple(IDL.Principal, UserProfile))], ['query']),
+    'getMemos' : IDL.Func([], [IDL.Vec(Memo)], ['query']),
+    'createMemo' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Vec(ExternalBlob), IDL.Opt(ExternalBlob)],
+        [IDL.Text],
+        [],
+      ),
+    'deleteMemo' : IDL.Func([IDL.Text], [], []),
   });
 };
 

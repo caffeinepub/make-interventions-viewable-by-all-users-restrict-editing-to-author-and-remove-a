@@ -12,9 +12,9 @@ import {
   CalendarRange,
   Clock,
   FileText,
-  FolderOpen,
   LayoutDashboard,
   LogOut,
+  StickyNote,
   Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -31,7 +31,7 @@ const navItems = [
   { path: "/planning", label: "Planning", icon: CalendarRange },
   { path: "/timesheet", label: "Heures", icon: Clock },
   { path: "/facturation", label: "Facturation", icon: FileText },
-  { path: "/technical-folder", label: "Technique", icon: FolderOpen },
+  { path: "/memo", label: "Mémo", icon: StickyNote },
 ];
 
 export default function MobileLayout({ children }: MobileLayoutProps) {

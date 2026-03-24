@@ -26,10 +26,10 @@ import ClientsPage from "./pages/ClientsPage";
 import DashboardPage from "./pages/DashboardPage";
 import FacturationPage from "./pages/FacturationPage";
 import LoginPage from "./pages/LoginPage";
+import MemoPage from "./pages/MemoPage";
 import PendingApprovalPage from "./pages/PendingApprovalPage";
 import PlanningPage from "./pages/PlanningPage";
 import ScheduledInterventionDetailPage from "./pages/ScheduledInterventionDetailPage";
-import TechnicalFolderPage from "./pages/TechnicalFolderPage";
 import TimesheetPage from "./pages/TimesheetPage";
 
 const queryClient = new QueryClient({
@@ -237,16 +237,12 @@ function AuthenticatedLayoutInner() {
 
   const principalStr = identity?.getPrincipal().toString() ?? "";
 
-  // Latch: once admin is confirmed (by query OR by localStorage), it stays true
-  // for this session — never reverts to false.
   const isAdminLatchRef = useRef(
     principalStr ? isStoredAdmin(principalStr) : false,
   );
   const [isAdminLatch, setIsAdminLatch] = useState(isAdminLatchRef.current);
 
-  // Track whether we've attempted backend re-registration this session
   const adminReRegisterAttempted = useRef(false);
-  // Track whether we've attempted auto-sync for approved-but-not-admin users
   const approvedAdminSyncAttempted = useRef(false);
 
   useEffect(() => {
@@ -257,8 +253,6 @@ function AuthenticatedLayoutInner() {
     }
   }, [adminQuery.data, principalStr]);
 
-  // KEY FIX: If localStorage says we're admin but the backend doesn't confirm it,
-  // silently re-register admin role in the backend (happens after each redeploy).
   useEffect(() => {
     if (
       isAdminLatchRef.current &&
@@ -270,11 +264,9 @@ function AuthenticatedLayoutInner() {
     ) {
       adminReRegisterAttempted.current = true;
       const a = actor as any;
-      // Try to re-claim admin if no admin is registered yet (fresh deploy)
       Promise.resolve()
         .then(async () => {
           try {
-            // First try syncAdminRole (works if adminPrincipal is already set in stable storage)
             const synced = await a.syncAdminRole?.();
             if (synced) {
               isAdminLatchRef.current = true;
@@ -287,16 +279,13 @@ function AuthenticatedLayoutInner() {
             // ignore
           }
           try {
-            // If syncAdminRole didn't work, claim admin (works if no admin registered yet)
             await a.claimAdminIfNoneExists?.();
             queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
           } catch {
-            // If another admin is already registered, this will fail silently — that's OK
+            // ignore
           }
         })
-        .catch(() => {
-          // Non-blocking — never crash the app
-        });
+        .catch(() => {});
     }
   }, [
     actor,
@@ -307,9 +296,6 @@ function AuthenticatedLayoutInner() {
     queryClient,
   ]);
 
-  // CRITICAL FIX: If user is "approved" but NOT recognized as admin,
-  // try syncAdminRole silently — the real admin will be auto-restored.
-  // This fixes the case where admin is in approval list as regular user.
   useEffect(() => {
     if (
       !isAdminLatch &&
@@ -378,7 +364,6 @@ function AuthenticatedLayoutInner() {
     );
   }
 
-  // If admin is latched (from localStorage or confirmed query), skip loading
   if (!isAdminLatch && (adminQuery.isLoading || approvalQuery.isLoading)) {
     return <LoadingScreen message="Vérification des accès..." />;
   }
@@ -463,10 +448,10 @@ const dashboardRoute = createRoute({
   path: "/dashboard",
   component: DashboardPage,
 });
-const technicalFolderRoute = createRoute({
+const memoRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
-  path: "/technical-folder",
-  component: TechnicalFolderPage,
+  path: "/memo",
+  component: MemoPage,
 });
 const adminAccessRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
@@ -502,7 +487,7 @@ const routeTree = rootRoute.addChildren([
     clientsRoute,
     clientDossierRoute,
     dashboardRoute,
-    technicalFolderRoute,
+    memoRoute,
     adminAccessRoute,
     planningRoute,
     scheduledInterventionDetailRoute,
